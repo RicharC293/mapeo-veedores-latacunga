@@ -414,15 +414,18 @@ function colorForPct(pctValue: number): string {
 
 // Versión de una sola línea para la vista general (cantón): las barras
 // completas por parroquia ocupaban demasiado espacio en una lista de 15+
-// filas. Aquí solo se ve el % registrado con un punto de color; el detalle
-// verificado/pendiente sigue disponible al entrar a la parroquia.
+// filas. El punto de color refleja el % registrado, y el texto muestra
+// "registrado% - verificado%" (mismo formato que las barras completas del
+// detalle de parroquia) para no perder esa distinción.
 function ResumenCompacto({
   cobertura,
 }: {
   cobertura: CoberturaParroquia | undefined;
 }) {
   const pctVeedores = cobertura?.pctVeedores ?? 0;
+  const pctVeedoresVerificado = cobertura?.pctVeedoresVerificado ?? 0;
   const pctCoordinador = cobertura?.pctCoordinador ?? 0;
+  const pctCoordinadorVerificado = cobertura?.pctCoordinadorVerificado ?? 0;
   const mostrarCda = (cobertura?.totalRecintosCda ?? 0) > 0;
   return (
     <div class="resumen-compacto">
@@ -431,14 +434,14 @@ function ResumenCompacto({
           class="resumen-dot"
           style={{ background: colorForPct(pctVeedores) }}
         />
-        Veedores {pctVeedores}%
+        Veedores {pctVeedores}% - {pctVeedoresVerificado}%
       </span>
       <span class="resumen-item">
         <span
           class="resumen-dot"
           style={{ background: colorForPct(pctCoordinador) }}
         />
-        Coordinador {pctCoordinador}%
+        Coordinador {pctCoordinador}% - {pctCoordinadorVerificado}%
       </span>
       {mostrarCda ? (
         <span class="resumen-item">
@@ -446,7 +449,7 @@ function ResumenCompacto({
             class="resumen-dot"
             style={{ background: colorForPct(cobertura!.pctCda) }}
           />
-          CDA {cobertura!.pctCda}%
+          CDA {cobertura!.pctCda}% - {cobertura!.pctCdaVerificado}%
         </span>
       ) : null}
     </div>
