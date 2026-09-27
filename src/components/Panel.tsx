@@ -18,6 +18,7 @@ import type {
   Recinto,
 } from "../lib/types";
 import type {
+  AcreditadoCda,
   CoberturaParroquia,
   CoberturaRecinto,
   Coordinador,
@@ -30,6 +31,7 @@ interface Props {
   lideres: Lider[];
   coordinadores: Coordinador[];
   veedores: Veedor[];
+  acreditadosCda: AcreditadoCda[];
 }
 
 function nombreLider(lideres: Lider[], recinto: Recinto): string {
@@ -57,11 +59,22 @@ function nombreCoordinador(
   return titular ? titular.nombres : "Sin asignar";
 }
 
+function nombreAcreditadoCda(
+  acreditadosCda: AcreditadoCda[],
+  recintoCodigo: number,
+): string {
+  const titular = acreditadosCda.find(
+    (a) => a.recintoCodigo === recintoCodigo && a.tipo === "titular",
+  );
+  return titular ? titular.nombres : "Sin asignar";
+}
+
 export default function Panel({
   data,
   lideres,
   coordinadores,
   veedores,
+  acreditadosCda,
 }: Props) {
   const v = view.value;
   const parByCode = useMemo(() => buildParByCode(data), [data]);
@@ -74,16 +87,22 @@ export default function Panel({
         data.recintos,
         veedores,
         coordinadores,
+        acreditadosCda,
       ),
-    [data, veedores, coordinadores],
+    [data, veedores, coordinadores, acreditadosCda],
   );
   const coberturaRecinto = useMemo(() => {
     const porRecinto = new Map<number, CoberturaRecinto>();
-    for (const c of calcularCobertura(data.recintos, veedores, coordinadores)) {
+    for (const c of calcularCobertura(
+      data.recintos,
+      veedores,
+      coordinadores,
+      acreditadosCda,
+    )) {
       porRecinto.set(c.recintoCodigo, c);
     }
     return porRecinto;
-  }, [data, veedores, coordinadores]);
+  }, [data, veedores, coordinadores, acreditadosCda]);
 
   if (v.kind === "canton") {
     const byType = (u: boolean) =>
@@ -185,16 +204,7 @@ export default function Panel({
             </small>
           </div>
         </div>
-        <CoberturaBars
-          pctVeedores={coberturaParroquia[v.code]?.pctVeedores ?? 0}
-          pctVeedoresVerificado={
-            coberturaParroquia[v.code]?.pctVeedoresVerificado ?? 0
-          }
-          pctCoordinador={coberturaParroquia[v.code]?.pctCoordinador ?? 0}
-          pctCoordinadorVerificado={
-            coberturaParroquia[v.code]?.pctCoordinadorVerificado ?? 0
-          }
-        />
+        <CoberturaBarsAgregado cobertura={coberturaParroquia[v.code]} />
         <h3>Recintos</h3>
         <ul class="list">
           {recs.map((r) => (
@@ -241,16 +251,7 @@ export default function Panel({
             </small>
           </div>
         </div>
-        <CoberturaBars
-          pctVeedores={coberturaRecinto.get(r.cod)?.pctVeedores ?? 0}
-          pctVeedoresVerificado={
-            coberturaRecinto.get(r.cod)?.pctVeedoresVerificado ?? 0
-          }
-          pctCoordinador={coberturaRecinto.get(r.cod)?.pctCoordinador ?? 0}
-          pctCoordinadorVerificado={
-            coberturaRecinto.get(r.cod)?.pctCoordinadorVerificado ?? 0
-          }
-        />
+        <EstadoRecinto cobertura={coberturaRecinto.get(r.cod)} cda={r.cda} />
         <dl>
           <dt>Electores</dt>
           <dd>{fmt(r.el)}</dd>
@@ -262,6 +263,12 @@ export default function Panel({
           <dd>{nombreLider(lideres, r)}</dd>
           <dt>Coordinador de recinto</dt>
           <dd>{nombreCoordinador(coordinadores, r.cod)}</dd>
+          {r.cda ? (
+            <>
+              <dt>Acreditado CDA</dt>
+              <dd>{nombreAcreditadoCda(acreditadosCda, r.cod)}</dd>
+            </>
+          ) : null}
           {r.zona ? (
             <>
               <dt>Zona electoral</dt>
@@ -351,13 +358,7 @@ function ParroquiaRow({
           <small>electores</small>
         </span>
       </button>
-      <CoberturaBars
-        pctVeedores={cobertura?.pctVeedores ?? 0}
-        pctVeedoresVerificado={cobertura?.pctVeedoresVerificado ?? 0}
-        pctCoordinador={cobertura?.pctCoordinador ?? 0}
-        pctCoordinadorVerificado={cobertura?.pctCoordinadorVerificado ?? 0}
-        compact
-      />
+      <CoberturaBarsAgregado cobertura={cobertura} compact />
     </li>
   );
 }
@@ -397,15 +398,13 @@ function RecintoRow({
           <small>juntas</small>
         </span>
       </button>
-      <CoberturaBars
-        pctVeedores={cobertura?.pctVeedores ?? 0}
-        pctVeedoresVerificado={cobertura?.pctVeedoresVerificado ?? 0}
-        pctCoordinador={cobertura?.pctCoordinador ?? 0}
-        pctCoordinadorVerificado={cobertura?.pctCoordinadorVerificado ?? 0}
-        compact
-      />
+      <EstadoRecinto cobertura={cobertura} cda={r.cda} compact />
     </li>
   );
+}
+
+function pctOf(parte: number, total: number): number {
+  return total > 0 ? Math.round((parte / total) * 1000) / 10 : 0;
 }
 
 function GroupSummary({
@@ -433,6 +432,16 @@ function GroupSummary({
         0,
       ) / features.length,
     );
+  // El CDA solo aplica a un puñado de recintos: promediar el % por
+  // parroquia diluiría el resultado con las que no tienen ninguno. En vez
+  // de eso, sumamos los conteos reales de todo el grupo y sacamos la
+  // proporción sobre ese total.
+  const sum = (key: keyof CoberturaParroquia) =>
+    features.reduce(
+      (a, f) => a + ((cobertura[f.properties.code]?.[key] as number) ?? 0),
+      0,
+    );
+  const totalRecintosCda = sum("totalRecintosCda");
   return (
     <div class="group-summary">
       <div class="stats">
@@ -449,42 +458,122 @@ function GroupSummary({
           <small>juntas</small>
         </div>
       </div>
-      <CoberturaBars
-        pctVeedores={avg("pctVeedores")}
-        pctVeedoresVerificado={avg("pctVeedoresVerificado")}
-        pctCoordinador={avg("pctCoordinador")}
-        pctCoordinadorVerificado={avg("pctCoordinadorVerificado")}
-      />
+      <div class="progress-group">
+        <ProgressBar
+          label="Veedores"
+          pct={avg("pctVeedores")}
+          pctVerificado={avg("pctVeedoresVerificado")}
+        />
+        <ProgressBar
+          label="Coordinador"
+          pct={avg("pctCoordinador")}
+          pctVerificado={avg("pctCoordinadorVerificado")}
+        />
+        {totalRecintosCda > 0 ? (
+          <ProgressBar
+            label="CDA"
+            pct={pctOf(sum("recintosConCda"), totalRecintosCda)}
+            pctVerificado={pctOf(
+              sum("recintosConCdaVerificado"),
+              totalRecintosCda,
+            )}
+          />
+        ) : null}
+      </div>
     </div>
   );
 }
 
-function CoberturaBars({
-  pctVeedores,
-  pctVeedoresVerificado,
-  pctCoordinador,
-  pctCoordinadorVerificado,
+// Barras de progreso: para una agrupación de varios recintos (parroquia o
+// cantón), veedores/coordinador/CDA son proporciones reales, así que tiene
+// sentido mostrarlas como porcentaje.
+function CoberturaBarsAgregado({
+  cobertura,
   compact,
 }: {
-  pctVeedores: number;
-  pctVeedoresVerificado: number;
-  pctCoordinador: number;
-  pctCoordinadorVerificado: number;
+  cobertura: CoberturaParroquia | undefined;
   compact?: boolean;
 }) {
   return (
     <div class={compact ? "progress-group compact" : "progress-group"}>
       <ProgressBar
         label="Veedores"
-        pct={pctVeedores}
-        pctVerificado={pctVeedoresVerificado}
+        pct={cobertura?.pctVeedores ?? 0}
+        pctVerificado={cobertura?.pctVeedoresVerificado ?? 0}
       />
       <ProgressBar
         label="Coordinador"
-        pct={pctCoordinador}
-        pctVerificado={pctCoordinadorVerificado}
+        pct={cobertura?.pctCoordinador ?? 0}
+        pctVerificado={cobertura?.pctCoordinadorVerificado ?? 0}
       />
+      {cobertura && cobertura.totalRecintosCda > 0 ? (
+        <ProgressBar
+          label="CDA"
+          pct={cobertura.pctCda}
+          pctVerificado={cobertura.pctCdaVerificado}
+        />
+      ) : null}
     </div>
+  );
+}
+
+// Para un solo recinto, coordinador y CDA son binarios (una persona o
+// ninguna): una barra de progreso ahí solo puede estar vacía o llena, así
+// que se muestran como una etiqueta de estado en vez de una barra. Veedores
+// sigue siendo una barra porque un recinto puede tener varias juntas.
+function EstadoRecinto({
+  cobertura,
+  cda,
+  compact,
+}: {
+  cobertura: CoberturaRecinto | undefined;
+  cda: boolean;
+  compact?: boolean;
+}) {
+  return (
+    <div class={compact ? "progress-group compact" : "progress-group"}>
+      <ProgressBar
+        label="Veedores"
+        pct={cobertura?.pctVeedores ?? 0}
+        pctVerificado={cobertura?.pctVeedoresVerificado ?? 0}
+      />
+      <div class="chip-row">
+        <EstadoChip
+          label="Coordinador"
+          tieneTitular={cobertura?.tieneCoordinadorTitular ?? false}
+          verificado={cobertura?.tieneCoordinadorVerificado ?? false}
+        />
+        {cda ? (
+          <EstadoChip
+            label="CDA"
+            tieneTitular={cobertura?.tieneCdaTitular ?? false}
+            verificado={cobertura?.tieneCdaVerificado ?? false}
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function EstadoChip({
+  label,
+  tieneTitular,
+  verificado,
+}: {
+  label: string;
+  tieneTitular: boolean;
+  verificado: boolean;
+}) {
+  const estado = !tieneTitular ? "sin" : verificado ? "ok" : "pendiente";
+  const texto = !tieneTitular
+    ? "Sin asignar"
+    : verificado
+      ? "Verificado"
+      : "Asignado";
+  return (
+    <span class={`chip-estado chip-estado-${estado}`}>
+      {label}: {texto}
+    </span>
   );
 }
 

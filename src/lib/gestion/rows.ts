@@ -1,6 +1,7 @@
 // Traduce filas de Supabase (snake_case) a los tipos de dominio (camelCase).
 
 import type {
+  AcreditadoCda,
   AmbitoLider,
   Coordinador,
   Lider,
@@ -27,6 +28,23 @@ export function rowToVeedor(row: Record<string, unknown>): Veedor {
 }
 
 export function rowToCoordinador(row: Record<string, unknown>): Coordinador {
+  return {
+    id: row.id as string,
+    cedula: row.cedula as string,
+    nombres: row.nombres as string,
+    telefono: row.telefono as string,
+    recintoCodigo: row.recinto_codigo as number,
+    parroquiaCodigo: row.parroquia_codigo as number,
+    tipo: row.tipo as TipoAsignacion,
+    orden: row.orden as number,
+    verificado: Boolean(row.verificado),
+    creadoEn: row.creado_en as string,
+  };
+}
+
+export function rowToAcreditadoCda(
+  row: Record<string, unknown>,
+): AcreditadoCda {
   return {
     id: row.id as string,
     cedula: row.cedula as string,

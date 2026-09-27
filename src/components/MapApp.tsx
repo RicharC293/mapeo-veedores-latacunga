@@ -2,13 +2,19 @@ import MapView from "./MapView";
 import Panel from "./Panel";
 import SearchBox from "./SearchBox";
 import type { MapData } from "../lib/types";
-import type { Coordinador, Lider, Veedor } from "../lib/gestion/types";
+import type {
+  AcreditadoCda,
+  Coordinador,
+  Lider,
+  Veedor,
+} from "../lib/gestion/types";
 
 interface Props {
   data: MapData;
   lideres: Lider[];
   coordinadores: Coordinador[];
   veedores: Veedor[];
+  acreditadosCda: AcreditadoCda[];
 }
 
 export default function MapApp({
@@ -16,6 +22,7 @@ export default function MapApp({
   lideres,
   coordinadores,
   veedores,
+  acreditadosCda,
 }: Props) {
   return (
     <>
@@ -32,6 +39,7 @@ export default function MapApp({
             lideres={lideres}
             coordinadores={coordinadores}
             veedores={veedores}
+            acreditadosCda={acreditadosCda}
           />
         </div>
       </aside>

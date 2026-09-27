@@ -36,6 +36,22 @@ export interface Coordinador {
   creadoEn: string;
 }
 
+// Persona acreditada por el CNE para el Centro de Digitalización de Actas
+// (CDA) de un recinto. Solo aplica a recintos con cda = true, y es un rol
+// distinto del coordinador de recinto (otra persona, otra responsabilidad).
+export interface AcreditadoCda {
+  id: string;
+  cedula: string;
+  nombres: string;
+  telefono: string;
+  recintoCodigo: number;
+  parroquiaCodigo: number;
+  tipo: TipoAsignacion;
+  orden: number;
+  verificado: boolean;
+  creadoEn: string;
+}
+
 export type AmbitoLider = "general" | "parroquia";
 
 export interface Lider {
@@ -49,7 +65,8 @@ export interface Lider {
   creadoEn: string;
 }
 
-export type OrigenListaNegra = "veedor" | "coordinador" | "manual";
+export type OrigenListaNegra =
+  "veedor" | "coordinador" | "acreditado_cda" | "manual";
 
 export interface ListaNegraEntry {
   id: string;
@@ -62,7 +79,12 @@ export interface ListaNegraEntry {
 }
 
 export type TipoEvento =
-  "alta_veedor" | "baja_veedor" | "alta_coordinador" | "baja_coordinador";
+  | "alta_veedor"
+  | "baja_veedor"
+  | "alta_coordinador"
+  | "baja_coordinador"
+  | "alta_acreditado_cda"
+  | "baja_acreditado_cda";
 
 export interface EventoActividad {
   id: string;
@@ -94,6 +116,14 @@ export interface CoberturaRecinto {
   pctVeedoresVerificado: number;
   pctCoordinador: number;
   pctCoordinadorVerificado: number;
+  // Acreditación CDA: solo aplica cuando el recinto es un Centro de
+  // Digitalización de Actas (cdaAplica = r.cda). Si no aplica, pctCda y
+  // pctCdaVerificado quedan en 0 y no deben mostrarse.
+  cdaAplica: boolean;
+  tieneCdaTitular: boolean;
+  tieneCdaVerificado: boolean;
+  pctCda: number;
+  pctCdaVerificado: number;
 }
 
 export interface CoberturaParroquia {
@@ -108,4 +138,11 @@ export interface CoberturaParroquia {
   recintosConCoordinadorVerificado: number;
   pctCoordinador: number;
   pctCoordinadorVerificado: number;
+  // Igual que arriba, pero contado solo sobre los recintos CDA de la
+  // parroquia (totalRecintosCda puede ser 0 si no tiene ninguno).
+  totalRecintosCda: number;
+  recintosConCda: number;
+  recintosConCdaVerificado: number;
+  pctCda: number;
+  pctCdaVerificado: number;
 }

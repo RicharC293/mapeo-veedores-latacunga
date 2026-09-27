@@ -1,0 +1,25 @@
+---
+import GestionLayout from "../../layouts/GestionLayout.astro";
+import GestionAcreditadosCda from "../../components/gestion/GestionAcreditadosCda";
+import { getMapData } from "../../lib/data";
+import { listAcreditadosCda } from "../../lib/gestion/acreditadosCda";
+
+const data = await getMapData();
+const acreditados = await listAcreditadosCda();
+const recintosCda = data.recintos.filter((r) => r.cda);
+---
+
+<GestionLayout title="Acreditados CDA" activo="acreditados-cda">
+  <h1>Acreditados CDA</h1>
+  <p class="g-sub">
+    Persona acreditada por el CNE para el Centro de Digitalización de Actas
+    (CDA) de un recinto, y sus suplentes. Solo aplica a los recintos marcados
+    como CDA; es un rol distinto del coordinador de recinto.
+  </p>
+  <GestionAcreditadosCda
+    client:load
+    parroquias={data.parroquias.features}
+    recintosCda={recintosCda}
+    acreditadosIniciales={acreditados}
+  />
+</GestionLayout>

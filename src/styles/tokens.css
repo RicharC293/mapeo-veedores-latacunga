@@ -482,12 +482,17 @@ h3 {
 }
 .progress-group.compact {
   flex-direction: row;
-  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
   padding: 0 4px 10px;
 }
 .progress-group.compact .progress {
   flex: 1;
-  min-width: 0;
+  min-width: 140px;
+}
+.progress-group.compact .chip-row {
+  flex: 0 0 auto;
 }
 .progress-head {
   display: flex;
@@ -520,6 +525,32 @@ h3 {
 }
 .progress-fill-pending {
   background: #c94b4b;
+}
+.chip-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.chip-estado {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+.chip-estado-sin {
+  background: var(--chip);
+  color: var(--muted);
+}
+.chip-estado-pendiente {
+  background: color-mix(in srgb, #c94b4b 18%, transparent);
+  color: #c94b4b;
+}
+.chip-estado-ok {
+  background: color-mix(in srgb, #2f9e57 18%, transparent);
+  color: #2f9e57;
 }
 
 dl {

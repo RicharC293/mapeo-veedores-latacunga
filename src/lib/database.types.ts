@@ -39,6 +39,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      acreditados_cda: {
+        Row: {
+          cedula: string
+          creado_en: string
+          id: string
+          nombres: string
+          orden: number
+          parroquia_codigo: number
+          recinto_codigo: number
+          telefono: string
+          tipo: string
+          verificado: boolean
+        }
+        Insert: {
+          cedula: string
+          creado_en?: string
+          id?: string
+          nombres: string
+          orden?: number
+          parroquia_codigo: number
+          recinto_codigo: number
+          telefono?: string
+          tipo: string
+          verificado?: boolean
+        }
+        Update: {
+          cedula?: string
+          creado_en?: string
+          id?: string
+          nombres?: string
+          orden?: number
+          parroquia_codigo?: number
+          recinto_codigo?: number
+          telefono?: string
+          tipo?: string
+          verificado?: boolean
+        }
+        Relationships: []
+      }
       canton_base: {
         Row: {
           canton_codigo: number
@@ -384,6 +423,34 @@ export type Database = {
         Args: { p_archivo: string; p_fecha_corte: string; p_fuente: string }
         Returns: number
       }
+      agregar_acreditado_cda: {
+        Args: {
+          p_cedula: string
+          p_nombres: string
+          p_parroquia_codigo: number
+          p_recinto_codigo: number
+          p_telefono: string
+          p_tipo: string
+        }
+        Returns: {
+          cedula: string
+          creado_en: string
+          id: string
+          nombres: string
+          orden: number
+          parroquia_codigo: number
+          recinto_codigo: number
+          telefono: string
+          tipo: string
+          verificado: boolean
+        }
+        SetofOptions: {
+          from: "*"
+          to: "acreditados_cda"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       agregar_coordinador: {
         Args: {
           p_cedula: string
@@ -481,6 +548,10 @@ export type Database = {
           p_total_juntas: number
           p_zona: string
         }
+        Returns: undefined
+      }
+      desvincular_acreditado_cda: {
+        Args: { p_id: string; p_motivo: string }
         Returns: undefined
       }
       desvincular_coordinador: {

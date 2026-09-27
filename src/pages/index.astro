@@ -5,13 +5,16 @@ import { getMapData } from "../lib/data";
 import { listLideres } from "../lib/gestion/lideres";
 import { listCoordinadores } from "../lib/gestion/coordinadores";
 import { listVeedores } from "../lib/gestion/veedores";
+import { listAcreditadosCda } from "../lib/gestion/acreditadosCda";
 
-const [data, lideres, coordinadores, veedores] = await Promise.all([
-  getMapData(),
-  listLideres(),
-  listCoordinadores(),
-  listVeedores(),
-]);
+const [data, lideres, coordinadores, veedores, acreditadosCda] =
+  await Promise.all([
+    getMapData(),
+    listLideres(),
+    listCoordinadores(),
+    listVeedores(),
+    listAcreditadosCda(),
+  ]);
 ---
 
 <Base title="Recintos electorales de Latacunga" bodyClass="map-page">
@@ -22,6 +25,7 @@ const [data, lideres, coordinadores, veedores] = await Promise.all([
       lideres={lideres}
       coordinadores={coordinadores}
       veedores={veedores}
+      acreditadosCda={acreditadosCda}
     />
   </div>
 </Base>

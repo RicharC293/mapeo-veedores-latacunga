@@ -1,0 +1,230 @@
+import { randomUUID } from "node:crypto";
+import { supabaseSecret } from "../supabase";
+import { mutateCollection, readCollection } from "./jsonStore";
+import { cedulaValida, normalizarCedula } from "./cedula";
+import { estaEnListaNegra, agregarAListaNegra } from "./listaNegra";
+import { registrarEvento } from "./eventos";
+import { rowToAcreditadoCda } from "./rows";
+import type { AcreditadoCda } from "./types";
+
+const COLLECTION = "acreditados_cda";
+
+export async function listAcreditadosCda(): Promise<AcreditadoCda[]> {
+  if (supabaseSecret) {
+    const { data, error } = await supabaseSecret
+      .from("acreditados_cda")
+      .select("*");
+    if (error) throw new Error(error.message);
+    return data.map(rowToAcreditadoCda);
+  }
+  return readCollection<AcreditadoCda>(COLLECTION);
+}
+
+export async function acreditadosCdaPorRecinto(
+  recintoCodigo: number,
+): Promise<{ titular: AcreditadoCda | null; suplentes: AcreditadoCda[] }> {
+  const items = (await listAcreditadosCda()).filter(
+    (a) => a.recintoCodigo === recintoCodigo,
+  );
+  return {
+    titular: items.find((a) => a.tipo === "titular") ?? null,
+    suplentes: items
+      .filter((a) => a.tipo === "suplente")
+      .sort((a, b) => a.orden - b.orden),
+  };
+}
+
+export async function agregarAcreditadoCda(input: {
+  cedula: string;
+  nombres: string;
+  telefono: string;
+  recintoCodigo: number;
+  parroquiaCodigo: number;
+  tipo: "titular" | "suplente";
+}): Promise<AcreditadoCda> {
+  const cedula = normalizarCedula(input.cedula);
+  if (!cedulaValida(cedula))
+    throw new Error("Cédula inválida: debe tener 10 dígitos.");
+  if (!input.nombres.trim()) throw new Error("El nombre es obligatorio.");
+
+  if (supabaseSecret) {
+    const { data, error } = await supabaseSecret.rpc(
+      "agregar_acreditado_cda",
+      {
+        p_cedula: cedula,
+        p_nombres: input.nombres,
+        p_telefono: input.telefono,
+        p_recinto_codigo: input.recintoCodigo,
+        p_parroquia_codigo: input.parroquiaCodigo,
+        p_tipo: input.tipo,
+      },
+    );
+    if (error) throw new Error(error.message);
+    return rowToAcreditadoCda(data);
+  }
+
+  if (await estaEnListaNegra(cedula)) {
+    throw new Error(
+      "Esta cédula está en la lista negra y no puede registrarse.",
+    );
+  }
+
+  let creado: AcreditadoCda | null = null;
+  await mutateCollection<AcreditadoCda>(COLLECTION, (items) => {
+    if (items.some((a) => a.cedula === cedula)) {
+      throw new Error("Esta cédula ya está registrada como acreditado CDA.");
+    }
+    const delRecinto = items.filter(
+      (a) => a.recintoCodigo === input.recintoCodigo,
+    );
+    if (
+      input.tipo === "titular" &&
+      delRecinto.some((a) => a.tipo === "titular")
+    ) {
+      throw new Error(
+        "Este recinto ya tiene un acreditado CDA titular. Desvincúlelo primero.",
+      );
+    }
+    const orden =
+      input.tipo === "titular"
+        ? 0
+        : Math.max(
+            0,
+            ...delRecinto
+              .filter((a) => a.tipo === "suplente")
+              .map((a) => a.orden),
+          ) + 1;
+    const acreditado: AcreditadoCda = {
+      id: randomUUID(),
+      cedula,
+      nombres: input.nombres.trim(),
+      telefono: input.telefono.trim(),
+      recintoCodigo: input.recintoCodigo,
+      parroquiaCodigo: input.parroquiaCodigo,
+      tipo: input.tipo,
+      orden,
+      verificado: false,
+      creadoEn: new Date().toISOString(),
+    };
+    creado = acreditado;
+    return [...items, acreditado];
+  });
+
+  await registrarEvento({
+    tipo: "alta_acreditado_cda",
+    cedula,
+    recintoCodigo: input.recintoCodigo,
+    parroquiaCodigo: input.parroquiaCodigo,
+  });
+  return creado!;
+}
+
+export async function desvincularAcreditadoCda(
+  id: string,
+  motivo: string | null,
+): Promise<void> {
+  if (supabaseSecret) {
+    const { error } = await supabaseSecret.rpc("desvincular_acreditado_cda", {
+      p_id: id,
+      // La función SQL acepta NULL para p_motivo, pero el generador de tipos
+      // de Supabase no marca los parámetros como anulables (solo detecta
+      // opcionalidad por valores por defecto).
+      p_motivo: motivo as string,
+    });
+    if (error) throw new Error(error.message);
+    return;
+  }
+
+  let desvinculado: AcreditadoCda | null = null;
+
+  // La promoción de un suplente a titular es un cambio de rol, no una alta
+  // neta: esa persona ya cuenta como acreditada desde que se registró como
+  // suplente, así que no se registra un nuevo evento "alta_acreditado_cda".
+  await mutateCollection<AcreditadoCda>(COLLECTION, (items) => {
+    const acreditado = items.find((a) => a.id === id);
+    if (!acreditado) throw new Error("No se encontró el acreditado CDA.");
+    desvinculado = acreditado;
+
+    const resto = items.filter((a) => a.id !== id);
+
+    if (acreditado.tipo !== "titular") {
+      const demas = resto
+        .filter(
+          (a) =>
+            a.recintoCodigo === acreditado.recintoCodigo &&
+            a.tipo === "suplente" &&
+            a.orden > acreditado.orden,
+        )
+        .sort((a, b) => a.orden - b.orden);
+      return resto.map((a) => {
+        const idx = demas.findIndex((d) => d.id === a.id);
+        return idx === -1 ? a : { ...a, orden: a.orden - 1 };
+      });
+    }
+
+    const suplentes = resto
+      .filter(
+        (a) =>
+          a.recintoCodigo === acreditado.recintoCodigo &&
+          a.tipo === "suplente",
+      )
+      .sort((a, b) => a.orden - b.orden);
+    if (suplentes.length === 0) return resto;
+
+    const [siguiente, ...demas] = suplentes;
+    const nuevoTitular: AcreditadoCda = {
+      ...siguiente,
+      tipo: "titular",
+      orden: 0,
+    };
+    return resto.map((a) => {
+      if (a.id === nuevoTitular.id) return nuevoTitular;
+      const idx = demas.findIndex((d) => d.id === a.id);
+      return idx === -1 ? a : { ...a, orden: idx + 1 };
+    });
+  });
+
+  if (!desvinculado) return;
+  const d = desvinculado as AcreditadoCda;
+
+  await agregarAListaNegra({
+    cedula: d.cedula,
+    nombres: d.nombres,
+    telefono: d.telefono,
+    motivo,
+    origen: "acreditado_cda",
+  });
+  await registrarEvento({
+    tipo: "baja_acreditado_cda",
+    cedula: d.cedula,
+    recintoCodigo: d.recintoCodigo,
+    parroquiaCodigo: d.parroquiaCodigo,
+  });
+}
+
+export async function marcarVerificadoAcreditadoCda(
+  id: string,
+  verificado: boolean,
+): Promise<AcreditadoCda> {
+  if (supabaseSecret) {
+    const { data, error } = await supabaseSecret
+      .from("acreditados_cda")
+      .update({ verificado })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return rowToAcreditadoCda(data);
+  }
+
+  let actualizado: AcreditadoCda | null = null;
+  await mutateCollection<AcreditadoCda>(COLLECTION, (items) =>
+    items.map((a) => {
+      if (a.id !== id) return a;
+      actualizado = { ...a, verificado };
+      return actualizado;
+    }),
+  );
+  if (!actualizado) throw new Error("No se encontró el acreditado CDA.");
+  return actualizado;
+}

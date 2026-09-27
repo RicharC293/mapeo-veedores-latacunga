@@ -1,6 +1,7 @@
 import type { ParroquiaFeature, Recinto } from "../types";
 import { listJuntasDeRecinto } from "./juntas";
 import type {
+  AcreditadoCda,
   Coordinador,
   CoberturaParroquia,
   CoberturaRecinto,
@@ -15,6 +16,7 @@ export function calcularCobertura(
   recintos: Recinto[],
   veedores: Veedor[],
   coordinadores: Coordinador[],
+  acreditadosCda: AcreditadoCda[],
 ): CoberturaRecinto[] {
   const titulares = veedores.filter((v) => v.tipo === "titular");
   const juntasConTitular = new Set(titulares.map((v) => v.juntaId));
@@ -30,6 +32,14 @@ export function calcularCobertura(
     coordTitulares.filter((c) => c.verificado).map((c) => c.recintoCodigo),
   );
 
+  const cdaTitulares = acreditadosCda.filter((a) => a.tipo === "titular");
+  const recintosConCdaTitular = new Set(
+    cdaTitulares.map((a) => a.recintoCodigo),
+  );
+  const recintosConCdaVerificado = new Set(
+    cdaTitulares.filter((a) => a.verificado).map((a) => a.recintoCodigo),
+  );
+
   return recintos.map((recinto) => {
     const juntas = listJuntasDeRecinto(recinto);
     const tieneCoordinadorTitular = recintosConCoordinadorTitular.has(recinto.cod);
@@ -42,6 +52,8 @@ export function calcularCobertura(
     const juntasCubiertasVerificado = tieneCoordinadorVerificado
       ? juntasConVeedorVerificadoAqui
       : 0;
+    const tieneCdaTitular = recintosConCdaTitular.has(recinto.cod);
+    const tieneCdaVerificado = recintosConCdaVerificado.has(recinto.cod);
     return {
       recintoCodigo: recinto.cod,
       parroquiaCodigo: recinto.par,
@@ -56,6 +68,11 @@ export function calcularCobertura(
       pctVeedoresVerificado: pct(juntasConVeedorVerificadoAqui, juntas.length),
       pctCoordinador: tieneCoordinadorTitular ? 100 : 0,
       pctCoordinadorVerificado: tieneCoordinadorVerificado ? 100 : 0,
+      cdaAplica: recinto.cda,
+      tieneCdaTitular,
+      tieneCdaVerificado,
+      pctCda: recinto.cda && tieneCdaTitular ? 100 : 0,
+      pctCdaVerificado: recinto.cda && tieneCdaVerificado ? 100 : 0,
     };
   });
 }
@@ -65,12 +82,14 @@ export function calcularCobertura(
 // titular asignado, cada uno independiente del otro (a diferencia de
 // calcularCobertura(), que exige ambos para contar una junta como cubierta).
 // Los campos "*Verificado" son, sobre el mismo total, cuántos de esos
-// titulares ya fueron contactados.
+// titulares ya fueron contactados. Los campos "*Cda" solo cuentan sobre los
+// recintos CDA de la parroquia (totalRecintosCda puede ser 0).
 export function calcularCoberturaPorParroquia(
   parroquias: ParroquiaFeature[],
   recintos: Recinto[],
   veedores: Veedor[],
   coordinadores: Coordinador[],
+  acreditadosCda: AcreditadoCda[],
 ): Record<number, CoberturaParroquia> {
   const titulares = veedores.filter((v) => v.tipo === "titular");
   const juntasConTitular = new Set(titulares.map((v) => v.juntaId));
@@ -84,6 +103,14 @@ export function calcularCoberturaPorParroquia(
   );
   const recintosConCoordinadorVerificado = new Set(
     coordTitulares.filter((c) => c.verificado).map((c) => c.recintoCodigo),
+  );
+
+  const cdaTitulares = acreditadosCda.filter((a) => a.tipo === "titular");
+  const recintosConCdaTitular = new Set(
+    cdaTitulares.map((a) => a.recintoCodigo),
+  );
+  const recintosConCdaVerificado = new Set(
+    cdaTitulares.filter((a) => a.verificado).map((a) => a.recintoCodigo),
   );
 
   const resultado: Record<number, CoberturaParroquia> = {};
@@ -100,6 +127,11 @@ export function calcularCoberturaPorParroquia(
       recintosConCoordinadorVerificado: 0,
       pctCoordinador: 0,
       pctCoordinadorVerificado: 0,
+      totalRecintosCda: 0,
+      recintosConCda: 0,
+      recintosConCdaVerificado: 0,
+      pctCda: 0,
+      pctCdaVerificado: 0,
     };
   }
 
@@ -116,6 +148,12 @@ export function calcularCoberturaPorParroquia(
     if (recintosConCoordinadorTitular.has(recinto.cod)) entry.recintosConCoordinador += 1;
     if (recintosConCoordinadorVerificado.has(recinto.cod))
       entry.recintosConCoordinadorVerificado += 1;
+    if (recinto.cda) {
+      entry.totalRecintosCda += 1;
+      if (recintosConCdaTitular.has(recinto.cod)) entry.recintosConCda += 1;
+      if (recintosConCdaVerificado.has(recinto.cod))
+        entry.recintosConCdaVerificado += 1;
+    }
   }
 
   for (const entry of Object.values(resultado)) {
@@ -128,6 +166,11 @@ export function calcularCoberturaPorParroquia(
     entry.pctCoordinadorVerificado = pct(
       entry.recintosConCoordinadorVerificado,
       entry.totalRecintos,
+    );
+    entry.pctCda = pct(entry.recintosConCda, entry.totalRecintosCda);
+    entry.pctCdaVerificado = pct(
+      entry.recintosConCdaVerificado,
+      entry.totalRecintosCda,
     );
   }
 

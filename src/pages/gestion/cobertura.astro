@@ -4,13 +4,20 @@ import CoberturaTable from "../../components/gestion/CoberturaTable";
 import { getMapData } from "../../lib/data";
 import { listVeedores } from "../../lib/gestion/veedores";
 import { listCoordinadores } from "../../lib/gestion/coordinadores";
+import { listAcreditadosCda } from "../../lib/gestion/acreditadosCda";
 import { calcularCobertura } from "../../lib/gestion/coverage";
 import { title as titleCase } from "../../lib/format";
 
 const data = await getMapData();
 const veedores = await listVeedores();
 const coordinadores = await listCoordinadores();
-const cobertura = calcularCobertura(data.recintos, veedores, coordinadores);
+const acreditadosCda = await listAcreditadosCda();
+const cobertura = calcularCobertura(
+  data.recintos,
+  veedores,
+  coordinadores,
+  acreditadosCda,
+);
 
 const parByCode = new Map(
   data.parroquias.features.map((f) => [f.properties.code, f]),

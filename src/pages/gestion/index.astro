@@ -5,16 +5,24 @@ import { listVeedores } from "../../lib/gestion/veedores";
 import { listCoordinadores } from "../../lib/gestion/coordinadores";
 import { listLideres } from "../../lib/gestion/lideres";
 import { listListaNegra } from "../../lib/gestion/listaNegra";
+import { listAcreditadosCda } from "../../lib/gestion/acreditadosCda";
 import { calcularCobertura } from "../../lib/gestion/coverage";
 
 const data = await getMapData();
-const [veedores, coordinadores, lideres, listaNegra] = await Promise.all([
-  listVeedores(),
-  listCoordinadores(),
-  listLideres(),
-  listListaNegra(),
-]);
-const cobertura = calcularCobertura(data.recintos, veedores, coordinadores);
+const [veedores, coordinadores, lideres, listaNegra, acreditadosCda] =
+  await Promise.all([
+    listVeedores(),
+    listCoordinadores(),
+    listLideres(),
+    listListaNegra(),
+    listAcreditadosCda(),
+  ]);
+const cobertura = calcularCobertura(
+  data.recintos,
+  veedores,
+  coordinadores,
+  acreditadosCda,
+);
 const totalJuntas = cobertura.reduce((a, c) => a + c.totalJuntas, 0);
 const totalCubiertas = cobertura.reduce((a, c) => a + c.juntasCubiertas, 0);
 const pctGlobal =

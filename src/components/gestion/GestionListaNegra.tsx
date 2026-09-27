@@ -18,6 +18,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 const origenLabel: Record<ListaNegraEntry["origen"], string> = {
   veedor: "Ex veedor",
   coordinador: "Ex coordinador",
+  acreditado_cda: "Ex acreditado CDA",
   manual: "Agregado manualmente",
 };
 
