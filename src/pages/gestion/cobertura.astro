@@ -1,10 +1,11 @@
 ---
 import GestionLayout from "../../layouts/GestionLayout.astro";
+import CoberturaTable from "../../components/gestion/CoberturaTable";
 import { getMapData } from "../../lib/data";
 import { listVeedores } from "../../lib/gestion/veedores";
 import { listCoordinadores } from "../../lib/gestion/coordinadores";
 import { calcularCobertura } from "../../lib/gestion/coverage";
-import { title as titleCase, fmt } from "../../lib/format";
+import { title as titleCase } from "../../lib/format";
 
 const data = await getMapData();
 const veedores = await listVeedores();
@@ -16,72 +17,34 @@ const parByCode = new Map(
 );
 const recintoByCode = new Map(data.recintos.map((r) => [r.cod, r]));
 
-const filas = cobertura
-  .map((c) => ({
-    ...c,
-    nombreRecinto: titleCase(recintoByCode.get(c.recintoCodigo)?.nombre ?? ""),
-    nombreParroquia: parByCode.get(c.parroquiaCodigo)?.properties.name ?? "",
-  }))
-  .sort((a, b) => a.pct - b.pct);
+const filas = cobertura.map((c) => ({
+  recintoCodigo: c.recintoCodigo,
+  parroquiaCodigo: c.parroquiaCodigo,
+  nombreRecinto: titleCase(recintoByCode.get(c.recintoCodigo)?.nombre ?? ""),
+  nombreParroquia: parByCode.get(c.parroquiaCodigo)?.properties.name ?? "",
+  urbana: parByCode.get(c.parroquiaCodigo)?.properties.urbana ?? false,
+  tieneCoordinadorTitular: c.tieneCoordinadorTitular,
+  juntasCubiertas: c.juntasCubiertas,
+  juntasCubiertasVerificado: c.juntasCubiertasVerificado,
+  totalJuntas: c.totalJuntas,
+  pct: c.pct,
+  pctVerificado: c.pctVerificado,
+}));
 
-const totalJuntas = cobertura.reduce((a, c) => a + c.totalJuntas, 0);
-const totalCubiertas = cobertura.reduce((a, c) => a + c.juntasCubiertas, 0);
-const pctGlobal =
-  totalJuntas > 0 ? Math.round((totalCubiertas / totalJuntas) * 1000) / 10 : 0;
-
-function colorFor(pct: number): string {
-  const hue = Math.round((pct / 100) * 120);
-  return `hsl(${hue}, 65%, 45%)`;
-}
+const parroquiasOpciones = data.parroquias.features.map((f) => ({
+  code: f.properties.code,
+  name: f.properties.name,
+  urbana: f.properties.urbana,
+}));
 ---
 
 <GestionLayout title="Cobertura" activo="cobertura">
   <h1>Cobertura de veedores y coordinadores</h1>
   <p class="g-sub">
-    Una junta cuenta como cubierta solo si tiene veedor titular y su recinto
-    tiene coordinador titular.
+    Una junta cuenta como cubierta si tiene veedor titular y su recinto tiene
+    coordinador titular. Cuenta como cubierta y verificada si, además, ambos
+    ya fueron contactados.
   </p>
 
-  <div class="g-summary">
-    <div class="g-summary-item">
-      <b>
-        {fmt(totalCubiertas)} / {fmt(totalJuntas)}
-      </b>
-      <small>juntas cubiertas</small>
-    </div>
-    <div class="g-summary-item">
-      <b>{pctGlobal}%</b>
-      <small>cobertura del cantón</small>
-    </div>
-  </div>
-
-  <table class="g-table">
-    <thead>
-      <tr>
-        <th>Parroquia</th>
-        <th>Recinto</th>
-        <th>Coordinador</th>
-        <th>Juntas cubiertas</th>
-        <th>% cobertura</th>
-      </tr>
-    </thead>
-    <tbody>
-      {filas.map((f) => (
-        <tr>
-          <td>{f.nombreParroquia}</td>
-          <td>{f.nombreRecinto}</td>
-          <td>{f.tieneCoordinadorTitular ? "Sí" : "No"}</td>
-          <td>
-            {f.juntasCubiertas} / {f.totalJuntas}
-          </td>
-          <td>
-            <div class="g-bar">
-              <span style={`width:${f.pct}%; background:${colorFor(f.pct)}`} />
-            </div>
-            {f.pct}%
-          </td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
+  <CoberturaTable client:load filas={filas} parroquias={parroquiasOpciones} />
 </GestionLayout>

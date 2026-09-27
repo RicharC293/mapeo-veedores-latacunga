@@ -81,6 +81,11 @@ export interface CoberturaRecinto {
   juntasCubiertas: number;
   tieneCoordinadorTitular: boolean;
   pct: number;
+  // Igual que juntasCubiertas/pct, pero exige además que tanto el veedor
+  // como el coordinador titulares ya hayan sido verificados (contactados).
+  juntasCubiertasVerificado: number;
+  tieneCoordinadorVerificado: boolean;
+  pctVerificado: number;
   // Progreso informativo, independiente entre sí (a diferencia de "pct" arriba,
   // que exige veedor Y coordinador para contar una junta como cubierta).
   // pct* = % con titular asignado; pct*Verificado = % (sobre el mismo total)

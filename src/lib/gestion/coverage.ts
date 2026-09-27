@@ -39,6 +39,9 @@ export function calcularCobertura(
       juntasConTitularVerificado.has(j.id),
     ).length;
     const juntasCubiertas = tieneCoordinadorTitular ? juntasConVeedorAqui : 0;
+    const juntasCubiertasVerificado = tieneCoordinadorVerificado
+      ? juntasConVeedorVerificadoAqui
+      : 0;
     return {
       recintoCodigo: recinto.cod,
       parroquiaCodigo: recinto.par,
@@ -46,6 +49,9 @@ export function calcularCobertura(
       juntasCubiertas,
       tieneCoordinadorTitular,
       pct: pct(juntasCubiertas, juntas.length),
+      juntasCubiertasVerificado,
+      tieneCoordinadorVerificado,
+      pctVerificado: pct(juntasCubiertasVerificado, juntas.length),
       pctVeedores: pct(juntasConVeedorAqui, juntas.length),
       pctVeedoresVerificado: pct(juntasConVeedorVerificadoAqui, juntas.length),
       pctCoordinador: tieneCoordinadorTitular ? 100 : 0,
