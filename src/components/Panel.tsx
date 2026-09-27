@@ -358,7 +358,7 @@ function ParroquiaRow({
           <small>electores</small>
         </span>
       </button>
-      <CoberturaBarsAgregado cobertura={cobertura} />
+      <ResumenCompacto cobertura={cobertura} />
     </li>
   );
 }
@@ -407,6 +407,52 @@ function pctOf(parte: number, total: number): number {
   return total > 0 ? Math.round((parte / total) * 1000) / 10 : 0;
 }
 
+function colorForPct(pctValue: number): string {
+  const hue = Math.round((pctValue / 100) * 120);
+  return `hsl(${hue}, 65%, 45%)`;
+}
+
+// Versión de una sola línea para la vista general (cantón): las barras
+// completas por parroquia ocupaban demasiado espacio en una lista de 15+
+// filas. Aquí solo se ve el % registrado con un punto de color; el detalle
+// verificado/pendiente sigue disponible al entrar a la parroquia.
+function ResumenCompacto({
+  cobertura,
+}: {
+  cobertura: CoberturaParroquia | undefined;
+}) {
+  const pctVeedores = cobertura?.pctVeedores ?? 0;
+  const pctCoordinador = cobertura?.pctCoordinador ?? 0;
+  const mostrarCda = (cobertura?.totalRecintosCda ?? 0) > 0;
+  return (
+    <div class="resumen-compacto">
+      <span class="resumen-item">
+        <span
+          class="resumen-dot"
+          style={{ background: colorForPct(pctVeedores) }}
+        />
+        Veedores {pctVeedores}%
+      </span>
+      <span class="resumen-item">
+        <span
+          class="resumen-dot"
+          style={{ background: colorForPct(pctCoordinador) }}
+        />
+        Coordinador {pctCoordinador}%
+      </span>
+      {mostrarCda ? (
+        <span class="resumen-item">
+          <span
+            class="resumen-dot"
+            style={{ background: colorForPct(cobertura!.pctCda) }}
+          />
+          CDA {cobertura!.pctCda}%
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 function GroupSummary({
   features,
   stats,
@@ -442,6 +488,24 @@ function GroupSummary({
       0,
     );
   const totalRecintosCda = sum("totalRecintosCda");
+  const coberturaGrupo: CoberturaParroquia = {
+    parroquiaCodigo: 0,
+    totalJuntas: 0,
+    juntasConVeedor: 0,
+    juntasConVeedorVerificado: 0,
+    pctVeedores: avg("pctVeedores"),
+    pctVeedoresVerificado: avg("pctVeedoresVerificado"),
+    totalRecintos: 0,
+    recintosConCoordinador: 0,
+    recintosConCoordinadorVerificado: 0,
+    pctCoordinador: avg("pctCoordinador"),
+    pctCoordinadorVerificado: avg("pctCoordinadorVerificado"),
+    totalRecintosCda,
+    recintosConCda: sum("recintosConCda"),
+    recintosConCdaVerificado: sum("recintosConCdaVerificado"),
+    pctCda: pctOf(sum("recintosConCda"), totalRecintosCda),
+    pctCdaVerificado: pctOf(sum("recintosConCdaVerificado"), totalRecintosCda),
+  };
   return (
     <div class="group-summary">
       <div class="stats">
@@ -458,28 +522,7 @@ function GroupSummary({
           <small>juntas</small>
         </div>
       </div>
-      <div class="progress-group">
-        <ProgressBar
-          label="Veedores"
-          pct={avg("pctVeedores")}
-          pctVerificado={avg("pctVeedoresVerificado")}
-        />
-        <ProgressBar
-          label="Coordinador"
-          pct={avg("pctCoordinador")}
-          pctVerificado={avg("pctCoordinadorVerificado")}
-        />
-        {totalRecintosCda > 0 ? (
-          <ProgressBar
-            label="CDA"
-            pct={pctOf(sum("recintosConCda"), totalRecintosCda)}
-            pctVerificado={pctOf(
-              sum("recintosConCdaVerificado"),
-              totalRecintosCda,
-            )}
-          />
-        ) : null}
-      </div>
+      <ResumenCompacto cobertura={coberturaGrupo} />
     </div>
   );
 }

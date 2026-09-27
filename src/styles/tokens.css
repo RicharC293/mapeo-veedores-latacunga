@@ -552,6 +552,27 @@ h3 {
   background: color-mix(in srgb, #2f9e57 18%, transparent);
   color: #2f9e57;
 }
+.resumen-compacto {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  padding: 0 4px 10px;
+  font-size: 0.76rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.resumen-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.resumen-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
 
 dl {
   margin: 10px 0 0;
