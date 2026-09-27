@@ -83,16 +83,24 @@ export interface CoberturaRecinto {
   pct: number;
   // Progreso informativo, independiente entre sí (a diferencia de "pct" arriba,
   // que exige veedor Y coordinador para contar una junta como cubierta).
+  // pct* = % con titular asignado; pct*Verificado = % (sobre el mismo total)
+  // cuyo titular ya fue contactado.
   pctVeedores: number;
+  pctVeedoresVerificado: number;
   pctCoordinador: number;
+  pctCoordinadorVerificado: number;
 }
 
 export interface CoberturaParroquia {
   parroquiaCodigo: number;
   totalJuntas: number;
   juntasConVeedor: number;
+  juntasConVeedorVerificado: number;
   pctVeedores: number;
+  pctVeedoresVerificado: number;
   totalRecintos: number;
   recintosConCoordinador: number;
+  recintosConCoordinadorVerificado: number;
   pctCoordinador: number;
+  pctCoordinadorVerificado: number;
 }

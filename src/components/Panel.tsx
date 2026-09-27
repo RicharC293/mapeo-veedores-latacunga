@@ -9,7 +9,6 @@ import {
 import {
   calcularCobertura,
   calcularCoberturaPorParroquia,
-  colorParaCobertura,
 } from "../lib/gestion/coverage";
 import { fmt, normalizar, rango, title } from "../lib/format";
 import type {
@@ -188,7 +187,13 @@ export default function Panel({
         </div>
         <CoberturaBars
           pctVeedores={coberturaParroquia[v.code]?.pctVeedores ?? 0}
+          pctVeedoresVerificado={
+            coberturaParroquia[v.code]?.pctVeedoresVerificado ?? 0
+          }
           pctCoordinador={coberturaParroquia[v.code]?.pctCoordinador ?? 0}
+          pctCoordinadorVerificado={
+            coberturaParroquia[v.code]?.pctCoordinadorVerificado ?? 0
+          }
         />
         <h3>Recintos</h3>
         <ul class="list">
@@ -238,7 +243,13 @@ export default function Panel({
         </div>
         <CoberturaBars
           pctVeedores={coberturaRecinto.get(r.cod)?.pctVeedores ?? 0}
+          pctVeedoresVerificado={
+            coberturaRecinto.get(r.cod)?.pctVeedoresVerificado ?? 0
+          }
           pctCoordinador={coberturaRecinto.get(r.cod)?.pctCoordinador ?? 0}
+          pctCoordinadorVerificado={
+            coberturaRecinto.get(r.cod)?.pctCoordinadorVerificado ?? 0
+          }
         />
         <dl>
           <dt>Electores</dt>
@@ -342,7 +353,9 @@ function ParroquiaRow({
       </button>
       <CoberturaBars
         pctVeedores={cobertura?.pctVeedores ?? 0}
+        pctVeedoresVerificado={cobertura?.pctVeedoresVerificado ?? 0}
         pctCoordinador={cobertura?.pctCoordinador ?? 0}
+        pctCoordinadorVerificado={cobertura?.pctCoordinadorVerificado ?? 0}
         compact
       />
     </li>
@@ -386,7 +399,9 @@ function RecintoRow({
       </button>
       <CoberturaBars
         pctVeedores={cobertura?.pctVeedores ?? 0}
+        pctVeedoresVerificado={cobertura?.pctVeedoresVerificado ?? 0}
         pctCoordinador={cobertura?.pctCoordinador ?? 0}
+        pctCoordinadorVerificado={cobertura?.pctCoordinadorVerificado ?? 0}
         compact
       />
     </li>
@@ -411,18 +426,13 @@ function GroupSummary({
     (a, f) => a + stats[f.properties.code].jt,
     0,
   );
-  const avgVeedores = Math.round(
-    features.reduce(
-      (a, f) => a + (cobertura[f.properties.code]?.pctVeedores ?? 0),
-      0,
-    ) / features.length,
-  );
-  const avgCoordinador = Math.round(
-    features.reduce(
-      (a, f) => a + (cobertura[f.properties.code]?.pctCoordinador ?? 0),
-      0,
-    ) / features.length,
-  );
+  const avg = (key: keyof CoberturaParroquia) =>
+    Math.round(
+      features.reduce(
+        (a, f) => a + ((cobertura[f.properties.code]?.[key] as number) ?? 0),
+        0,
+      ) / features.length,
+    );
   return (
     <div class="group-summary">
       <div class="stats">
@@ -440,8 +450,10 @@ function GroupSummary({
         </div>
       </div>
       <CoberturaBars
-        pctVeedores={avgVeedores}
-        pctCoordinador={avgCoordinador}
+        pctVeedores={avg("pctVeedores")}
+        pctVeedoresVerificado={avg("pctVeedoresVerificado")}
+        pctCoordinador={avg("pctCoordinador")}
+        pctCoordinadorVerificado={avg("pctCoordinadorVerificado")}
       />
     </div>
   );
@@ -449,41 +461,63 @@ function GroupSummary({
 
 function CoberturaBars({
   pctVeedores,
+  pctVeedoresVerificado,
   pctCoordinador,
+  pctCoordinadorVerificado,
   compact,
 }: {
   pctVeedores: number;
+  pctVeedoresVerificado: number;
   pctCoordinador: number;
+  pctCoordinadorVerificado: number;
   compact?: boolean;
 }) {
   return (
     <div class={compact ? "progress-group compact" : "progress-group"}>
-      <ProgressBar label="Veedores" pctValue={pctVeedores} />
-      <ProgressBar label="Coordinador" pctValue={pctCoordinador} />
+      <ProgressBar
+        label="Veedores"
+        pct={pctVeedores}
+        pctVerificado={pctVeedoresVerificado}
+      />
+      <ProgressBar
+        label="Coordinador"
+        pct={pctCoordinador}
+        pctVerificado={pctCoordinadorVerificado}
+      />
     </div>
   );
 }
 
+// Barra de dos colores: la porción verde (a la izquierda) es el % ya
+// verificado y la porción roja el % registrado que aún falta contactar,
+// ambas sobre el mismo total. El resto de la barra (sin colorear) es lo que
+// aún no tiene titular asignado.
 function ProgressBar({
   label,
-  pctValue,
+  pct,
+  pctVerificado,
 }: {
   label: string;
-  pctValue: number;
+  pct: number;
+  pctVerificado: number;
 }) {
+  const pendiente = Math.max(0, pct - pctVerificado);
   return (
     <div class="progress">
       <div class="progress-head">
         <span>{label}</span>
-        <span>{pctValue}%</span>
+        <span>
+          {pct}% - {pctVerificado}%
+        </span>
       </div>
       <div class="progress-track">
         <div
-          class="progress-fill"
-          style={{
-            width: `${pctValue}%`,
-            background: colorParaCobertura(pctValue),
-          }}
+          class="progress-fill progress-fill-ok"
+          style={{ width: `${pctVerificado}%` }}
+        />
+        <div
+          class="progress-fill progress-fill-pending"
+          style={{ left: `${pctVerificado}%`, width: `${pendiente}%` }}
         />
       </div>
     </div>

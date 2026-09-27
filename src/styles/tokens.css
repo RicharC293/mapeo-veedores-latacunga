@@ -499,15 +499,27 @@ h3 {
   font-variant-numeric: tabular-nums;
 }
 .progress-track {
+  position: relative;
   height: 6px;
   border-radius: 99px;
   background: var(--chip);
   overflow: hidden;
 }
 .progress-fill {
-  height: 100%;
+  position: absolute;
+  top: 0;
+  bottom: 0;
   border-radius: 99px;
-  transition: width 0.3s ease;
+  transition:
+    width 0.3s ease,
+    left 0.3s ease;
+}
+.progress-fill-ok {
+  left: 0;
+  background: #2f9e57;
+}
+.progress-fill-pending {
+  background: #c94b4b;
 }
 
 dl {
