@@ -97,6 +97,7 @@ export async function agregarVeedor(input: {
       parroquiaCodigo: input.parroquiaCodigo,
       tipo: input.tipo,
       orden,
+      verificado: false,
       creadoEn: new Date().toISOString(),
     };
     creado = veedor;
@@ -185,4 +186,28 @@ export async function desvincularVeedor(
     recintoCodigo: d.recintoCodigo,
     parroquiaCodigo: d.parroquiaCodigo,
   });
+}
+
+export async function marcarVerificadoVeedor(id: string, verificado: boolean): Promise<Veedor> {
+  if (supabaseSecret) {
+    const { data, error } = await supabaseSecret
+      .from("veedores")
+      .update({ verificado })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return rowToVeedor(data);
+  }
+
+  let actualizado: Veedor | null = null;
+  await mutateCollection<Veedor>(COLLECTION, (items) =>
+    items.map((v) => {
+      if (v.id !== id) return v;
+      actualizado = { ...v, verificado };
+      return actualizado;
+    }),
+  );
+  if (!actualizado) throw new Error("No se encontró el veedor.");
+  return actualizado;
 }

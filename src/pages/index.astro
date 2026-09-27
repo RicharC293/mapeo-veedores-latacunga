@@ -4,11 +4,13 @@ import MapApp from "../components/MapApp";
 import { getMapData } from "../lib/data";
 import { listLideres } from "../lib/gestion/lideres";
 import { listCoordinadores } from "../lib/gestion/coordinadores";
+import { listVeedores } from "../lib/gestion/veedores";
 
-const [data, lideres, coordinadores] = await Promise.all([
+const [data, lideres, coordinadores, veedores] = await Promise.all([
   getMapData(),
   listLideres(),
   listCoordinadores(),
+  listVeedores(),
 ]);
 ---
 
@@ -19,6 +21,7 @@ const [data, lideres, coordinadores] = await Promise.all([
       data={data}
       lideres={lideres}
       coordinadores={coordinadores}
+      veedores={veedores}
     />
   </div>
 </Base>

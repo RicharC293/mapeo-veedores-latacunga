@@ -6,6 +6,11 @@ import {
   buildParroquiaStats,
   buildTotales,
 } from "../lib/stats";
+import {
+  calcularCobertura,
+  calcularCoberturaPorParroquia,
+  colorParaCobertura,
+} from "../lib/gestion/coverage";
 import { fmt, normalizar, rango, title } from "../lib/format";
 import type {
   MapData,
@@ -13,12 +18,19 @@ import type {
   ParroquiaStats,
   Recinto,
 } from "../lib/types";
-import type { Coordinador, Lider } from "../lib/gestion/types";
+import type {
+  CoberturaParroquia,
+  CoberturaRecinto,
+  Coordinador,
+  Lider,
+  Veedor,
+} from "../lib/gestion/types";
 
 interface Props {
   data: MapData;
   lideres: Lider[];
   coordinadores: Coordinador[];
+  veedores: Veedor[];
 }
 
 function nombreLider(lideres: Lider[], recinto: Recinto): string {
@@ -46,11 +58,33 @@ function nombreCoordinador(
   return titular ? titular.nombres : "Sin asignar";
 }
 
-export default function Panel({ data, lideres, coordinadores }: Props) {
+export default function Panel({
+  data,
+  lideres,
+  coordinadores,
+  veedores,
+}: Props) {
   const v = view.value;
   const parByCode = useMemo(() => buildParByCode(data), [data]);
   const stats = useMemo(() => buildParroquiaStats(data), [data]);
   const totales = useMemo(() => buildTotales(data), [data]);
+  const coberturaParroquia = useMemo(
+    () =>
+      calcularCoberturaPorParroquia(
+        data.parroquias.features,
+        data.recintos,
+        veedores,
+        coordinadores,
+      ),
+    [data, veedores, coordinadores],
+  );
+  const coberturaRecinto = useMemo(() => {
+    const porRecinto = new Map<number, CoberturaRecinto>();
+    for (const c of calcularCobertura(data.recintos, veedores, coordinadores)) {
+      porRecinto.set(c.recintoCodigo, c);
+    }
+    return porRecinto;
+  }, [data, veedores, coordinadores]);
 
   if (v.kind === "canton") {
     const byType = (u: boolean) =>
@@ -82,22 +116,34 @@ export default function Panel({ data, lideres, coordinadores }: Props) {
           </div>
         </div>
         <h3>Parroquias urbanas</h3>
+        <GroupSummary
+          features={byType(true)}
+          stats={stats}
+          cobertura={coberturaParroquia}
+        />
         <ul class="list">
           {byType(true).map((f) => (
             <ParroquiaRow
               key={f.properties.code}
               f={f}
               stats={stats[f.properties.code]}
+              cobertura={coberturaParroquia[f.properties.code]}
             />
           ))}
         </ul>
         <h3>Parroquias rurales</h3>
+        <GroupSummary
+          features={byType(false)}
+          stats={stats}
+          cobertura={coberturaParroquia}
+        />
         <ul class="list">
           {byType(false).map((f) => (
             <ParroquiaRow
               key={f.properties.code}
               f={f}
               stats={stats[f.properties.code]}
+              cobertura={coberturaParroquia[f.properties.code]}
             />
           ))}
         </ul>
@@ -140,6 +186,10 @@ export default function Panel({ data, lideres, coordinadores }: Props) {
             </small>
           </div>
         </div>
+        <CoberturaBars
+          pctVeedores={coberturaParroquia[v.code]?.pctVeedores ?? 0}
+          pctCoordinador={coberturaParroquia[v.code]?.pctCoordinador ?? 0}
+        />
         <h3>Recintos</h3>
         <ul class="list">
           {recs.map((r) => (
@@ -148,6 +198,7 @@ export default function Panel({ data, lideres, coordinadores }: Props) {
               r={r}
               showParish={false}
               parByCode={parByCode}
+              cobertura={coberturaRecinto.get(r.cod)}
             />
           ))}
         </ul>
@@ -185,6 +236,10 @@ export default function Panel({ data, lideres, coordinadores }: Props) {
             </small>
           </div>
         </div>
+        <CoberturaBars
+          pctVeedores={coberturaRecinto.get(r.cod)?.pctVeedores ?? 0}
+          pctCoordinador={coberturaRecinto.get(r.cod)?.pctCoordinador ?? 0}
+        />
         <dl>
           <dt>Electores</dt>
           <dd>{fmt(r.el)}</dd>
@@ -240,7 +295,13 @@ export default function Panel({ data, lideres, coordinadores }: Props) {
       {hits.length ? (
         <ul class="list">
           {hits.map((r) => (
-            <RecintoRow key={r.cod} r={r} showParish parByCode={parByCode} />
+            <RecintoRow
+              key={r.cod}
+              r={r}
+              showParish
+              parByCode={parByCode}
+              cobertura={coberturaRecinto.get(r.cod)}
+            />
           ))}
         </ul>
       ) : (
@@ -256,9 +317,11 @@ export default function Panel({ data, lideres, coordinadores }: Props) {
 function ParroquiaRow({
   f,
   stats: s,
+  cobertura,
 }: {
   f: ParroquiaFeature;
   stats: ParroquiaStats;
+  cobertura: CoberturaParroquia | undefined;
 }) {
   return (
     <li>
@@ -277,6 +340,11 @@ function ParroquiaRow({
           <small>electores</small>
         </span>
       </button>
+      <CoberturaBars
+        pctVeedores={cobertura?.pctVeedores ?? 0}
+        pctCoordinador={cobertura?.pctCoordinador ?? 0}
+        compact
+      />
     </li>
   );
 }
@@ -285,10 +353,12 @@ function RecintoRow({
   r,
   showParish,
   parByCode,
+  cobertura,
 }: {
   r: Recinto;
   showParish: boolean;
   parByCode: Map<number, ParroquiaFeature>;
+  cobertura: CoberturaRecinto | undefined;
 }) {
   const parish = parByCode.get(r.par);
   const p = parish ? parish.properties.name.replace(/ \(.*\)/, "") : "";
@@ -314,6 +384,108 @@ function RecintoRow({
           <small>juntas</small>
         </span>
       </button>
+      <CoberturaBars
+        pctVeedores={cobertura?.pctVeedores ?? 0}
+        pctCoordinador={cobertura?.pctCoordinador ?? 0}
+        compact
+      />
     </li>
+  );
+}
+
+function GroupSummary({
+  features,
+  stats,
+  cobertura,
+}: {
+  features: ParroquiaFeature[];
+  stats: Record<number, ParroquiaStats>;
+  cobertura: Record<number, CoberturaParroquia>;
+}) {
+  if (features.length === 0) return null;
+  const totalEl = features.reduce(
+    (a, f) => a + stats[f.properties.code].el,
+    0,
+  );
+  const totalJt = features.reduce(
+    (a, f) => a + stats[f.properties.code].jt,
+    0,
+  );
+  const avgVeedores = Math.round(
+    features.reduce(
+      (a, f) => a + (cobertura[f.properties.code]?.pctVeedores ?? 0),
+      0,
+    ) / features.length,
+  );
+  const avgCoordinador = Math.round(
+    features.reduce(
+      (a, f) => a + (cobertura[f.properties.code]?.pctCoordinador ?? 0),
+      0,
+    ) / features.length,
+  );
+  return (
+    <div class="group-summary">
+      <div class="stats">
+        <div class="stat">
+          <b>{features.length}</b>
+          <small>{features.length === 1 ? "parroquia" : "parroquias"}</small>
+        </div>
+        <div class="stat">
+          <b>{fmt(totalEl)}</b>
+          <small>electores</small>
+        </div>
+        <div class="stat">
+          <b>{totalJt}</b>
+          <small>juntas</small>
+        </div>
+      </div>
+      <CoberturaBars
+        pctVeedores={avgVeedores}
+        pctCoordinador={avgCoordinador}
+      />
+    </div>
+  );
+}
+
+function CoberturaBars({
+  pctVeedores,
+  pctCoordinador,
+  compact,
+}: {
+  pctVeedores: number;
+  pctCoordinador: number;
+  compact?: boolean;
+}) {
+  return (
+    <div class={compact ? "progress-group compact" : "progress-group"}>
+      <ProgressBar label="Veedores" pctValue={pctVeedores} />
+      <ProgressBar label="Coordinador" pctValue={pctCoordinador} />
+    </div>
+  );
+}
+
+function ProgressBar({
+  label,
+  pctValue,
+}: {
+  label: string;
+  pctValue: number;
+}) {
+  return (
+    <div class="progress">
+      <div class="progress-head">
+        <span>{label}</span>
+        <span>{pctValue}%</span>
+      </div>
+      <div class="progress-track">
+        <div
+          class="progress-fill"
+          style={{
+            width: `${pctValue}%`,
+            background: colorParaCobertura(pctValue),
+          }}
+        />
+      </div>
+    </div>
   );
 }

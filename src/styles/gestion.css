@@ -241,6 +241,16 @@
   color: var(--ink);
   font-size: 0.9rem;
 }
+.g-check-verificado {
+  margin-top: 4px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  cursor: pointer;
+  width: fit-content;
+}
+.g-check-verificado input {
+  cursor: pointer;
+}
 
 .g-list {
   list-style: none;

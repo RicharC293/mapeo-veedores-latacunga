@@ -7,6 +7,7 @@ export interface PersonaAsignada {
   cedula: string;
   nombres: string;
   telefono: string;
+  verificado: boolean;
 }
 
 interface Props {
@@ -24,6 +25,7 @@ interface Props {
     telefono: string;
   }) => Promise<void>;
   onDesvincular: (id: string, motivo: string | null) => Promise<void>;
+  onVerificar: (id: string, verificado: boolean) => Promise<void>;
 }
 
 type Abierto = null | "titular" | "suplente" | { desvincular: string };
@@ -35,6 +37,7 @@ export default function AsignacionCard({
   onAgregarTitular,
   onAgregarSuplente,
   onDesvincular,
+  onVerificar,
 }: Props) {
   const [abierto, setAbierto] = useState<Abierto>(null);
 
@@ -48,6 +51,7 @@ export default function AsignacionCard({
           <PersonaRow
             persona={titular}
             onDesvincular={() => setAbierto({ desvincular: titular.id })}
+            onVerificar={(v) => onVerificar(titular.id, v)}
           />
         ) : abierto === "titular" ? (
           <PersonaForm
@@ -84,6 +88,7 @@ export default function AsignacionCard({
               <PersonaRow
                 persona={s}
                 onDesvincular={() => setAbierto({ desvincular: s.id })}
+                onVerificar={(v) => onVerificar(s.id, v)}
               />
               {abierto !== null &&
               typeof abierto === "object" &&
@@ -121,10 +126,14 @@ export default function AsignacionCard({
 function PersonaRow({
   persona,
   onDesvincular,
+  onVerificar,
 }: {
   persona: PersonaAsignada;
   onDesvincular: () => void;
+  onVerificar: (verificado: boolean) => Promise<void>;
 }) {
+  const [enviando, setEnviando] = useState(false);
+
   return (
     <div class="g-persona">
       <div>
@@ -133,6 +142,23 @@ function PersonaRow({
           CI {persona.cedula}
           {persona.telefono ? ` · ${persona.telefono}` : ""}
         </small>
+        <label class="g-check g-check-verificado">
+          <input
+            type="checkbox"
+            checked={persona.verificado}
+            disabled={enviando}
+            onChange={async (e) => {
+              const checked = (e.currentTarget as HTMLInputElement).checked;
+              setEnviando(true);
+              try {
+                await onVerificar(checked);
+              } finally {
+                setEnviando(false);
+              }
+            }}
+          />
+          Verificado
+        </label>
       </div>
       <button class="g-btn-danger-ghost" onClick={onDesvincular}>
         Desvincular

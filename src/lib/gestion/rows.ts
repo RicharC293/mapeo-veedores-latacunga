@@ -21,6 +21,7 @@ export function rowToVeedor(row: Record<string, unknown>): Veedor {
     parroquiaCodigo: row.parroquia_codigo as number,
     tipo: row.tipo as TipoAsignacion,
     orden: row.orden as number,
+    verificado: Boolean(row.verificado),
     creadoEn: row.creado_en as string,
   };
 }
@@ -35,6 +36,7 @@ export function rowToCoordinador(row: Record<string, unknown>): Coordinador {
     parroquiaCodigo: row.parroquia_codigo as number,
     tipo: row.tipo as TipoAsignacion,
     orden: row.orden as number,
+    verificado: Boolean(row.verificado),
     creadoEn: row.creado_en as string,
   };
 }

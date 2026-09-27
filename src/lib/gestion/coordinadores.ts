@@ -100,6 +100,7 @@ export async function agregarCoordinador(input: {
       parroquiaCodigo: input.parroquiaCodigo,
       tipo: input.tipo,
       orden,
+      verificado: false,
       creadoEn: new Date().toISOString(),
     };
     creado = coordinador;
@@ -196,4 +197,31 @@ export async function desvincularCoordinador(
     recintoCodigo: d.recintoCodigo,
     parroquiaCodigo: d.parroquiaCodigo,
   });
+}
+
+export async function marcarVerificadoCoordinador(
+  id: string,
+  verificado: boolean,
+): Promise<Coordinador> {
+  if (supabaseSecret) {
+    const { data, error } = await supabaseSecret
+      .from("coordinadores")
+      .update({ verificado })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return rowToCoordinador(data);
+  }
+
+  let actualizado: Coordinador | null = null;
+  await mutateCollection<Coordinador>(COLLECTION, (items) =>
+    items.map((c) => {
+      if (c.id !== id) return c;
+      actualizado = { ...c, verificado };
+      return actualizado;
+    }),
+  );
+  if (!actualizado) throw new Error("No se encontró el coordinador.");
+  return actualizado;
 }

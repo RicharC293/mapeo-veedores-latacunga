@@ -19,6 +19,7 @@ export interface Veedor {
   parroquiaCodigo: number;
   tipo: TipoAsignacion;
   orden: number;
+  verificado: boolean;
   creadoEn: string;
 }
 
@@ -31,6 +32,7 @@ export interface Coordinador {
   parroquiaCodigo: number;
   tipo: TipoAsignacion;
   orden: number;
+  verificado: boolean;
   creadoEn: string;
 }
 
@@ -79,4 +81,18 @@ export interface CoberturaRecinto {
   juntasCubiertas: number;
   tieneCoordinadorTitular: boolean;
   pct: number;
+  // Progreso informativo, independiente entre sí (a diferencia de "pct" arriba,
+  // que exige veedor Y coordinador para contar una junta como cubierta).
+  pctVeedores: number;
+  pctCoordinador: number;
+}
+
+export interface CoberturaParroquia {
+  parroquiaCodigo: number;
+  totalJuntas: number;
+  juntasConVeedor: number;
+  pctVeedores: number;
+  totalRecintos: number;
+  recintosConCoordinador: number;
+  pctCoordinador: number;
 }

@@ -471,6 +471,45 @@ h3 {
   margin-left: 4px;
   vertical-align: 1px;
 }
+.group-summary {
+  margin-bottom: 4px;
+}
+.progress-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 4px 12px;
+}
+.progress-group.compact {
+  flex-direction: row;
+  gap: 12px;
+  padding: 0 4px 10px;
+}
+.progress-group.compact .progress {
+  flex: 1;
+  min-width: 0;
+}
+.progress-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-bottom: 3px;
+  font-variant-numeric: tabular-nums;
+}
+.progress-track {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--chip);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.3s ease;
+}
+
 dl {
   margin: 10px 0 0;
   display: grid;
