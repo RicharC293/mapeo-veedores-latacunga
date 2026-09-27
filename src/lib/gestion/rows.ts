@@ -65,6 +65,7 @@ export function rowToLider(row: Record<string, unknown>): Lider {
     cedula: row.cedula as string,
     nombres: row.nombres as string,
     telefono: row.telefono as string,
+    organizacion: (row.organizacion as string | null) ?? "",
     ambito: row.ambito as AmbitoLider,
     parroquiaCodigo: (row.parroquia_codigo as number | null) ?? null,
     recintoCodigos: (row.recinto_codigos as number[] | null) ?? [],

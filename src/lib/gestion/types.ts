@@ -59,6 +59,7 @@ export interface Lider {
   cedula: string;
   nombres: string;
   telefono: string;
+  organizacion: string;
   ambito: AmbitoLider;
   parroquiaCodigo: number | null;
   recintoCodigos: number[];

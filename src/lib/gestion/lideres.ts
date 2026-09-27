@@ -23,6 +23,7 @@ export async function agregarLider(input: {
   cedula: string;
   nombres: string;
   telefono: string;
+  organizacion: string;
   ambito: "general" | "parroquia";
   parroquiaCodigo: number | null;
   recintoCodigos: number[];
@@ -46,6 +47,7 @@ export async function agregarLider(input: {
         cedula,
         nombres: input.nombres.trim(),
         telefono: input.telefono.trim(),
+        organizacion: input.organizacion.trim(),
         ambito: input.ambito,
         parroquia_codigo: parroquiaCodigo,
         recinto_codigos: recintoCodigos,
@@ -70,6 +72,7 @@ export async function agregarLider(input: {
       cedula,
       nombres: input.nombres.trim(),
       telefono: input.telefono.trim(),
+      organizacion: input.organizacion.trim(),
       ambito: input.ambito,
       parroquiaCodigo,
       recintoCodigos,
@@ -86,7 +89,12 @@ export async function editarLider(
   patch: Partial<
     Pick<
       Lider,
-      "nombres" | "telefono" | "parroquiaCodigo" | "recintoCodigos" | "ambito"
+      | "nombres"
+      | "telefono"
+      | "organizacion"
+      | "parroquiaCodigo"
+      | "recintoCodigos"
+      | "ambito"
     >
   >,
 ): Promise<Lider> {
@@ -94,6 +102,8 @@ export async function editarLider(
     const dbPatch: LiderUpdate = {};
     if (patch.nombres !== undefined) dbPatch.nombres = patch.nombres;
     if (patch.telefono !== undefined) dbPatch.telefono = patch.telefono;
+    if (patch.organizacion !== undefined)
+      dbPatch.organizacion = patch.organizacion;
     if (patch.ambito !== undefined) dbPatch.ambito = patch.ambito;
     if (patch.parroquiaCodigo !== undefined)
       dbPatch.parroquia_codigo = patch.parroquiaCodigo;

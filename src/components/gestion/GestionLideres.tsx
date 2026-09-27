@@ -23,6 +23,7 @@ interface FormState {
   cedula: string;
   nombres: string;
   telefono: string;
+  organizacion: string;
   ambito: "general" | "parroquia";
   parroquiaCodigo: number | "";
   recintoCodigos: number[];
@@ -32,6 +33,7 @@ const vacio: FormState = {
   cedula: "",
   nombres: "",
   telefono: "",
+  organizacion: "",
   ambito: "parroquia",
   parroquiaCodigo: "",
   recintoCodigos: [],
@@ -71,6 +73,7 @@ export default function GestionLideres({
           cedula: form.cedula,
           nombres: form.nombres,
           telefono: form.telefono,
+          organizacion: form.organizacion,
           ambito: form.ambito,
           parroquiaCodigo:
             form.ambito === "parroquia" ? form.parroquiaCodigo || null : null,
@@ -141,6 +144,19 @@ export default function GestionLideres({
                 telefono: (e.currentTarget as HTMLInputElement).value,
               })
             }
+          />
+        </label>
+        <label>
+          Organización
+          <input
+            value={form.organizacion}
+            onInput={(e) =>
+              setForm({
+                ...form,
+                organizacion: (e.currentTarget as HTMLInputElement).value,
+              })
+            }
+            placeholder="Opcional"
           />
         </label>
         <label>
@@ -245,6 +261,9 @@ export default function GestionLideres({
                     ? "Líder general de Latacunga"
                     : `Líder de ${nombreParroquia(l.parroquiaCodigo)}`}
                 </small>
+                {l.organizacion ? (
+                  <small>Organización: {l.organizacion}</small>
+                ) : null}
                 {l.recintoCodigos.length > 0 ? (
                   <small>
                     Recintos:{" "}
@@ -292,6 +311,7 @@ function LiderEditForm({
 }) {
   const [nombres, setNombres] = useState(lider.nombres);
   const [telefono, setTelefono] = useState(lider.telefono);
+  const [organizacion, setOrganizacion] = useState(lider.organizacion);
   const [parroquiaCodigo, setParroquiaCodigo] = useState<number | "">(
     lider.parroquiaCodigo ?? "",
   );
@@ -309,6 +329,7 @@ function LiderEditForm({
       await onGuardar({
         nombres,
         telefono,
+        organizacion,
         parroquiaCodigo:
           lider.ambito === "parroquia" ? parroquiaCodigo || null : null,
         recintoCodigos: lider.ambito === "parroquia" ? recintoCodigos : [],
@@ -337,6 +358,16 @@ function LiderEditForm({
           onInput={(e) =>
             setTelefono((e.currentTarget as HTMLInputElement).value)
           }
+        />
+      </label>
+      <label>
+        Organización
+        <input
+          value={organizacion}
+          onInput={(e) =>
+            setOrganizacion((e.currentTarget as HTMLInputElement).value)
+          }
+          placeholder="Opcional"
         />
       </label>
       {lider.ambito === "parroquia" ? (

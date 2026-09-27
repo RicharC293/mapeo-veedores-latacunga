@@ -196,6 +196,7 @@ export type Database = {
           creado_en: string
           id: string
           nombres: string
+          organizacion: string
           parroquia_codigo: number | null
           recinto_codigos: number[]
           telefono: string
@@ -206,6 +207,7 @@ export type Database = {
           creado_en?: string
           id?: string
           nombres: string
+          organizacion?: string
           parroquia_codigo?: number | null
           recinto_codigos?: number[]
           telefono?: string
@@ -216,6 +218,7 @@ export type Database = {
           creado_en?: string
           id?: string
           nombres?: string
+          organizacion?: string
           parroquia_codigo?: number | null
           recinto_codigos?: number[]
           telefono?: string
