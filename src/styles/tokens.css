@@ -740,6 +740,30 @@ dd {
   cursor: pointer;
   padding: 8px;
 }
+.modal-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 24px 16px 0;
+}
+.modal-tab {
+  background: var(--chip);
+  border: 0;
+  border-radius: 99px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.modal-tab-active {
+  background: var(--sel);
+  color: var(--panel);
+}
 .modal-rol {
   color: var(--muted);
   font-size: 0.78rem;

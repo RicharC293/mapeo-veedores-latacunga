@@ -64,6 +64,24 @@ function coordinadorDe(
   );
 }
 
+function personaDe(
+  rol: string,
+  entidad: {
+    nombres: string;
+    cedula: string;
+    telefono: string;
+    organizacion?: string;
+  },
+): PersonaInfo {
+  return {
+    rol,
+    nombres: entidad.nombres,
+    cedula: entidad.cedula,
+    telefono: entidad.telefono,
+    organizacion: entidad.organizacion,
+  };
+}
+
 function acreditadoCdaDe(
   acreditadosCda: AcreditadoCda[],
   recintoCodigo: number,
@@ -83,9 +101,9 @@ export default function Panel({
   acreditadosCda,
 }: Props) {
   const v = view.value;
-  const [persona, setPersona] = useState<PersonaInfo | null>(null);
+  const [personas, setPersonas] = useState<PersonaInfo[] | null>(null);
   useEffect(() => {
-    setPersona(null);
+    setPersonas(null);
   }, [v]);
   const parByCode = useMemo(() => buildParByCode(data), [data]);
   const stats = useMemo(() => buildParroquiaStats(data), [data]);
@@ -274,28 +292,26 @@ export default function Panel({
           <dd>{f.properties.name}</dd>
           <dt>Líder</dt>
           <dd>
-            {lideresRecinto.length > 0 ? (
-              lideresRecinto.map((l, i) => (
-                <>
-                  {i > 0 ? ", " : ""}
-                  <button
-                    class="link-persona"
-                    onClick={() =>
-                      setPersona({
-                        rol: "Líder",
-                        nombres: l.nombres,
-                        cedula: l.cedula,
-                        telefono: l.telefono,
-                        organizacion: l.organizacion,
-                      })
-                    }
-                  >
-                    {l.nombres}
-                  </button>
-                </>
-              ))
-            ) : (
+            {lideresRecinto.length === 0 ? (
               <span>Sin asignar</span>
+            ) : lideresRecinto.length === 1 ? (
+              <button
+                class="link-persona"
+                onClick={() => setPersonas([personaDe("Líder", lideresRecinto[0])])}
+              >
+                {lideresRecinto[0].nombres}
+              </button>
+            ) : (
+              <button
+                class="link-persona"
+                onClick={() =>
+                  setPersonas(
+                    lideresRecinto.map((l) => personaDe("Líder", l)),
+                  )
+                }
+              >
+                Ver líderes ({lideresRecinto.length})
+              </button>
             )}
           </dd>
           <dt>Coordinador de recinto</dt>
@@ -304,12 +320,9 @@ export default function Panel({
               <button
                 class="link-persona"
                 onClick={() =>
-                  setPersona({
-                    rol: "Coordinador de recinto",
-                    nombres: coordinadorRecinto.nombres,
-                    cedula: coordinadorRecinto.cedula,
-                    telefono: coordinadorRecinto.telefono,
-                  })
+                  setPersonas([
+                    personaDe("Coordinador de recinto", coordinadorRecinto),
+                  ])
                 }
               >
                 {coordinadorRecinto.nombres}
@@ -326,12 +339,9 @@ export default function Panel({
                   <button
                     class="link-persona"
                     onClick={() =>
-                      setPersona({
-                        rol: "Acreditado CDA",
-                        nombres: acreditadoCdaRecinto.nombres,
-                        cedula: acreditadoCdaRecinto.cedula,
-                        telefono: acreditadoCdaRecinto.telefono,
-                      })
+                      setPersonas([
+                        personaDe("Acreditado CDA", acreditadoCdaRecinto),
+                      ])
                     }
                   >
                     {acreditadoCdaRecinto.nombres}
@@ -370,8 +380,8 @@ export default function Panel({
         <a class="go" href={maps} target="_blank" rel="noopener">
           Cómo llegar en Google Maps
         </a>
-        {persona ? (
-          <PersonaModal persona={persona} onClose={() => setPersona(null)} />
+        {personas ? (
+          <PersonaModal personas={personas} onClose={() => setPersonas(null)} />
         ) : null}
       </>
     );
@@ -743,12 +753,14 @@ function numeroWhatsapp(telefono: string): string {
 }
 
 function PersonaModal({
-  persona,
+  personas,
   onClose,
 }: {
-  persona: PersonaInfo;
+  personas: PersonaInfo[];
   onClose: () => void;
 }) {
+  const [activo, setActivo] = useState(0);
+  const persona = personas[activo] ?? personas[0];
   const telefono = persona.telefono.trim();
   return (
     <div class="modal-backdrop" onClick={onClose}>
@@ -756,6 +768,21 @@ function PersonaModal({
         <button class="modal-close" onClick={onClose} aria-label="Cerrar">
           ×
         </button>
+        {personas.length > 1 ? (
+          <div class="modal-tabs">
+            {personas.map((p, i) => (
+              <button
+                key={i}
+                class={
+                  i === activo ? "modal-tab modal-tab-active" : "modal-tab"
+                }
+                onClick={() => setActivo(i)}
+              >
+                {p.nombres}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <p class="modal-rol">{persona.rol}</p>
         <h3 class="modal-nombre">{persona.nombres}</h3>
         <dl class="modal-dl">
