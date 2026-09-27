@@ -358,7 +358,7 @@ function ParroquiaRow({
           <small>electores</small>
         </span>
       </button>
-      <CoberturaBarsAgregado cobertura={cobertura} compact />
+      <CoberturaBarsAgregado cobertura={cobertura} />
     </li>
   );
 }
@@ -489,13 +489,11 @@ function GroupSummary({
 // sentido mostrarlas como porcentaje.
 function CoberturaBarsAgregado({
   cobertura,
-  compact,
 }: {
   cobertura: CoberturaParroquia | undefined;
-  compact?: boolean;
 }) {
   return (
-    <div class={compact ? "progress-group compact" : "progress-group"}>
+    <div class="progress-group">
       <ProgressBar
         label="Veedores"
         pct={cobertura?.pctVeedores ?? 0}
