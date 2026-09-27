@@ -588,6 +588,23 @@ dd {
   margin: 0;
   font-weight: 700;
 }
+.link-persona {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--sel);
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) {
+  .link-persona:hover {
+    text-decoration-style: solid;
+  }
+}
 .juntas {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -690,4 +707,95 @@ dd {
   * {
     transition: none !important;
   }
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+}
+.modal-card {
+  position: relative;
+  background: var(--panel);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 360px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+.modal-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: 0;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 8px;
+}
+.modal-rol {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  margin: 0 0 2px;
+}
+.modal-nombre {
+  margin: 0 0 14px;
+  font-size: 1.25rem;
+  padding-right: 24px;
+}
+.modal-dl {
+  margin: 0 0 20px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 14px;
+}
+.modal-dl dt {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.modal-dl dd {
+  margin: 0;
+  font-weight: 700;
+}
+.modal-actions {
+  display: flex;
+  gap: 10px;
+}
+.modal-btn {
+  flex: 1;
+  text-align: center;
+  padding: 11px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  text-decoration: none;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition: transform 100ms ease-out;
+}
+.modal-btn:active {
+  transform: scale(0.97);
+}
+.modal-btn-call {
+  background: var(--sel);
+  color: var(--panel);
+}
+.modal-btn-whatsapp {
+  background: #25d366;
+  color: #05300f;
+}
+.modal-sin-telefono {
+  color: var(--muted);
+  margin: 0;
 }

@@ -1,4 +1,4 @@
-import { useMemo } from "preact/hooks";
+import { useEffect, useMemo, useState } from "preact/hooks";
 import { view } from "../lib/state";
 import { selectCanton, selectParroquia, selectRecinto } from "../lib/state";
 import {
@@ -34,39 +34,45 @@ interface Props {
   acreditadosCda: AcreditadoCda[];
 }
 
-function nombreLider(lideres: Lider[], recinto: Recinto): string {
+interface PersonaInfo {
+  rol: string;
+  nombres: string;
+  cedula: string;
+  telefono: string;
+  organizacion?: string;
+}
+
+function lideresDe(lideres: Lider[], recinto: Recinto): Lider[] {
   const especificos = lideres.filter(
     (l) => l.ambito === "parroquia" && l.recintoCodigos.includes(recinto.cod),
   );
-  const relevantes =
-    especificos.length > 0
-      ? especificos
-      : lideres.filter(
-          (l) => l.ambito === "parroquia" && l.parroquiaCodigo === recinto.par,
-        );
-  return relevantes.length > 0
-    ? relevantes.map((l) => l.nombres).join(", ")
-    : "Sin asignar";
+  return especificos.length > 0
+    ? especificos
+    : lideres.filter(
+        (l) => l.ambito === "parroquia" && l.parroquiaCodigo === recinto.par,
+      );
 }
 
-function nombreCoordinador(
+function coordinadorDe(
   coordinadores: Coordinador[],
   recintoCodigo: number,
-): string {
-  const titular = coordinadores.find(
-    (c) => c.recintoCodigo === recintoCodigo && c.tipo === "titular",
+): Coordinador | null {
+  return (
+    coordinadores.find(
+      (c) => c.recintoCodigo === recintoCodigo && c.tipo === "titular",
+    ) ?? null
   );
-  return titular ? titular.nombres : "Sin asignar";
 }
 
-function nombreAcreditadoCda(
+function acreditadoCdaDe(
   acreditadosCda: AcreditadoCda[],
   recintoCodigo: number,
-): string {
-  const titular = acreditadosCda.find(
-    (a) => a.recintoCodigo === recintoCodigo && a.tipo === "titular",
+): AcreditadoCda | null {
+  return (
+    acreditadosCda.find(
+      (a) => a.recintoCodigo === recintoCodigo && a.tipo === "titular",
+    ) ?? null
   );
-  return titular ? titular.nombres : "Sin asignar";
 }
 
 export default function Panel({
@@ -77,6 +83,10 @@ export default function Panel({
   acreditadosCda,
 }: Props) {
   const v = view.value;
+  const [persona, setPersona] = useState<PersonaInfo | null>(null);
+  useEffect(() => {
+    setPersona(null);
+  }, [v]);
   const parByCode = useMemo(() => buildParByCode(data), [data]);
   const stats = useMemo(() => buildParroquiaStats(data), [data]);
   const totales = useMemo(() => buildTotales(data), [data]);
@@ -226,6 +236,9 @@ export default function Panel({
     const f = r ? parByCode.get(r.par) : undefined;
     if (!r || !f) return null;
     const maps = `https://www.google.com/maps/search/?api=1&query=${r.lat},${r.lon}`;
+    const lideresRecinto = lideresDe(lideres, r);
+    const coordinadorRecinto = coordinadorDe(coordinadores, r.cod);
+    const acreditadoCdaRecinto = acreditadoCdaDe(acreditadosCda, r.cod);
     return (
       <>
         <button class="back" onClick={() => selectParroquia(r.par, true)}>
@@ -260,13 +273,73 @@ export default function Panel({
           <dt>Parroquia</dt>
           <dd>{f.properties.name}</dd>
           <dt>Líder</dt>
-          <dd>{nombreLider(lideres, r)}</dd>
+          <dd>
+            {lideresRecinto.length > 0 ? (
+              lideresRecinto.map((l, i) => (
+                <>
+                  {i > 0 ? ", " : ""}
+                  <button
+                    class="link-persona"
+                    onClick={() =>
+                      setPersona({
+                        rol: "Líder",
+                        nombres: l.nombres,
+                        cedula: l.cedula,
+                        telefono: l.telefono,
+                        organizacion: l.organizacion,
+                      })
+                    }
+                  >
+                    {l.nombres}
+                  </button>
+                </>
+              ))
+            ) : (
+              <span>Sin asignar</span>
+            )}
+          </dd>
           <dt>Coordinador de recinto</dt>
-          <dd>{nombreCoordinador(coordinadores, r.cod)}</dd>
+          <dd>
+            {coordinadorRecinto ? (
+              <button
+                class="link-persona"
+                onClick={() =>
+                  setPersona({
+                    rol: "Coordinador de recinto",
+                    nombres: coordinadorRecinto.nombres,
+                    cedula: coordinadorRecinto.cedula,
+                    telefono: coordinadorRecinto.telefono,
+                  })
+                }
+              >
+                {coordinadorRecinto.nombres}
+              </button>
+            ) : (
+              <span>Sin asignar</span>
+            )}
+          </dd>
           {r.cda ? (
             <>
               <dt>Acreditado CDA</dt>
-              <dd>{nombreAcreditadoCda(acreditadosCda, r.cod)}</dd>
+              <dd>
+                {acreditadoCdaRecinto ? (
+                  <button
+                    class="link-persona"
+                    onClick={() =>
+                      setPersona({
+                        rol: "Acreditado CDA",
+                        nombres: acreditadoCdaRecinto.nombres,
+                        cedula: acreditadoCdaRecinto.cedula,
+                        telefono: acreditadoCdaRecinto.telefono,
+                      })
+                    }
+                  >
+                    {acreditadoCdaRecinto.nombres}
+                  </button>
+                ) : (
+                  <span>Sin asignar</span>
+                )}
+              </dd>
             </>
           ) : null}
           {r.zona ? (
@@ -297,6 +370,9 @@ export default function Panel({
         <a class="go" href={maps} target="_blank" rel="noopener">
           Cómo llegar en Google Maps
         </a>
+        {persona ? (
+          <PersonaModal persona={persona} onClose={() => setPersona(null)} />
+        ) : null}
       </>
     );
   }
@@ -652,6 +728,65 @@ function ProgressBar({
           class="progress-fill progress-fill-pending"
           style={{ left: `${pctVerificado}%`, width: `${pendiente}%` }}
         />
+      </div>
+    </div>
+  );
+}
+
+// Convierte un teléfono ecuatoriano (celular con 0 inicial, o ya con
+// código de país) al formato internacional sin signos que espera wa.me.
+function numeroWhatsapp(telefono: string): string {
+  const digitos = telefono.replace(/\D/g, "");
+  if (digitos.startsWith("593")) return digitos;
+  if (digitos.startsWith("0")) return `593${digitos.slice(1)}`;
+  return digitos;
+}
+
+function PersonaModal({
+  persona,
+  onClose,
+}: {
+  persona: PersonaInfo;
+  onClose: () => void;
+}) {
+  const telefono = persona.telefono.trim();
+  return (
+    <div class="modal-backdrop" onClick={onClose}>
+      <div class="modal-card" onClick={(e) => e.stopPropagation()}>
+        <button class="modal-close" onClick={onClose} aria-label="Cerrar">
+          ×
+        </button>
+        <p class="modal-rol">{persona.rol}</p>
+        <h3 class="modal-nombre">{persona.nombres}</h3>
+        <dl class="modal-dl">
+          <dt>Cédula</dt>
+          <dd>{persona.cedula}</dd>
+          <dt>Teléfono</dt>
+          <dd>{telefono || "No registrado"}</dd>
+          {persona.organizacion ? (
+            <>
+              <dt>Organización</dt>
+              <dd>{persona.organizacion}</dd>
+            </>
+          ) : null}
+        </dl>
+        {telefono ? (
+          <div class="modal-actions">
+            <a class="modal-btn modal-btn-call" href={`tel:${telefono}`}>
+              Llamar
+            </a>
+            <a
+              class="modal-btn modal-btn-whatsapp"
+              href={`https://wa.me/${numeroWhatsapp(telefono)}`}
+              target="_blank"
+              rel="noopener"
+            >
+              WhatsApp
+            </a>
+          </div>
+        ) : (
+          <p class="modal-sin-telefono">Sin teléfono registrado.</p>
+        )}
       </div>
     </div>
   );
