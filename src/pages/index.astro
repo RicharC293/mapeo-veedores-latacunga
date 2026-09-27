@@ -1,0 +1,13 @@
+---
+import Base from "../layouts/Base.astro";
+import MapApp from "../components/MapApp";
+import { getMapData } from "../lib/data";
+
+const data = await getMapData();
+---
+
+<Base title="Recintos electorales de Latacunga">
+  <div class="app">
+    <MapApp client:load data={data} />
+  </div>
+</Base>

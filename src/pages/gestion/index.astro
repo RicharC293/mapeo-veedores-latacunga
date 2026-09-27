@@ -1,0 +1,68 @@
+---
+import GestionLayout from "../../layouts/GestionLayout.astro";
+import { getMapData } from "../../lib/data";
+import { listVeedores } from "../../lib/gestion/veedores";
+import { listCoordinadores } from "../../lib/gestion/coordinadores";
+import { listLideres } from "../../lib/gestion/lideres";
+import { listListaNegra } from "../../lib/gestion/listaNegra";
+import { calcularCobertura } from "../../lib/gestion/coverage";
+
+const data = await getMapData();
+const [veedores, coordinadores, lideres, listaNegra] = await Promise.all([
+  listVeedores(),
+  listCoordinadores(),
+  listLideres(),
+  listListaNegra(),
+]);
+const cobertura = calcularCobertura(data.recintos, veedores, coordinadores);
+const totalJuntas = cobertura.reduce((a, c) => a + c.totalJuntas, 0);
+const totalCubiertas = cobertura.reduce((a, c) => a + c.juntasCubiertas, 0);
+const pctGlobal =
+  totalJuntas > 0 ? Math.round((totalCubiertas / totalJuntas) * 1000) / 10 : 0;
+
+const veedoresTitulares = veedores.filter((v) => v.tipo === "titular").length;
+const coordinadoresTitulares = coordinadores.filter(
+  (c) => c.tipo === "titular",
+).length;
+---
+
+<GestionLayout title="Gestión" activo="index">
+  <h1>Gestión de veedores y coordinadores</h1>
+  <p class="g-sub">
+    Panel de organización de la veeduría electoral. Sin autenticación por ahora.
+  </p>
+
+  <div class="g-summary">
+    <a href="/gestion/veedores">
+      <b>{veedoresTitulares}</b>
+      <small>veedores titulares</small>
+    </a>
+    <a href="/gestion/coordinadores">
+      <b>{coordinadoresTitulares}</b>
+      <small>coordinadores titulares</small>
+    </a>
+    <a href="/gestion/lideres">
+      <b>{lideres.length}</b>
+      <small>líderes</small>
+    </a>
+    <a href="/gestion/lista-negra">
+      <b>{listaNegra.length}</b>
+      <small>en lista negra</small>
+    </a>
+    <a href="/gestion/cobertura">
+      <b>{pctGlobal}%</b>
+      <small>cobertura del cantón</small>
+    </a>
+  </div>
+
+  <p>
+    Usa el menú de arriba para gestionar{" "}
+    <a href="/gestion/veedores">veedores</a>,
+    <a href="/gestion/coordinadores">coordinadores</a>,{" "}
+    <a href="/gestion/lideres">líderes</a> y la
+    <a href="/gestion/lista-negra">lista negra</a>, o revisar la
+    <a href="/gestion/cobertura">cobertura</a>, el{" "}
+    <a href="/gestion/crecimiento">crecimiento diario</a>y el{" "}
+    <a href="/gestion/organigrama">organigrama</a>.
+  </p>
+</GestionLayout>

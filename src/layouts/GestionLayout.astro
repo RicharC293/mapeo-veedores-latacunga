@@ -1,0 +1,50 @@
+---
+import Base from "./Base.astro";
+import "../styles/gestion.css";
+
+interface Props {
+  title: string;
+  activo:
+    | "index"
+    | "veedores"
+    | "coordinadores"
+    | "lideres"
+    | "lista-negra"
+    | "cobertura"
+    | "crecimiento"
+    | "organigrama";
+}
+
+const { title, activo } = Astro.props;
+
+const links = [
+  { href: "/gestion", key: "index", label: "Resumen" },
+  { href: "/gestion/veedores", key: "veedores", label: "Veedores" },
+  {
+    href: "/gestion/coordinadores",
+    key: "coordinadores",
+    label: "Coordinadores",
+  },
+  { href: "/gestion/lideres", key: "lideres", label: "Líderes" },
+  { href: "/gestion/lista-negra", key: "lista-negra", label: "Lista negra" },
+  { href: "/gestion/cobertura", key: "cobertura", label: "Cobertura" },
+  { href: "/gestion/crecimiento", key: "crecimiento", label: "Crecimiento" },
+  { href: "/gestion/organigrama", key: "organigrama", label: "Organigrama" },
+] as const;
+---
+
+<Base title={`${title} · Gestión`}>
+  <div class="g-shell">
+    <nav class="g-nav">
+      <a class="g-nav-back" href="/">
+        ‹ Mapa
+      </a>
+      {links.map((l) => (
+        <a href={l.href} aria-current={activo === l.key ? "page" : undefined}>
+          {l.label}
+        </a>
+      ))}
+    </nav>
+    <slot />
+  </div>
+</Base>

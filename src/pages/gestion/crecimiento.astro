@@ -1,0 +1,23 @@
+---
+import GestionLayout from "../../layouts/GestionLayout.astro";
+import GraficoCrecimiento from "../../components/gestion/GraficoCrecimiento";
+import { getMapData } from "../../lib/data";
+import { listEventos } from "../../lib/gestion/eventos";
+
+const data = await getMapData();
+const eventos = await listEventos();
+---
+
+<GestionLayout title="Crecimiento" activo="crecimiento">
+  <h1>Crecimiento diario</h1>
+  <p class="g-sub">
+    Altas y bajas netas de veedores y coordinadores por día. Filtra por
+    parroquia y recinto; sin filtro se muestra todo el cantón.
+  </p>
+  <GraficoCrecimiento
+    client:load
+    eventos={eventos}
+    parroquias={data.parroquias.features}
+    recintos={data.recintos}
+  />
+</GestionLayout>

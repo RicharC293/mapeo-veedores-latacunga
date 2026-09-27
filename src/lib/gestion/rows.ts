@@ -1,0 +1,65 @@
+// Traduce filas de Supabase (snake_case) a los tipos de dominio (camelCase).
+
+import type {
+  AmbitoLider,
+  Coordinador,
+  Lider,
+  ListaNegraEntry,
+  OrigenListaNegra,
+  TipoAsignacion,
+  Veedor,
+} from "./types";
+
+export function rowToVeedor(row: Record<string, unknown>): Veedor {
+  return {
+    id: row.id as string,
+    cedula: row.cedula as string,
+    nombres: row.nombres as string,
+    telefono: row.telefono as string,
+    juntaId: row.junta_id as string,
+    recintoCodigo: row.recinto_codigo as number,
+    parroquiaCodigo: row.parroquia_codigo as number,
+    tipo: row.tipo as TipoAsignacion,
+    orden: row.orden as number,
+    creadoEn: row.creado_en as string,
+  };
+}
+
+export function rowToCoordinador(row: Record<string, unknown>): Coordinador {
+  return {
+    id: row.id as string,
+    cedula: row.cedula as string,
+    nombres: row.nombres as string,
+    telefono: row.telefono as string,
+    recintoCodigo: row.recinto_codigo as number,
+    parroquiaCodigo: row.parroquia_codigo as number,
+    tipo: row.tipo as TipoAsignacion,
+    orden: row.orden as number,
+    creadoEn: row.creado_en as string,
+  };
+}
+
+export function rowToLider(row: Record<string, unknown>): Lider {
+  return {
+    id: row.id as string,
+    cedula: row.cedula as string,
+    nombres: row.nombres as string,
+    telefono: row.telefono as string,
+    ambito: row.ambito as AmbitoLider,
+    parroquiaCodigo: (row.parroquia_codigo as number | null) ?? null,
+    recintoCodigos: (row.recinto_codigos as number[] | null) ?? [],
+    creadoEn: row.creado_en as string,
+  };
+}
+
+export function rowToListaNegra(row: Record<string, unknown>): ListaNegraEntry {
+  return {
+    id: row.id as string,
+    cedula: row.cedula as string,
+    nombres: row.nombres as string,
+    telefono: row.telefono as string,
+    motivo: (row.motivo as string | null) ?? null,
+    origen: row.origen as OrigenListaNegra,
+    creadoEn: row.creado_en as string,
+  };
+}

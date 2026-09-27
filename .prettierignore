@@ -1,0 +1,4 @@
+# Prototipo original: no se reformatea, se mantiene tal cual como referencia.
+reference/
+# Datos generados/seed: no necesitan el estilo de Prettier.
+data/

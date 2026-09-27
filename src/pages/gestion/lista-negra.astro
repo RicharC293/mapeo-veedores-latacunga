@@ -1,0 +1,17 @@
+---
+import GestionLayout from "../../layouts/GestionLayout.astro";
+import GestionListaNegra from "../../components/gestion/GestionListaNegra";
+import { listListaNegra } from "../../lib/gestion/listaNegra";
+
+const entradas = await listListaNegra();
+---
+
+<GestionLayout title="Lista negra" activo="lista-negra">
+  <h1>Lista negra</h1>
+  <p class="g-sub">
+    Personas que no pueden volver a registrarse como veedor o coordinador. Se
+    llena automáticamente al desvincular a alguien, o puedes agregar a alguien
+    manualmente. Sacar a una persona de aquí permite que vuelva a registrarse.
+  </p>
+  <GestionListaNegra client:load entradasIniciales={entradas} />
+</GestionLayout>

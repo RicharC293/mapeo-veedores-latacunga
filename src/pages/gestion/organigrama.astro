@@ -1,0 +1,84 @@
+---
+import GestionLayout from "../../layouts/GestionLayout.astro";
+import { getMapData } from "../../lib/data";
+import { listLideres } from "../../lib/gestion/lideres";
+import { listCoordinadores } from "../../lib/gestion/coordinadores";
+import { title as titleCase } from "../../lib/format";
+
+const data = await getMapData();
+const lideres = await listLideres();
+const coordinadores = await listCoordinadores();
+
+const lideresGenerales = lideres.filter((l) => l.ambito === "general");
+const lideresPorParroquia = data.parroquias.features
+  .map((f) => ({
+    parroquia: f,
+    lideres: lideres.filter(
+      (l) =>
+        l.ambito === "parroquia" && l.parroquiaCodigo === f.properties.code,
+    ),
+    recintos: data.recintos.filter((r) => r.par === f.properties.code),
+  }))
+  .filter(
+    (g) =>
+      g.lideres.length > 0 ||
+      g.recintos.some((r) =>
+        coordinadores.some(
+          (c) => c.recintoCodigo === r.cod && c.tipo === "titular",
+        ),
+      ),
+  );
+
+function coordinadorTitular(recintoCodigo: number) {
+  return (
+    coordinadores.find(
+      (c) => c.recintoCodigo === recintoCodigo && c.tipo === "titular",
+    ) ?? null
+  );
+}
+---
+
+<GestionLayout title="Organigrama" activo="organigrama">
+  <h1>Organigrama</h1>
+  <p class="g-sub">
+    Líder general, líderes de parroquia y coordinadores titulares de cada
+    recinto.
+  </p>
+
+  <div class="g-org">
+    <div class="g-org-node">
+      <b>Líder general de Latacunga</b>
+      {lideresGenerales.length > 0 ? (
+        lideresGenerales.map((l) => <small>{l.nombres}</small>)
+      ) : (
+        <small>Sin asignar</small>
+      )}
+    </div>
+
+    <div class="g-org-children">
+      {lideresPorParroquia.map((g) => (
+        <div class="g-org-branch">
+          <div class="g-org-node">
+            <b>{g.parroquia.properties.name}</b>
+            {g.lideres.length > 0 ? (
+              g.lideres.map((l) => <small>{l.nombres}</small>)
+            ) : (
+              <small>Sin líder asignado</small>
+            )}
+          </div>
+          <div class="g-org-grandchildren">
+            {g.recintos.map((r) => {
+              const c = coordinadorTitular(r.cod);
+              return (
+                <span class="g-org-leaf">
+                  {titleCase(r.nombre)}
+                  {c ? ` · ${c.nombres}` : " · sin coordinador"}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</GestionLayout>

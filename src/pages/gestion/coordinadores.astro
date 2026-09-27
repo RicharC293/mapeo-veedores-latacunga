@@ -1,0 +1,22 @@
+---
+import GestionLayout from "../../layouts/GestionLayout.astro";
+import GestionCoordinadores from "../../components/gestion/GestionCoordinadores";
+import { getMapData } from "../../lib/data";
+import { listCoordinadores } from "../../lib/gestion/coordinadores";
+
+const data = await getMapData();
+const coordinadores = await listCoordinadores();
+---
+
+<GestionLayout title="Coordinadores" activo="coordinadores">
+  <h1>Coordinadores de recinto</h1>
+  <p class="g-sub">
+    Un coordinador titular y sus suplentes por cada recinto electoral completo.
+  </p>
+  <GestionCoordinadores
+    client:load
+    parroquias={data.parroquias.features}
+    recintos={data.recintos}
+    coordinadoresIniciales={coordinadores}
+  />
+</GestionLayout>

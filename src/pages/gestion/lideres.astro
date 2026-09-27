@@ -1,0 +1,25 @@
+---
+import GestionLayout from "../../layouts/GestionLayout.astro";
+import GestionLideres from "../../components/gestion/GestionLideres";
+import { getMapData } from "../../lib/data";
+import { listLideres } from "../../lib/gestion/lideres";
+
+const data = await getMapData();
+const lideres = await listLideres();
+---
+
+<GestionLayout title="Líderes" activo="lideres">
+  <h1>Líderes</h1>
+  <p class="g-sub">
+    Rol solo organizativo, sin injerencia en el proceso electoral. Cada
+    parroquia puede tener uno o más líderes, cada uno asignado a los recintos
+    que le correspondan. El líder general coordina todo el cantón. Los líderes
+    no entran a la lista negra al ser removidos.
+  </p>
+  <GestionLideres
+    client:load
+    parroquias={data.parroquias.features}
+    recintos={data.recintos}
+    lideresIniciales={lideres}
+  />
+</GestionLayout>

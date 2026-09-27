@@ -1,0 +1,23 @@
+---
+import GestionLayout from "../../layouts/GestionLayout.astro";
+import GestionVeedores from "../../components/gestion/GestionVeedores";
+import { getMapData } from "../../lib/data";
+import { listVeedores } from "../../lib/gestion/veedores";
+
+const data = await getMapData();
+const veedores = await listVeedores();
+---
+
+<GestionLayout title="Veedores" activo="veedores">
+  <h1>Veedores</h1>
+  <p class="g-sub">
+    Un veedor titular y sus suplentes por cada junta receptora del voto. Al
+    desvincular al titular, el primer suplente ocupa su lugar automáticamente.
+  </p>
+  <GestionVeedores
+    client:load
+    parroquias={data.parroquias.features}
+    recintos={data.recintos}
+    veedoresIniciales={veedores}
+  />
+</GestionLayout>
