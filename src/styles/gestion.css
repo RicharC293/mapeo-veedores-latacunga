@@ -17,6 +17,10 @@
   text-decoration: none;
   font-weight: 700;
   font-size: 0.92rem;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 .g-nav a[aria-current="page"] {
   color: var(--ink);
@@ -34,6 +38,7 @@
 .g-shell > p.g-sub {
   color: var(--muted);
   margin: 0 0 20px;
+  max-width: 54ch;
 }
 
 .g-panel {
@@ -298,8 +303,20 @@
   color: inherit;
   background: var(--panel);
 }
-.g-summary a:hover {
-  border-color: var(--sel);
+.g-summary a {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition: transform 100ms ease-out;
+}
+.g-summary a:active {
+  transform: scale(0.97);
+}
+@media (hover: hover) and (pointer: fine) {
+  .g-summary a:hover {
+    border-color: var(--sel);
+  }
 }
 .g-summary b {
   display: block;

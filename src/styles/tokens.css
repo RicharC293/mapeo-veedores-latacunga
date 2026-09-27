@@ -64,6 +64,8 @@
 html {
   scroll-padding-top: env(safe-area-inset-top, 0px);
   height: 100%;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
 }
 body {
   margin: 0;
@@ -100,6 +102,18 @@ body.map-page {
 button {
   font: inherit;
   color: inherit;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition: transform 100ms ease-out;
+}
+button:active {
+  transform: scale(0.97);
+}
+a,
+[role="button"] {
+  touch-action: manipulation;
 }
 :focus-visible {
   outline: 3px solid var(--focus);
@@ -171,8 +185,10 @@ button {
   display: grid;
   place-items: center;
 }
-.ctrls button:hover {
-  border-color: var(--sel);
+@media (hover: hover) and (pointer: fine) {
+  .ctrls button:hover {
+    border-color: var(--sel);
+  }
 }
 
 .gestion-link {
@@ -187,9 +203,19 @@ button {
   font-weight: 700;
   color: var(--sel);
   text-decoration: none;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition: transform 100ms ease-out;
 }
-.gestion-link:hover {
-  border-color: var(--sel);
+.gestion-link:active {
+  transform: scale(0.97);
+}
+@media (hover: hover) and (pointer: fine) {
+  .gestion-link:hover {
+    border-color: var(--sel);
+  }
 }
 
 .legend {
@@ -244,8 +270,10 @@ button {
 .parish.rur {
   fill: var(--rur);
 }
-.parish:hover {
-  filter: brightness(0.94);
+@media (hover: hover) and (pointer: fine) {
+  .parish:hover {
+    filter: brightness(0.94);
+  }
 }
 .dimmed .base {
   fill: color-mix(in srgb, var(--base) 40%, var(--bg));
@@ -289,13 +317,16 @@ button {
   vector-effect: non-scaling-stroke;
   stroke-width: 1.5;
 }
-.rec:hover,
 .rec.on {
   fill: var(--sel);
   stroke: var(--pin);
-}
-.rec.on {
   stroke-width: 3;
+}
+@media (hover: hover) and (pointer: fine) {
+  .rec:hover {
+    fill: var(--sel);
+    stroke: var(--pin);
+  }
 }
 .dimmed .rec {
   opacity: 0.3;
@@ -328,6 +359,10 @@ button {
   background: var(--bg);
   color: var(--ink);
   font: inherit;
+}
+.search::placeholder {
+  color: var(--muted);
+  opacity: 1;
 }
 .body {
   padding: 8px 20px 28px;
@@ -395,8 +430,10 @@ h3 {
   align-items: center;
   cursor: pointer;
 }
-.row:hover {
-  background: var(--chip);
+@media (hover: hover) and (pointer: fine) {
+  .row:hover {
+    background: var(--chip);
+  }
 }
 .row .t {
   flex: 1;
@@ -476,6 +513,14 @@ dd {
   color: var(--panel);
   text-decoration: none;
   font-weight: 700;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition: transform 100ms ease-out;
+}
+.go:active {
+  transform: scale(0.97);
 }
 .empty {
   color: var(--muted);

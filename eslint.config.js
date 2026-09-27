@@ -28,6 +28,17 @@ export default [
     },
   },
   {
-    ignores: ["dist/**", ".astro/**", ".vercel/**", "node_modules/**"],
+    ignores: [
+      "dist/**",
+      ".astro/**",
+      ".vercel/**",
+      "node_modules/**",
+      ".claude/**",
+      ".agents/**",
+      ".codex/**",
+      ".cursor/**",
+      ".gemini/**",
+      ".grok/**",
+    ],
   },
 ];

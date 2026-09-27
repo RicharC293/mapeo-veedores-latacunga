@@ -2,3 +2,7 @@
 reference/
 # Datos generados/seed: no necesitan el estilo de Prettier.
 data/
+# Skills/plugins de terceros instalados para agentes de IA: no son código
+# del proyecto, no se reformatean.
+.claude/skills/
+.agents/

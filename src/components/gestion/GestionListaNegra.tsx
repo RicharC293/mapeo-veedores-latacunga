@@ -112,55 +112,56 @@ export default function GestionListaNegra({ entradasIniciales }: Props) {
         </div>
       </form>
 
-      <ul class="g-list">
-        {entradas.length === 0 ? (
-          <p class="g-empty">La lista negra está vacía.</p>
-        ) : null}
-        {entradas.map((entry) =>
-          editandoId === entry.id ? (
-            <li key={entry.id}>
-              <EditarEntrada
-                entry={entry}
-                onGuardar={async (patch) => {
-                  await api(`/api/gestion/lista-negra/${entry.id}`, {
-                    method: "PATCH",
-                    body: JSON.stringify(patch),
-                  });
-                  setEditandoId(null);
-                  await refrescar();
-                }}
-                onCancelar={() => setEditandoId(null)}
-              />
-            </li>
-          ) : (
-            <li key={entry.id} class="g-persona">
-              <div>
-                <strong>{entry.nombres}</strong>
-                <small>
-                  CI {entry.cedula}
-                  {entry.telefono ? ` · ${entry.telefono}` : ""} ·{" "}
-                  {origenLabel[entry.origen]}
-                </small>
-                {entry.motivo ? <small>Motivo: {entry.motivo}</small> : null}
-              </div>
-              <div class="g-row-actions">
-                <button
-                  class="g-btn-ghost"
-                  onClick={() => setEditandoId(entry.id)}
-                >
-                  Editar
-                </button>
-                <button
-                  class="g-btn-danger-ghost"
-                  onClick={() => quitar(entry.id)}
-                >
-                  Sacar de la lista negra
-                </button>
-              </div>
-            </li>
-          ),
-        )}
-      </ul>
+      {entradas.length === 0 ? (
+        <p class="g-empty">La lista negra está vacía.</p>
+      ) : (
+        <ul class="g-list">
+          {entradas.map((entry) =>
+            editandoId === entry.id ? (
+              <li key={entry.id}>
+                <EditarEntrada
+                  entry={entry}
+                  onGuardar={async (patch) => {
+                    await api(`/api/gestion/lista-negra/${entry.id}`, {
+                      method: "PATCH",
+                      body: JSON.stringify(patch),
+                    });
+                    setEditandoId(null);
+                    await refrescar();
+                  }}
+                  onCancelar={() => setEditandoId(null)}
+                />
+              </li>
+            ) : (
+              <li key={entry.id} class="g-persona">
+                <div>
+                  <strong>{entry.nombres}</strong>
+                  <small>
+                    CI {entry.cedula}
+                    {entry.telefono ? ` · ${entry.telefono}` : ""} ·{" "}
+                    {origenLabel[entry.origen]}
+                  </small>
+                  {entry.motivo ? <small>Motivo: {entry.motivo}</small> : null}
+                </div>
+                <div class="g-row-actions">
+                  <button
+                    class="g-btn-ghost"
+                    onClick={() => setEditandoId(entry.id)}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    class="g-btn-danger-ghost"
+                    onClick={() => quitar(entry.id)}
+                  >
+                    Sacar de la lista negra
+                  </button>
+                </div>
+              </li>
+            ),
+          )}
+        </ul>
+      )}
     </div>
   );
 }
