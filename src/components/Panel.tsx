@@ -182,7 +182,7 @@ export default function Panel({ data }: Props) {
               "No registrado"
             )}
           </dd>
-          <dt>Democracia accesible (CDA)</dt>
+          <dt>Centro de digitalización de actas (CDA)</dt>
           <dd>{r.cda ? "Sí" : "No"}</dd>
           <dt>Difícil acceso</dt>
           <dd>{r.dif ? "Sí" : "No"}</dd>
@@ -266,7 +266,11 @@ function RecintoRow({
         <span class="t">
           <strong>
             {title(r.nombre)}
-            {r.cda ? <span class="tag">CDA</span> : null}
+            {r.cda ? (
+              <span class="tag" title="Centro de digitalización de actas">
+                CDA
+              </span>
+            ) : null}
           </strong>
           <small>
             {showParish ? `${p}, ` : ""}
