@@ -2,12 +2,23 @@
 import Base from "../layouts/Base.astro";
 import MapApp from "../components/MapApp";
 import { getMapData } from "../lib/data";
+import { listLideres } from "../lib/gestion/lideres";
+import { listCoordinadores } from "../lib/gestion/coordinadores";
 
-const data = await getMapData();
+const [data, lideres, coordinadores] = await Promise.all([
+  getMapData(),
+  listLideres(),
+  listCoordinadores(),
+]);
 ---
 
-<Base title="Recintos electorales de Latacunga">
+<Base title="Recintos electorales de Latacunga" bodyClass="map-page">
   <div class="app">
-    <MapApp client:load data={data} />
+    <MapApp
+      client:load
+      data={data}
+      lideres={lideres}
+      coordinadores={coordinadores}
+    />
   </div>
 </Base>

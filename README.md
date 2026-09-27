@@ -23,14 +23,14 @@ Sin `.env` configurado, el sitio sigue funcionando con los datos semilla locales
 
 ## Scripts
 
-| Comando                  | Qué hace                                                      |
-| ------------------------ | -------------------------------------------------------------- |
-| `pnpm dev`                | Servidor de desarrollo en `localhost:4321`                     |
-| `pnpm build`              | Build de producción                                             |
-| `pnpm test`               | Pruebas con Vitest                                              |
-| `pnpm lint`               | ESLint                                                          |
-| `pnpm extract-reference`  | Extrae los datos del prototipo HTML original a `data/seed/`    |
-| `pnpm seed-supabase`      | Carga `data/seed/*` a Supabase como corte activo                |
+| Comando                  | Qué hace                                                    |
+| ------------------------ | ----------------------------------------------------------- |
+| `pnpm dev`               | Servidor de desarrollo en `localhost:4321`                  |
+| `pnpm build`             | Build de producción                                         |
+| `pnpm test`              | Pruebas con Vitest                                          |
+| `pnpm lint`              | ESLint                                                      |
+| `pnpm extract-reference` | Extrae los datos del prototipo HTML original a `data/seed/` |
+| `pnpm seed-supabase`     | Carga `data/seed/*` a Supabase como corte activo            |
 
 ## Estructura
 

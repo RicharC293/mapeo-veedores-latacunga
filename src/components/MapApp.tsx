@@ -2,12 +2,15 @@ import MapView from "./MapView";
 import Panel from "./Panel";
 import SearchBox from "./SearchBox";
 import type { MapData } from "../lib/types";
+import type { Coordinador, Lider } from "../lib/gestion/types";
 
 interface Props {
   data: MapData;
+  lideres: Lider[];
+  coordinadores: Coordinador[];
 }
 
-export default function MapApp({ data }: Props) {
+export default function MapApp({ data, lideres, coordinadores }: Props) {
   return (
     <>
       <div class="mapwrap" id="mapwrap">
@@ -18,7 +21,7 @@ export default function MapApp({ data }: Props) {
           <SearchBox />
         </div>
         <div class="body">
-          <Panel data={data} />
+          <Panel data={data} lideres={lideres} coordinadores={coordinadores} />
         </div>
       </aside>
     </>

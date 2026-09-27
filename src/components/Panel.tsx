@@ -13,12 +13,40 @@ import type {
   ParroquiaStats,
   Recinto,
 } from "../lib/types";
+import type { Coordinador, Lider } from "../lib/gestion/types";
 
 interface Props {
   data: MapData;
+  lideres: Lider[];
+  coordinadores: Coordinador[];
 }
 
-export default function Panel({ data }: Props) {
+function nombreLider(lideres: Lider[], recinto: Recinto): string {
+  const especificos = lideres.filter(
+    (l) => l.ambito === "parroquia" && l.recintoCodigos.includes(recinto.cod),
+  );
+  const relevantes =
+    especificos.length > 0
+      ? especificos
+      : lideres.filter(
+          (l) => l.ambito === "parroquia" && l.parroquiaCodigo === recinto.par,
+        );
+  return relevantes.length > 0
+    ? relevantes.map((l) => l.nombres).join(", ")
+    : "Sin asignar";
+}
+
+function nombreCoordinador(
+  coordinadores: Coordinador[],
+  recintoCodigo: number,
+): string {
+  const titular = coordinadores.find(
+    (c) => c.recintoCodigo === recintoCodigo && c.tipo === "titular",
+  );
+  return titular ? titular.nombres : "Sin asignar";
+}
+
+export default function Panel({ data, lideres, coordinadores }: Props) {
   const v = view.value;
   const parByCode = useMemo(() => buildParByCode(data), [data]);
   const stats = useMemo(() => buildParroquiaStats(data), [data]);
@@ -164,6 +192,10 @@ export default function Panel({ data }: Props) {
           <dd>{r.jt}</dd>
           <dt>Parroquia</dt>
           <dd>{f.properties.name}</dd>
+          <dt>Líder</dt>
+          <dd>{nombreLider(lideres, r)}</dd>
+          <dt>Coordinador de recinto</dt>
+          <dd>{nombreCoordinador(coordinadores, r.cod)}</dd>
           {r.zona ? (
             <>
               <dt>Zona electoral</dt>
