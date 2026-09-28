@@ -63,7 +63,7 @@
   flex-wrap: wrap;
 }
 .g-selects label,
-.g-panel > form label {
+.g-form label {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -197,6 +197,35 @@
   padding: 12px;
   margin-top: 8px;
   background: var(--chip);
+}
+
+.login-page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px;
+  box-sizing: border-box;
+}
+.login-shell {
+  width: 100%;
+  max-width: 360px;
+}
+.login-shell h1 {
+  font-size: 1.4rem;
+  margin: 0 0 4px;
+}
+.login-shell .g-form {
+  margin-top: 16px;
+  padding: 20px;
+  gap: 16px;
+}
+.login-shell .g-form-actions {
+  margin-top: 4px;
+}
+.login-shell .g-form-actions button[type="submit"] {
+  width: 100%;
+  padding: 11px 14px;
 }
 .g-form-danger {
   border-color: #c94b4b;
