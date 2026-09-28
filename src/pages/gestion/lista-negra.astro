@@ -2,6 +2,12 @@
 import GestionLayout from "../../layouts/GestionLayout.astro";
 import GestionListaNegra from "../../components/gestion/GestionListaNegra";
 import { listListaNegra } from "../../lib/gestion/listaNegra";
+import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
+
+if (!PAGINAS_GESTION["lista-negra"].includes(Astro.locals.rol)) {
+  return Astro.redirect(rutaPorDefecto(Astro.locals.rol));
+}
+const rol = Astro.locals.rol;
 
 const entradas = await listListaNegra();
 ---
@@ -13,5 +19,5 @@ const entradas = await listListaNegra();
     llena automáticamente al desvincular a alguien, o puedes agregar a alguien
     manualmente. Sacar a una persona de aquí permite que vuelva a registrarse.
   </p>
-  <GestionListaNegra client:load entradasIniciales={entradas} />
+  <GestionListaNegra client:load entradasIniciales={entradas} rol={rol} />
 </GestionLayout>

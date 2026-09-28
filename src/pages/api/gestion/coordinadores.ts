@@ -4,13 +4,23 @@ import {
   agregarCoordinador,
   listCoordinadores,
 } from "../../../lib/gestion/coordinadores";
-import { json, handle } from "../../../lib/gestion/apiHelpers";
+import {
+  json,
+  handle,
+  requireApiRole,
+} from "../../../lib/gestion/apiHelpers";
+import { PAGINAS_GESTION } from "../../../lib/auth/roles";
 
-export const GET: APIRoute = async () =>
-  handle(async () => json(await listCoordinadores()));
+export const GET: APIRoute = async ({ locals }) => {
+  const bloqueo = requireApiRole(locals, PAGINAS_GESTION.coordinadores);
+  if (bloqueo) return bloqueo;
+  return handle(async () => json(await listCoordinadores()));
+};
 
-export const POST: APIRoute = async ({ request }) =>
-  handle(async () => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  const bloqueo = requireApiRole(locals, PAGINAS_GESTION.coordinadores);
+  if (bloqueo) return bloqueo;
+  return handle(async () => {
     const body = (await request.json()) as {
       cedula: string;
       nombres: string;
@@ -32,3 +42,4 @@ export const POST: APIRoute = async ({ request }) =>
     });
     return json(coordinador, { status: 201 });
   });
+};

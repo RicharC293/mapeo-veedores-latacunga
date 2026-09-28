@@ -8,6 +8,7 @@ import type {
   Lider,
   Veedor,
 } from "../lib/gestion/types";
+import type { Rol } from "../lib/auth/roles";
 
 interface Props {
   data: MapData;
@@ -15,6 +16,7 @@ interface Props {
   coordinadores: Coordinador[];
   veedores: Veedor[];
   acreditadosCda: AcreditadoCda[];
+  rol: Rol;
 }
 
 export default function MapApp({
@@ -23,11 +25,12 @@ export default function MapApp({
   coordinadores,
   veedores,
   acreditadosCda,
+  rol,
 }: Props) {
   return (
     <>
       <div class="mapwrap" id="mapwrap">
-        <MapView data={data} />
+        <MapView data={data} rol={rol} />
       </div>
       <aside class="panel" aria-live="polite">
         <div class="pin-top">
@@ -40,6 +43,7 @@ export default function MapApp({
             coordinadores={coordinadores}
             veedores={veedores}
             acreditadosCda={acreditadosCda}
+            rol={rol}
           />
         </div>
       </aside>

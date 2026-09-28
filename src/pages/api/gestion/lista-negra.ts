@@ -3,13 +3,25 @@ import {
   agregarAListaNegra,
   listListaNegra,
 } from "../../../lib/gestion/listaNegra";
-import { json, handle } from "../../../lib/gestion/apiHelpers";
+import {
+  json,
+  handle,
+  requireApiRole,
+} from "../../../lib/gestion/apiHelpers";
+import { PAGINAS_GESTION } from "../../../lib/auth/roles";
 
-export const GET: APIRoute = async () =>
-  handle(async () => json(await listListaNegra()));
+export const GET: APIRoute = async ({ locals }) => {
+  const bloqueo = requireApiRole(locals, PAGINAS_GESTION["lista-negra"]);
+  if (bloqueo) return bloqueo;
+  return handle(async () => json(await listListaNegra()));
+};
 
-export const POST: APIRoute = async ({ request }) =>
-  handle(async () => {
+// El alta manual queda reservada al administrador: Gestor solo puede ver y
+// eliminar registros que ya existen.
+export const POST: APIRoute = async ({ request, locals }) => {
+  const bloqueo = requireApiRole(locals, ["administrador"]);
+  if (bloqueo) return bloqueo;
+  return handle(async () => {
     const body = (await request.json()) as {
       cedula: string;
       nombres: string;
@@ -19,3 +31,4 @@ export const POST: APIRoute = async ({ request }) =>
     const entry = await agregarAListaNegra({ ...body, origen: "manual" });
     return json(entry, { status: 201 });
   });
+};

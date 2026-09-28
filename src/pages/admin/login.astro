@@ -1,0 +1,30 @@
+---
+import Base from "../../layouts/Base.astro";
+import "../../styles/gestion.css";
+
+if (Astro.locals.rol === "administrador") {
+  return Astro.redirect("/gestion");
+}
+
+const error = Astro.url.searchParams.get("error");
+---
+
+<Base title="Ingreso administrador · Gestión">
+  <div class="g-shell" style="max-width: 420px;">
+    <h1>Ingreso de administrador</h1>
+    <form class="g-form" method="POST" action="/api/admin/login">
+      <label>
+        Correo
+        <input type="email" name="email" required autofocus />
+      </label>
+      <label>
+        Contraseña
+        <input type="password" name="password" required />
+      </label>
+      {error ? <p class="g-error">{error}</p> : null}
+      <div class="g-form-actions">
+        <button type="submit">Ingresar</button>
+      </div>
+    </form>
+  </div>
+</Base>

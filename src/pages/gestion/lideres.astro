@@ -3,6 +3,11 @@ import GestionLayout from "../../layouts/GestionLayout.astro";
 import GestionLideres from "../../components/gestion/GestionLideres";
 import { getMapData } from "../../lib/data";
 import { listLideres } from "../../lib/gestion/lideres";
+import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
+
+if (!PAGINAS_GESTION.lideres.includes(Astro.locals.rol)) {
+  return Astro.redirect(rutaPorDefecto(Astro.locals.rol));
+}
 
 const data = await getMapData();
 const lideres = await listLideres();

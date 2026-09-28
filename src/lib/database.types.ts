@@ -39,6 +39,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      accesos: {
+        Row: {
+          activo: boolean
+          creado_en: string
+          etiqueta: string
+          id: string
+          rol: string
+          token: string
+          ultimo_uso_en: string | null
+        }
+        Insert: {
+          activo?: boolean
+          creado_en?: string
+          etiqueta?: string
+          id?: string
+          rol: string
+          token: string
+          ultimo_uso_en?: string | null
+        }
+        Update: {
+          activo?: boolean
+          creado_en?: string
+          etiqueta?: string
+          id?: string
+          rol?: string
+          token?: string
+          ultimo_uso_en?: string | null
+        }
+        Relationships: []
+      }
       acreditados_cda: {
         Row: {
           cedula: string

@@ -7,6 +7,12 @@ import { listLideres } from "../../lib/gestion/lideres";
 import { listListaNegra } from "../../lib/gestion/listaNegra";
 import { listAcreditadosCda } from "../../lib/gestion/acreditadosCda";
 import { calcularCobertura } from "../../lib/gestion/coverage";
+import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
+
+if (!PAGINAS_GESTION.index.includes(Astro.locals.rol)) {
+  return Astro.redirect(rutaPorDefecto(Astro.locals.rol));
+}
+const esAdmin = Astro.locals.rol === "administrador";
 
 const data = await getMapData();
 const [veedores, coordinadores, lideres, listaNegra, acreditadosCda] =
@@ -36,9 +42,7 @@ const coordinadoresTitulares = coordinadores.filter(
 
 <GestionLayout title="Gestión" activo="index">
   <h1>Gestión de veedores y coordinadores</h1>
-  <p class="g-sub">
-    Panel de organización de la veeduría electoral. Sin autenticación por ahora.
-  </p>
+  <p class="g-sub">Panel de organización de la veeduría electoral.</p>
 
   <div class="g-summary">
     <a href="/gestion/veedores">
@@ -49,10 +53,17 @@ const coordinadoresTitulares = coordinadores.filter(
       <b>{coordinadoresTitulares}</b>
       <small>coordinadores titulares</small>
     </a>
-    <a href="/gestion/lideres">
-      <b>{lideres.length}</b>
-      <small>líderes</small>
-    </a>
+    {esAdmin ? (
+      <a href="/gestion/lideres">
+        <b>{lideres.length}</b>
+        <small>líderes</small>
+      </a>
+    ) : (
+      <div class="g-summary-item">
+        <b>{lideres.length}</b>
+        <small>líderes</small>
+      </div>
+    )}
     <a href="/gestion/lista-negra">
       <b>{listaNegra.length}</b>
       <small>en lista negra</small>
@@ -66,8 +77,12 @@ const coordinadoresTitulares = coordinadores.filter(
   <p>
     Usa el menú de arriba para gestionar{" "}
     <a href="/gestion/veedores">veedores</a>,
-    <a href="/gestion/coordinadores">coordinadores</a>,{" "}
-    <a href="/gestion/lideres">líderes</a> y la
+    <a href="/gestion/coordinadores">coordinadores</a>
+    {esAdmin ? (
+      <>
+        , <a href="/gestion/lideres">líderes</a>
+      </>
+    ) : null} y la
     <a href="/gestion/lista-negra">lista negra</a>, o revisar la
     <a href="/gestion/cobertura">cobertura</a>, el{" "}
     <a href="/gestion/crecimiento">crecimiento diario</a>y el{" "}

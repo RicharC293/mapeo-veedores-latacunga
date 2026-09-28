@@ -25,6 +25,7 @@ import type {
   Lider,
   Veedor,
 } from "../lib/gestion/types";
+import type { Rol } from "../lib/auth/roles";
 
 interface Props {
   data: MapData;
@@ -32,6 +33,7 @@ interface Props {
   coordinadores: Coordinador[];
   veedores: Veedor[];
   acreditadosCda: AcreditadoCda[];
+  rol: Rol;
 }
 
 interface PersonaInfo {
@@ -115,7 +117,9 @@ export default function Panel({
   coordinadores,
   veedores,
   acreditadosCda,
+  rol,
 }: Props) {
+  const puedeVerCobertura = rol !== "invitado";
   const v = view.value;
   const [personas, setPersonas] = useState<PersonaInfo[] | null>(null);
   useEffect(() => {
@@ -178,11 +182,13 @@ export default function Panel({
           </div>
         </div>
         <h3>Parroquias urbanas</h3>
-        <GroupSummary
-          features={byType(true)}
-          stats={stats}
-          cobertura={coberturaParroquia}
-        />
+        {puedeVerCobertura ? (
+          <GroupSummary
+            features={byType(true)}
+            stats={stats}
+            cobertura={coberturaParroquia}
+          />
+        ) : null}
         <ul class="list">
           {byType(true).map((f) => (
             <ParroquiaRow
@@ -190,15 +196,18 @@ export default function Panel({
               f={f}
               stats={stats[f.properties.code]}
               cobertura={coberturaParroquia[f.properties.code]}
+              puedeVerCobertura={puedeVerCobertura}
             />
           ))}
         </ul>
         <h3>Parroquias rurales</h3>
-        <GroupSummary
-          features={byType(false)}
-          stats={stats}
-          cobertura={coberturaParroquia}
-        />
+        {puedeVerCobertura ? (
+          <GroupSummary
+            features={byType(false)}
+            stats={stats}
+            cobertura={coberturaParroquia}
+          />
+        ) : null}
         <ul class="list">
           {byType(false).map((f) => (
             <ParroquiaRow
@@ -206,6 +215,7 @@ export default function Panel({
               f={f}
               stats={stats[f.properties.code]}
               cobertura={coberturaParroquia[f.properties.code]}
+              puedeVerCobertura={puedeVerCobertura}
             />
           ))}
         </ul>
@@ -248,7 +258,9 @@ export default function Panel({
             </small>
           </div>
         </div>
-        <CoberturaBarsAgregado cobertura={coberturaParroquia[v.code]} />
+        {puedeVerCobertura ? (
+          <CoberturaBarsAgregado cobertura={coberturaParroquia[v.code]} />
+        ) : null}
         <h3>Recintos</h3>
         <ul class="list">
           {recs.map((r) => (
@@ -258,6 +270,7 @@ export default function Panel({
               showParish={false}
               parByCode={parByCode}
               cobertura={coberturaRecinto.get(r.cod)}
+              puedeVerCobertura={puedeVerCobertura}
             />
           ))}
         </ul>
@@ -315,7 +328,9 @@ export default function Panel({
             </small>
           </div>
         </div>
-        <EstadoRecinto cobertura={coberturaRecinto.get(r.cod)} cda={r.cda} />
+        {puedeVerCobertura ? (
+          <EstadoRecinto cobertura={coberturaRecinto.get(r.cod)} cda={r.cda} />
+        ) : null}
         <dl>
           <dt>Electores</dt>
           <dd>{fmt(r.el)}</dd>
@@ -351,9 +366,11 @@ export default function Panel({
         <a class="go" href={maps} target="_blank" rel="noopener">
           Cómo llegar en Google Maps
         </a>
-        <button class="go go-btn" onClick={() => setPersonas(contactos)}>
-          Líderes
-        </button>
+        {puedeVerCobertura ? (
+          <button class="go go-btn" onClick={() => setPersonas(contactos)}>
+            Líderes
+          </button>
+        ) : null}
         {personas ? (
           <PersonaModal personas={personas} onClose={() => setPersonas(null)} />
         ) : null}
@@ -379,6 +396,7 @@ export default function Panel({
               showParish
               parByCode={parByCode}
               cobertura={coberturaRecinto.get(r.cod)}
+              puedeVerCobertura={puedeVerCobertura}
             />
           ))}
         </ul>
@@ -396,10 +414,12 @@ function ParroquiaRow({
   f,
   stats: s,
   cobertura,
+  puedeVerCobertura,
 }: {
   f: ParroquiaFeature;
   stats: ParroquiaStats;
   cobertura: CoberturaParroquia | undefined;
+  puedeVerCobertura: boolean;
 }) {
   return (
     <li>
@@ -418,7 +438,7 @@ function ParroquiaRow({
           <small>electores</small>
         </span>
       </button>
-      <ResumenCompacto cobertura={cobertura} />
+      {puedeVerCobertura ? <ResumenCompacto cobertura={cobertura} /> : null}
     </li>
   );
 }
@@ -428,11 +448,13 @@ function RecintoRow({
   showParish,
   parByCode,
   cobertura,
+  puedeVerCobertura,
 }: {
   r: Recinto;
   showParish: boolean;
   parByCode: Map<number, ParroquiaFeature>;
   cobertura: CoberturaRecinto | undefined;
+  puedeVerCobertura: boolean;
 }) {
   const parish = parByCode.get(r.par);
   const p = parish ? parish.properties.name.replace(/ \(.*\)/, "") : "";
@@ -458,7 +480,9 @@ function RecintoRow({
           <small>juntas</small>
         </span>
       </button>
-      <EstadoRecinto cobertura={cobertura} cda={r.cda} compact />
+      {puedeVerCobertura ? (
+        <EstadoRecinto cobertura={cobertura} cda={r.cda} compact />
+      ) : null}
     </li>
   );
 }

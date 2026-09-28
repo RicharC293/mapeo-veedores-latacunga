@@ -6,15 +6,30 @@ import { listLideres } from "../lib/gestion/lideres";
 import { listCoordinadores } from "../lib/gestion/coordinadores";
 import { listVeedores } from "../lib/gestion/veedores";
 import { listAcreditadosCda } from "../lib/gestion/acreditadosCda";
+import type {
+  AcreditadoCda,
+  Coordinador,
+  Lider,
+  Veedor,
+} from "../lib/gestion/types";
 
-const [data, lideres, coordinadores, veedores, acreditadosCda] =
-  await Promise.all([
-    getMapData(),
+const rol = Astro.locals.rol;
+const data = await getMapData();
+
+// Invitado no puede ver nombres de líderes/coordinadores/CDA ni los % de
+// cobertura: ni siquiera se piden esos datos, para que no viajen al cliente.
+let lideres: Lider[] = [];
+let coordinadores: Coordinador[] = [];
+let veedores: Veedor[] = [];
+let acreditadosCda: AcreditadoCda[] = [];
+if (rol !== "invitado") {
+  [lideres, coordinadores, veedores, acreditadosCda] = await Promise.all([
     listLideres(),
     listCoordinadores(),
     listVeedores(),
     listAcreditadosCda(),
   ]);
+}
 ---
 
 <Base title="Recintos electorales de Latacunga" bodyClass="map-page">
@@ -26,6 +41,7 @@ const [data, lideres, coordinadores, veedores, acreditadosCda] =
       coordinadores={coordinadores}
       veedores={veedores}
       acreditadosCda={acreditadosCda}
+      rol={rol}
     />
   </div>
 </Base>

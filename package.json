@@ -12,6 +12,7 @@
     "astro": "astro",
     "extract-reference": "tsx scripts/extract-reference.ts",
     "seed-supabase": "tsx scripts/seed-supabase.ts",
+    "create-admin": "tsx scripts/create-admin.ts",
     "test": "vitest run",
     "lint": "eslint .",
     "format": "prettier --write ."
@@ -20,6 +21,7 @@
     "@astrojs/preact": "^6.0.5",
     "@astrojs/vercel": "^11.0.11",
     "@preact/signals": "^2.11.2",
+    "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
     "astro": "^7.3.5",
     "d3-array": "^3.2.4",

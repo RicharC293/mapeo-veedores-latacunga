@@ -3,6 +3,11 @@ import GestionLayout from "../../layouts/GestionLayout.astro";
 import GraficoCrecimiento from "../../components/gestion/GraficoCrecimiento";
 import { getMapData } from "../../lib/data";
 import { listEventos } from "../../lib/gestion/eventos";
+import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
+
+if (!PAGINAS_GESTION.crecimiento.includes(Astro.locals.rol)) {
+  return Astro.redirect(rutaPorDefecto(Astro.locals.rol));
+}
 
 const data = await getMapData();
 const eventos = await listEventos();

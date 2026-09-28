@@ -1,0 +1,31 @@
+---
+import Base from "../../layouts/Base.astro";
+import "../../styles/gestion.css";
+import { buscarAccesoPorToken } from "../../lib/gestion/accesos";
+import { COOKIE_ACCESO, rutaPorDefecto } from "../../lib/auth/roles";
+
+const { token } = Astro.params;
+const acceso = token ? await buscarAccesoPorToken(token) : null;
+
+if (acceso && acceso.activo) {
+  Astro.cookies.set(COOKIE_ACCESO, acceso.token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+  return Astro.redirect(rutaPorDefecto(acceso.rol));
+}
+---
+
+<Base title="Enlace de acceso">
+  <div class="g-shell" style="max-width: 420px; text-align: center;">
+    <h1>Enlace inválido o revocado</h1>
+    <p class="g-sub">
+      Este enlace de acceso ya no es válido. Pide uno nuevo a quien te lo
+      compartió.
+    </p>
+    <a href="/">Volver al mapa</a>
+  </div>
+</Base>

@@ -1,8 +1,10 @@
 import { useState } from "preact/hooks";
 import type { ListaNegraEntry } from "../../lib/gestion/types";
+import type { Rol } from "../../lib/auth/roles";
 
 interface Props {
   entradasIniciales: ListaNegraEntry[];
+  rol: Rol;
 }
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
@@ -22,7 +24,8 @@ const origenLabel: Record<ListaNegraEntry["origen"], string> = {
   manual: "Agregado manualmente",
 };
 
-export default function GestionListaNegra({ entradasIniciales }: Props) {
+export default function GestionListaNegra({ entradasIniciales, rol }: Props) {
+  const esAdmin = rol === "administrador";
   const [entradas, setEntradas] = useState(entradasIniciales);
   const [cedula, setCedula] = useState("");
   const [nombres, setNombres] = useState("");
@@ -64,54 +67,56 @@ export default function GestionListaNegra({ entradasIniciales }: Props) {
 
   return (
     <div class="g-panel">
-      <form class="g-form" onSubmit={agregar}>
-        <p class="g-form-title">Agregar manualmente a la lista negra</p>
-        <label>
-          Cédula
-          <input
-            value={cedula}
-            onInput={(e) =>
-              setCedula((e.currentTarget as HTMLInputElement).value)
-            }
-            inputMode="numeric"
-            maxLength={10}
-            required
-          />
-        </label>
-        <label>
-          Nombres y apellidos
-          <input
-            value={nombres}
-            onInput={(e) =>
-              setNombres((e.currentTarget as HTMLInputElement).value)
-            }
-            required
-          />
-        </label>
-        <label>
-          Teléfono
-          <input
-            value={telefono}
-            onInput={(e) =>
-              setTelefono((e.currentTarget as HTMLInputElement).value)
-            }
-          />
-        </label>
-        <label>
-          Motivo (opcional)
-          <textarea
-            value={motivo}
-            onInput={(e) =>
-              setMotivo((e.currentTarget as HTMLTextAreaElement).value)
-            }
-            rows={2}
-          />
-        </label>
-        {error ? <p class="g-error">{error}</p> : null}
-        <div class="g-form-actions">
-          <button type="submit">Agregar</button>
-        </div>
-      </form>
+      {esAdmin ? (
+        <form class="g-form" onSubmit={agregar}>
+          <p class="g-form-title">Agregar manualmente a la lista negra</p>
+          <label>
+            Cédula
+            <input
+              value={cedula}
+              onInput={(e) =>
+                setCedula((e.currentTarget as HTMLInputElement).value)
+              }
+              inputMode="numeric"
+              maxLength={10}
+              required
+            />
+          </label>
+          <label>
+            Nombres y apellidos
+            <input
+              value={nombres}
+              onInput={(e) =>
+                setNombres((e.currentTarget as HTMLInputElement).value)
+              }
+              required
+            />
+          </label>
+          <label>
+            Teléfono
+            <input
+              value={telefono}
+              onInput={(e) =>
+                setTelefono((e.currentTarget as HTMLInputElement).value)
+              }
+            />
+          </label>
+          <label>
+            Motivo (opcional)
+            <textarea
+              value={motivo}
+              onInput={(e) =>
+                setMotivo((e.currentTarget as HTMLTextAreaElement).value)
+              }
+              rows={2}
+            />
+          </label>
+          {error ? <p class="g-error">{error}</p> : null}
+          <div class="g-form-actions">
+            <button type="submit">Agregar</button>
+          </div>
+        </form>
+      ) : null}
 
       {entradas.length === 0 ? (
         <p class="g-empty">La lista negra está vacía.</p>
@@ -145,12 +150,14 @@ export default function GestionListaNegra({ entradasIniciales }: Props) {
                   {entry.motivo ? <small>Motivo: {entry.motivo}</small> : null}
                 </div>
                 <div class="g-row-actions">
-                  <button
-                    class="g-btn-ghost"
-                    onClick={() => setEditandoId(entry.id)}
-                  >
-                    Editar
-                  </button>
+                  {esAdmin ? (
+                    <button
+                      class="g-btn-ghost"
+                      onClick={() => setEditandoId(entry.id)}
+                    >
+                      Editar
+                    </button>
+                  ) : null}
                   <button
                     class="g-btn-danger-ghost"
                     onClick={() => quitar(entry.id)}

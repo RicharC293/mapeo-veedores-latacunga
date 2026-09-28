@@ -22,9 +22,11 @@ import { buildParByCode, buildRecByCod, buildTotales } from "../lib/stats";
 import { fmt, title } from "../lib/format";
 import Legend from "./Legend";
 import type { MapData, ParroquiaFeature, Recinto } from "../lib/types";
+import type { Rol } from "../lib/auth/roles";
 
 interface Props {
   data: MapData;
+  rol: Rol;
 }
 
 const TOP_DESKTOP = 110;
@@ -50,7 +52,7 @@ interface MapApi {
   reset: () => void;
 }
 
-export default function MapView({ data }: Props) {
+export default function MapView({ data, rol }: Props) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const apiRef = useRef<MapApi | null>(null);
   const totales = useMemo(() => buildTotales(data), [data]);
@@ -318,9 +320,15 @@ export default function MapView({ data }: Props) {
           ⤢
         </button>
       </div>
-      <a class="gestion-link" href="/gestion">
-        Gestión →
-      </a>
+      {rol === "militante" ? (
+        <a class="gestion-link" href="/gestion/cobertura">
+          Reportes →
+        </a>
+      ) : rol === "gestor" || rol === "administrador" ? (
+        <a class="gestion-link" href="/gestion">
+          Gestión →
+        </a>
+      ) : null}
       <Legend />
     </>
   );

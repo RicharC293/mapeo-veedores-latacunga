@@ -4,6 +4,11 @@ import { getMapData } from "../../lib/data";
 import { listLideres } from "../../lib/gestion/lideres";
 import { listCoordinadores } from "../../lib/gestion/coordinadores";
 import { title as titleCase } from "../../lib/format";
+import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
+
+if (!PAGINAS_GESTION.organigrama.includes(Astro.locals.rol)) {
+  return Astro.redirect(rutaPorDefecto(Astro.locals.rol));
+}
 
 const data = await getMapData();
 const lideres = await listLideres();

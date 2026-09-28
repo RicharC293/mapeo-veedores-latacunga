@@ -2,13 +2,23 @@ import type { APIRoute } from "astro";
 import { getMapData } from "../../../lib/data";
 import { agregarVeedor, listVeedores } from "../../../lib/gestion/veedores";
 import { juntaId } from "../../../lib/gestion/juntas";
-import { json, handle } from "../../../lib/gestion/apiHelpers";
+import {
+  json,
+  handle,
+  requireApiRole,
+} from "../../../lib/gestion/apiHelpers";
+import { PAGINAS_GESTION } from "../../../lib/auth/roles";
 
-export const GET: APIRoute = async () =>
-  handle(async () => json(await listVeedores()));
+export const GET: APIRoute = async ({ locals }) => {
+  const bloqueo = requireApiRole(locals, PAGINAS_GESTION.veedores);
+  if (bloqueo) return bloqueo;
+  return handle(async () => json(await listVeedores()));
+};
 
-export const POST: APIRoute = async ({ request }) =>
-  handle(async () => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  const bloqueo = requireApiRole(locals, PAGINAS_GESTION.veedores);
+  if (bloqueo) return bloqueo;
+  return handle(async () => {
     const body = (await request.json()) as {
       cedula: string;
       nombres: string;
@@ -34,3 +44,4 @@ export const POST: APIRoute = async ({ request }) =>
     });
     return json(veedor, { status: 201 });
   });
+};

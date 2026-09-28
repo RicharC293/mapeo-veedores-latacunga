@@ -1,0 +1,25 @@
+---
+import GestionLayout from "../../layouts/GestionLayout.astro";
+import GestionAccesos from "../../components/gestion/GestionAccesos";
+import { listAccesos } from "../../lib/gestion/accesos";
+import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
+
+if (!PAGINAS_GESTION.accesos.includes(Astro.locals.rol)) {
+  return Astro.redirect(rutaPorDefecto(Astro.locals.rol));
+}
+
+const accesos = await listAccesos();
+---
+
+<GestionLayout title="Accesos" activo="accesos">
+  <h1>Accesos</h1>
+  <p class="g-sub">
+    Genera un enlace único por persona o grupo. Al abrirlo, ese navegador
+    queda con el rol elegido de forma permanente hasta que lo revoques.
+  </p>
+  <GestionAccesos
+    client:load
+    origin={Astro.url.origin}
+    accesosIniciales={accesos}
+  />
+</GestionLayout>

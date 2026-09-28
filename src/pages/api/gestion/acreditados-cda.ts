@@ -4,13 +4,23 @@ import {
   agregarAcreditadoCda,
   listAcreditadosCda,
 } from "../../../lib/gestion/acreditadosCda";
-import { json, handle } from "../../../lib/gestion/apiHelpers";
+import {
+  json,
+  handle,
+  requireApiRole,
+} from "../../../lib/gestion/apiHelpers";
+import { PAGINAS_GESTION } from "../../../lib/auth/roles";
 
-export const GET: APIRoute = async () =>
-  handle(async () => json(await listAcreditadosCda()));
+export const GET: APIRoute = async ({ locals }) => {
+  const bloqueo = requireApiRole(locals, PAGINAS_GESTION["acreditados-cda"]);
+  if (bloqueo) return bloqueo;
+  return handle(async () => json(await listAcreditadosCda()));
+};
 
-export const POST: APIRoute = async ({ request }) =>
-  handle(async () => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  const bloqueo = requireApiRole(locals, PAGINAS_GESTION["acreditados-cda"]);
+  if (bloqueo) return bloqueo;
+  return handle(async () => {
     const body = (await request.json()) as {
       cedula: string;
       nombres: string;
@@ -33,3 +43,4 @@ export const POST: APIRoute = async ({ request }) =>
     });
     return json(acreditado, { status: 201 });
   });
+};

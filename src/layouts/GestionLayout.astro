@@ -1,6 +1,7 @@
 ---
 import Base from "./Base.astro";
 import "../styles/gestion.css";
+import { PAGINAS_GESTION, tienePermiso } from "../lib/auth/roles";
 
 interface Props {
   title: string;
@@ -13,10 +14,12 @@ interface Props {
     | "lista-negra"
     | "cobertura"
     | "crecimiento"
-    | "organigrama";
+    | "organigrama"
+    | "accesos";
 }
 
 const { title, activo } = Astro.props;
+const rol = Astro.locals.rol;
 
 const links = [
   { href: "/gestion", key: "index", label: "Resumen" },
@@ -36,7 +39,8 @@ const links = [
   { href: "/gestion/cobertura", key: "cobertura", label: "Cobertura" },
   { href: "/gestion/crecimiento", key: "crecimiento", label: "Crecimiento" },
   { href: "/gestion/organigrama", key: "organigrama", label: "Organigrama" },
-] as const;
+  { href: "/gestion/accesos", key: "accesos", label: "Accesos" },
+].filter((l) => tienePermiso(rol, PAGINAS_GESTION[l.key]));
 ---
 
 <Base title={`${title} · Gestión`}>
@@ -50,6 +54,15 @@ const links = [
           {l.label}
         </a>
       ))}
+      {rol !== "invitado" ? (
+        <form
+          method="POST"
+          action={rol === "administrador" ? "/api/admin/logout" : "/api/acceso/salir"}
+          style="margin-left: auto;"
+        >
+          <button type="submit" class="g-nav-salir">Cerrar sesión</button>
+        </form>
+      ) : null}
     </nav>
     <slot />
   </div>

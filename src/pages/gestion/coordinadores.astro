@@ -3,6 +3,11 @@ import GestionLayout from "../../layouts/GestionLayout.astro";
 import GestionCoordinadores from "../../components/gestion/GestionCoordinadores";
 import { getMapData } from "../../lib/data";
 import { listCoordinadores } from "../../lib/gestion/coordinadores";
+import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
+
+if (!PAGINAS_GESTION.coordinadores.includes(Astro.locals.rol)) {
+  return Astro.redirect(rutaPorDefecto(Astro.locals.rol));
+}
 
 const data = await getMapData();
 const coordinadores = await listCoordinadores();

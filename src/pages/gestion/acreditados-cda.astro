@@ -3,6 +3,11 @@ import GestionLayout from "../../layouts/GestionLayout.astro";
 import GestionAcreditadosCda from "../../components/gestion/GestionAcreditadosCda";
 import { getMapData } from "../../lib/data";
 import { listAcreditadosCda } from "../../lib/gestion/acreditadosCda";
+import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
+
+if (!PAGINAS_GESTION["acreditados-cda"].includes(Astro.locals.rol)) {
+  return Astro.redirect(rutaPorDefecto(Astro.locals.rol));
+}
 
 const data = await getMapData();
 const acreditados = await listAcreditadosCda();
