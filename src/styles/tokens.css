@@ -608,13 +608,16 @@ dd {
   color: var(--muted);
 }
 .go {
-  display: inline-block;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
   margin-top: 18px;
   padding: 12px 16px;
   border-radius: 10px;
   background: var(--sel);
   color: var(--panel);
   text-decoration: none;
+  text-align: center;
   font-weight: 700;
   touch-action: manipulation;
   user-select: none;
@@ -628,8 +631,7 @@ dd {
 .go-btn {
   border: 0;
   cursor: pointer;
-  margin-top: 4px;
-  margin-bottom: 8px;
+  margin-top: 10px;
 }
 .empty {
   color: var(--muted);
@@ -811,4 +813,9 @@ dd {
 .modal-sin-telefono {
   color: var(--muted);
   margin: 0;
+}
+.modal-no-registrado {
+  color: var(--muted);
+  margin: 0;
+  font-size: 1.05rem;
 }

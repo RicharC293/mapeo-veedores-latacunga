@@ -36,10 +36,12 @@ interface Props {
 
 interface PersonaInfo {
   rol: string;
+  label: string;
   nombres: string;
   cedula: string;
   telefono: string;
   organizacion?: string;
+  asignado: boolean;
 }
 
 function lideresDe(lideres: Lider[], recinto: Recinto): Lider[] {
@@ -72,13 +74,27 @@ function personaDe(
     telefono: string;
     organizacion?: string;
   },
+  label: string = entidad.nombres,
 ): PersonaInfo {
   return {
     rol,
+    label,
     nombres: entidad.nombres,
     cedula: entidad.cedula,
     telefono: entidad.telefono,
     organizacion: entidad.organizacion,
+    asignado: true,
+  };
+}
+
+function personaSinAsignar(rol: string, label: string): PersonaInfo {
+  return {
+    rol,
+    label,
+    nombres: "No registrado",
+    cedula: "",
+    telefono: "",
+    asignado: false,
   };
 }
 
@@ -260,12 +276,18 @@ export default function Panel({
       ? acreditadoCdaDe(acreditadosCda, r.cod)
       : null;
     const contactos: PersonaInfo[] = [
-      ...lideresRecinto.map((l) => personaDe("Líder", l)),
-      ...(coordinadorRecinto
-        ? [personaDe("Coordinador de recinto", coordinadorRecinto)]
-        : []),
-      ...(acreditadoCdaRecinto
-        ? [personaDe("Acreditado CDA", acreditadoCdaRecinto)]
+      ...(lideresRecinto.length > 0
+        ? lideresRecinto.map((l) => personaDe("Líder", l))
+        : [personaSinAsignar("Líder", "Líder")]),
+      coordinadorRecinto
+        ? personaDe("Coordinador de recinto", coordinadorRecinto, "Coordinador")
+        : personaSinAsignar("Coordinador de recinto", "Coordinador"),
+      ...(r.cda
+        ? [
+            acreditadoCdaRecinto
+              ? personaDe("Acreditado CDA", acreditadoCdaRecinto, "CDA")
+              : personaSinAsignar("Acreditado CDA", "CDA"),
+          ]
         : []),
     ];
     return (
@@ -294,11 +316,6 @@ export default function Panel({
           </div>
         </div>
         <EstadoRecinto cobertura={coberturaRecinto.get(r.cod)} cda={r.cda} />
-        {contactos.length > 0 ? (
-          <button class="go go-btn" onClick={() => setPersonas(contactos)}>
-            Ver contactos ({contactos.length})
-          </button>
-        ) : null}
         <dl>
           <dt>Electores</dt>
           <dd>{fmt(r.el)}</dd>
@@ -306,22 +323,6 @@ export default function Panel({
           <dd>{r.jt}</dd>
           <dt>Parroquia</dt>
           <dd>{f.properties.name}</dd>
-          <dt>Líder</dt>
-          <dd>
-            {lideresRecinto.length > 0
-              ? lideresRecinto.map((l) => l.nombres).join(", ")
-              : "Sin asignar"}
-          </dd>
-          <dt>Coordinador de recinto</dt>
-          <dd>{coordinadorRecinto ? coordinadorRecinto.nombres : "Sin asignar"}</dd>
-          {r.cda ? (
-            <>
-              <dt>Acreditado CDA</dt>
-              <dd>
-                {acreditadoCdaRecinto ? acreditadoCdaRecinto.nombres : "Sin asignar"}
-              </dd>
-            </>
-          ) : null}
           {r.zona ? (
             <>
               <dt>Zona electoral</dt>
@@ -350,6 +351,9 @@ export default function Panel({
         <a class="go" href={maps} target="_blank" rel="noopener">
           Cómo llegar en Google Maps
         </a>
+        <button class="go go-btn" onClick={() => setPersonas(contactos)}>
+          Líderes
+        </button>
         {personas ? (
           <PersonaModal personas={personas} onClose={() => setPersonas(null)} />
         ) : null}
@@ -748,41 +752,47 @@ function PersonaModal({
                 }
                 onClick={() => setActivo(i)}
               >
-                {p.nombres}
+                {p.label}
               </button>
             ))}
           </div>
         ) : null}
         <p class="modal-rol">{persona.rol}</p>
-        <h3 class="modal-nombre">{persona.nombres}</h3>
-        <dl class="modal-dl">
-          <dt>Cédula</dt>
-          <dd>{persona.cedula}</dd>
-          <dt>Teléfono</dt>
-          <dd>{telefono || "No registrado"}</dd>
-          {persona.organizacion ? (
-            <>
-              <dt>Organización</dt>
-              <dd>{persona.organizacion}</dd>
-            </>
-          ) : null}
-        </dl>
-        {telefono ? (
-          <div class="modal-actions">
-            <a class="modal-btn modal-btn-call" href={`tel:${telefono}`}>
-              Llamar
-            </a>
-            <a
-              class="modal-btn modal-btn-whatsapp"
-              href={`https://wa.me/${numeroWhatsapp(telefono)}`}
-              target="_blank"
-              rel="noopener"
-            >
-              WhatsApp
-            </a>
-          </div>
+        {persona.asignado ? (
+          <>
+            <h3 class="modal-nombre">{persona.nombres}</h3>
+            <dl class="modal-dl">
+              <dt>Cédula</dt>
+              <dd>{persona.cedula}</dd>
+              <dt>Teléfono</dt>
+              <dd>{telefono || "No registrado"}</dd>
+              {persona.organizacion ? (
+                <>
+                  <dt>Organización</dt>
+                  <dd>{persona.organizacion}</dd>
+                </>
+              ) : null}
+            </dl>
+            {telefono ? (
+              <div class="modal-actions">
+                <a class="modal-btn modal-btn-call" href={`tel:${telefono}`}>
+                  Llamar
+                </a>
+                <a
+                  class="modal-btn modal-btn-whatsapp"
+                  href={`https://wa.me/${numeroWhatsapp(telefono)}`}
+                  target="_blank"
+                  rel="noopener"
+                >
+                  WhatsApp
+                </a>
+              </div>
+            ) : (
+              <p class="modal-sin-telefono">Sin teléfono registrado.</p>
+            )}
+          </>
         ) : (
-          <p class="modal-sin-telefono">Sin teléfono registrado.</p>
+          <p class="modal-no-registrado">No registrado.</p>
         )}
       </div>
     </div>
