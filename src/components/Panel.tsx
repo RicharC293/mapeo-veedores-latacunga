@@ -256,7 +256,18 @@ export default function Panel({
     const maps = `https://www.google.com/maps/search/?api=1&query=${r.lat},${r.lon}`;
     const lideresRecinto = lideresDe(lideres, r);
     const coordinadorRecinto = coordinadorDe(coordinadores, r.cod);
-    const acreditadoCdaRecinto = acreditadoCdaDe(acreditadosCda, r.cod);
+    const acreditadoCdaRecinto = r.cda
+      ? acreditadoCdaDe(acreditadosCda, r.cod)
+      : null;
+    const contactos: PersonaInfo[] = [
+      ...lideresRecinto.map((l) => personaDe("Líder", l)),
+      ...(coordinadorRecinto
+        ? [personaDe("Coordinador de recinto", coordinadorRecinto)]
+        : []),
+      ...(acreditadoCdaRecinto
+        ? [personaDe("Acreditado CDA", acreditadoCdaRecinto)]
+        : []),
+    ];
     return (
       <>
         <button class="back" onClick={() => selectParroquia(r.par, true)}>
@@ -283,6 +294,11 @@ export default function Panel({
           </div>
         </div>
         <EstadoRecinto cobertura={coberturaRecinto.get(r.cod)} cda={r.cda} />
+        {contactos.length > 0 ? (
+          <button class="go go-btn" onClick={() => setPersonas(contactos)}>
+            Ver contactos ({contactos.length})
+          </button>
+        ) : null}
         <dl>
           <dt>Electores</dt>
           <dd>{fmt(r.el)}</dd>
@@ -292,63 +308,17 @@ export default function Panel({
           <dd>{f.properties.name}</dd>
           <dt>Líder</dt>
           <dd>
-            {lideresRecinto.length === 0 ? (
-              <span>Sin asignar</span>
-            ) : lideresRecinto.length === 1 ? (
-              <button
-                class="link-persona"
-                onClick={() => setPersonas([personaDe("Líder", lideresRecinto[0])])}
-              >
-                {lideresRecinto[0].nombres}
-              </button>
-            ) : (
-              <button
-                class="link-persona"
-                onClick={() =>
-                  setPersonas(
-                    lideresRecinto.map((l) => personaDe("Líder", l)),
-                  )
-                }
-              >
-                Ver líderes ({lideresRecinto.length})
-              </button>
-            )}
+            {lideresRecinto.length > 0
+              ? lideresRecinto.map((l) => l.nombres).join(", ")
+              : "Sin asignar"}
           </dd>
           <dt>Coordinador de recinto</dt>
-          <dd>
-            {coordinadorRecinto ? (
-              <button
-                class="link-persona"
-                onClick={() =>
-                  setPersonas([
-                    personaDe("Coordinador de recinto", coordinadorRecinto),
-                  ])
-                }
-              >
-                {coordinadorRecinto.nombres}
-              </button>
-            ) : (
-              <span>Sin asignar</span>
-            )}
-          </dd>
+          <dd>{coordinadorRecinto ? coordinadorRecinto.nombres : "Sin asignar"}</dd>
           {r.cda ? (
             <>
               <dt>Acreditado CDA</dt>
               <dd>
-                {acreditadoCdaRecinto ? (
-                  <button
-                    class="link-persona"
-                    onClick={() =>
-                      setPersonas([
-                        personaDe("Acreditado CDA", acreditadoCdaRecinto),
-                      ])
-                    }
-                  >
-                    {acreditadoCdaRecinto.nombres}
-                  </button>
-                ) : (
-                  <span>Sin asignar</span>
-                )}
+                {acreditadoCdaRecinto ? acreditadoCdaRecinto.nombres : "Sin asignar"}
               </dd>
             </>
           ) : null}

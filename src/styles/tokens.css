@@ -588,23 +588,6 @@ dd {
   margin: 0;
   font-weight: 700;
 }
-.link-persona {
-  background: none;
-  border: 0;
-  padding: 0;
-  margin: 0;
-  font: inherit;
-  font-weight: 700;
-  color: var(--sel);
-  text-decoration: underline dotted;
-  text-underline-offset: 2px;
-  cursor: pointer;
-}
-@media (hover: hover) and (pointer: fine) {
-  .link-persona:hover {
-    text-decoration-style: solid;
-  }
-}
 .juntas {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -641,6 +624,12 @@ dd {
 }
 .go:active {
   transform: scale(0.97);
+}
+.go-btn {
+  border: 0;
+  cursor: pointer;
+  margin-top: 4px;
+  margin-bottom: 8px;
 }
 .empty {
   color: var(--muted);
