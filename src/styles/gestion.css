@@ -5,32 +5,71 @@
 }
 .g-nav {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 14px;
   align-items: center;
+  gap: 16px;
   margin-bottom: 20px;
   padding-bottom: 14px;
   border-bottom: 1px solid var(--line);
 }
-.g-nav a {
-  color: var(--sel);
+.g-nav-back {
+  flex-shrink: 0;
+  color: var(--muted);
   text-decoration: none;
-  font-weight: 700;
+  font-weight: 400;
   font-size: 0.92rem;
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
 }
-.g-nav a[aria-current="page"] {
-  color: var(--ink);
-  text-decoration: underline;
+.g-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
-.g-nav .g-nav-back {
-  color: var(--muted);
-  font-weight: 400;
+.g-nav-links::-webkit-scrollbar {
+  display: none;
+}
+.g-nav-links a {
+  flex-shrink: 0;
+  color: var(--sel);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  padding: 6px 10px;
+  border-radius: 8px;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.g-nav-links a[aria-current="page"] {
+  color: var(--ink);
+  background: var(--chip);
+}
+@media (hover: hover) and (pointer: fine) {
+  .g-nav-links a:not([aria-current="page"]):hover {
+    background: var(--chip);
+  }
+}
+.g-nav > form {
+  flex-shrink: 0;
+}
+.g-nav-sep {
+  flex-shrink: 0;
+  width: 1px;
+  height: 18px;
+  background: var(--line);
+  margin: 0 6px;
 }
 .g-nav-salir {
+  flex-shrink: 0;
+  white-space: nowrap;
   background: none;
   border: 0;
   padding: 0;

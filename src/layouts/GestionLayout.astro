@@ -22,24 +22,56 @@ const { title, activo } = Astro.props;
 const rol = Astro.locals.rol;
 
 const links = [
-  { href: "/gestion", key: "index", label: "Resumen" },
-  { href: "/gestion/veedores", key: "veedores", label: "Veedores" },
+  { href: "/gestion", key: "index", label: "Resumen", group: "gestion" },
+  {
+    href: "/gestion/veedores",
+    key: "veedores",
+    label: "Veedores",
+    group: "gestion",
+  },
   {
     href: "/gestion/coordinadores",
     key: "coordinadores",
     label: "Coordinadores",
+    group: "gestion",
   },
   {
     href: "/gestion/acreditados-cda",
     key: "acreditados-cda",
     label: "Acreditados CDA",
+    group: "gestion",
   },
-  { href: "/gestion/lideres", key: "lideres", label: "Líderes" },
-  { href: "/gestion/lista-negra", key: "lista-negra", label: "Lista negra" },
-  { href: "/gestion/cobertura", key: "cobertura", label: "Cobertura" },
-  { href: "/gestion/crecimiento", key: "crecimiento", label: "Crecimiento" },
-  { href: "/gestion/organigrama", key: "organigrama", label: "Organigrama" },
-  { href: "/gestion/accesos", key: "accesos", label: "Accesos" },
+  {
+    href: "/gestion/lideres",
+    key: "lideres",
+    label: "Líderes",
+    group: "gestion",
+  },
+  {
+    href: "/gestion/lista-negra",
+    key: "lista-negra",
+    label: "Lista negra",
+    group: "gestion",
+  },
+  {
+    href: "/gestion/cobertura",
+    key: "cobertura",
+    label: "Cobertura",
+    group: "reportes",
+  },
+  {
+    href: "/gestion/crecimiento",
+    key: "crecimiento",
+    label: "Crecimiento",
+    group: "reportes",
+  },
+  {
+    href: "/gestion/organigrama",
+    key: "organigrama",
+    label: "Organigrama",
+    group: "reportes",
+  },
+  { href: "/gestion/accesos", key: "accesos", label: "Accesos", group: "admin" },
 ].filter((l) => tienePermiso(rol, PAGINAS_GESTION[l.key]));
 ---
 
@@ -49,16 +81,29 @@ const links = [
       <a class="g-nav-back" href="/">
         ‹ Mapa
       </a>
-      {links.map((l) => (
-        <a href={l.href} aria-current={activo === l.key ? "page" : undefined}>
-          {l.label}
-        </a>
-      ))}
+      <div class="g-nav-links">
+        {links.map((l, i) => (
+          <>
+            {i > 0 && l.group !== links[i - 1].group ? (
+              <span class="g-nav-sep" aria-hidden="true" />
+            ) : null}
+            <a
+              href={l.href}
+              aria-current={activo === l.key ? "page" : undefined}
+            >
+              {l.label}
+            </a>
+          </>
+        ))}
+      </div>
       {rol !== "invitado" ? (
         <form
           method="POST"
-          action={rol === "administrador" ? "/api/admin/logout" : "/api/acceso/salir"}
-          style="margin-left: auto;"
+          action={
+            rol === "administrador"
+              ? "/api/admin/logout"
+              : "/api/acceso/salir"
+          }
         >
           <button type="submit" class="g-nav-salir">Cerrar sesión</button>
         </form>
