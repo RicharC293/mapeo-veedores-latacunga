@@ -38,6 +38,7 @@ export async function agregarAcreditadoCda(input: {
   cedula: string;
   nombres: string;
   telefono: string;
+  responsable: string;
   recintoCodigo: number;
   parroquiaCodigo: number;
   tipo: "titular" | "suplente";
@@ -57,6 +58,7 @@ export async function agregarAcreditadoCda(input: {
         p_recinto_codigo: input.recintoCodigo,
         p_parroquia_codigo: input.parroquiaCodigo,
         p_tipo: input.tipo,
+        p_responsable: input.responsable,
       },
     );
     if (error) throw new Error(error.message);
@@ -99,6 +101,7 @@ export async function agregarAcreditadoCda(input: {
       cedula,
       nombres: input.nombres.trim(),
       telefono: input.telefono.trim(),
+      responsable: input.responsable.trim(),
       recintoCodigo: input.recintoCodigo,
       parroquiaCodigo: input.parroquiaCodigo,
       tipo: input.tipo,
@@ -122,6 +125,7 @@ export async function agregarAcreditadoCda(input: {
 export async function desvincularAcreditadoCda(
   id: string,
   motivo: string | null,
+  listaNegra = true,
 ): Promise<void> {
   if (supabaseSecret) {
     const { error } = await supabaseSecret.rpc("desvincular_acreditado_cda", {
@@ -130,6 +134,7 @@ export async function desvincularAcreditadoCda(
       // de Supabase no marca los parámetros como anulables (solo detecta
       // opcionalidad por valores por defecto).
       p_motivo: motivo as string,
+      p_lista_negra: listaNegra,
     });
     if (error) throw new Error(error.message);
     return;
@@ -187,13 +192,15 @@ export async function desvincularAcreditadoCda(
   if (!desvinculado) return;
   const d = desvinculado as AcreditadoCda;
 
-  await agregarAListaNegra({
-    cedula: d.cedula,
-    nombres: d.nombres,
-    telefono: d.telefono,
-    motivo,
-    origen: "acreditado_cda",
-  });
+  if (listaNegra) {
+    await agregarAListaNegra({
+      cedula: d.cedula,
+      nombres: d.nombres,
+      telefono: d.telefono,
+      motivo,
+      origen: "acreditado_cda",
+    });
+  }
   await registrarEvento({
     tipo: "baja_acreditado_cda",
     cedula: d.cedula,

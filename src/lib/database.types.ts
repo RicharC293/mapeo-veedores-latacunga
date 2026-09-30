@@ -78,6 +78,7 @@ export type Database = {
           orden: number
           parroquia_codigo: number
           recinto_codigo: number
+          responsable: string
           telefono: string
           tipo: string
           verificado: boolean
@@ -90,6 +91,7 @@ export type Database = {
           orden?: number
           parroquia_codigo: number
           recinto_codigo: number
+          responsable?: string
           telefono?: string
           tipo: string
           verificado?: boolean
@@ -102,6 +104,7 @@ export type Database = {
           orden?: number
           parroquia_codigo?: number
           recinto_codigo?: number
+          responsable?: string
           telefono?: string
           tipo?: string
           verificado?: boolean
@@ -132,6 +135,7 @@ export type Database = {
           orden: number
           parroquia_codigo: number
           recinto_codigo: number
+          responsable: string
           telefono: string
           tipo: string
           verificado: boolean
@@ -144,6 +148,7 @@ export type Database = {
           orden?: number
           parroquia_codigo: number
           recinto_codigo: number
+          responsable?: string
           telefono?: string
           tipo: string
           verificado?: boolean
@@ -156,6 +161,7 @@ export type Database = {
           orden?: number
           parroquia_codigo?: number
           recinto_codigo?: number
+          responsable?: string
           telefono?: string
           tipo?: string
           verificado?: boolean
@@ -222,8 +228,10 @@ export type Database = {
       lideres: {
         Row: {
           ambito: string
+          cargo: string | null
           cedula: string
           creado_en: string
+          foto: string | null
           id: string
           nombres: string
           organizacion: string
@@ -233,8 +241,10 @@ export type Database = {
         }
         Insert: {
           ambito: string
+          cargo?: string | null
           cedula: string
           creado_en?: string
+          foto?: string | null
           id?: string
           nombres: string
           organizacion?: string
@@ -244,8 +254,10 @@ export type Database = {
         }
         Update: {
           ambito?: string
+          cargo?: string | null
           cedula?: string
           creado_en?: string
+          foto?: string | null
           id?: string
           nombres?: string
           organizacion?: string
@@ -415,6 +427,7 @@ export type Database = {
           orden: number
           parroquia_codigo: number
           recinto_codigo: number
+          responsable: string
           telefono: string
           tipo: string
           verificado: boolean
@@ -428,6 +441,7 @@ export type Database = {
           orden?: number
           parroquia_codigo: number
           recinto_codigo: number
+          responsable?: string
           telefono?: string
           tipo: string
           verificado?: boolean
@@ -441,6 +455,7 @@ export type Database = {
           orden?: number
           parroquia_codigo?: number
           recinto_codigo?: number
+          responsable?: string
           telefono?: string
           tipo?: string
           verificado?: boolean
@@ -462,6 +477,7 @@ export type Database = {
           p_nombres: string
           p_parroquia_codigo: number
           p_recinto_codigo: number
+          p_responsable?: string
           p_telefono: string
           p_tipo: string
         }
@@ -473,6 +489,7 @@ export type Database = {
           orden: number
           parroquia_codigo: number
           recinto_codigo: number
+          responsable: string
           telefono: string
           tipo: string
           verificado: boolean
@@ -490,6 +507,7 @@ export type Database = {
           p_nombres: string
           p_parroquia_codigo: number
           p_recinto_codigo: number
+          p_responsable?: string
           p_telefono: string
           p_tipo: string
         }
@@ -501,6 +519,7 @@ export type Database = {
           orden: number
           parroquia_codigo: number
           recinto_codigo: number
+          responsable: string
           telefono: string
           tipo: string
           verificado: boolean
@@ -519,6 +538,7 @@ export type Database = {
           p_nombres: string
           p_parroquia_codigo: number
           p_recinto_codigo: number
+          p_responsable?: string
           p_telefono: string
           p_tipo: string
         }
@@ -531,6 +551,7 @@ export type Database = {
           orden: number
           parroquia_codigo: number
           recinto_codigo: number
+          responsable: string
           telefono: string
           tipo: string
           verificado: boolean
@@ -584,15 +605,15 @@ export type Database = {
         Returns: undefined
       }
       desvincular_acreditado_cda: {
-        Args: { p_id: string; p_motivo: string }
+        Args: { p_id: string; p_lista_negra?: boolean; p_motivo: string }
         Returns: undefined
       }
       desvincular_coordinador: {
-        Args: { p_id: string; p_motivo: string }
+        Args: { p_id: string; p_lista_negra?: boolean; p_motivo: string }
         Returns: undefined
       }
       desvincular_veedor: {
-        Args: { p_id: string; p_motivo: string }
+        Args: { p_id: string; p_lista_negra?: boolean; p_motivo: string }
         Returns: undefined
       }
       get_mapa: { Args: { canton: number }; Returns: Json }

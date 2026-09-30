@@ -3,6 +3,7 @@
 import type {
   AcreditadoCda,
   AmbitoLider,
+  Cargo,
   Coordinador,
   Lider,
   ListaNegraEntry,
@@ -17,6 +18,7 @@ export function rowToVeedor(row: Record<string, unknown>): Veedor {
     cedula: row.cedula as string,
     nombres: row.nombres as string,
     telefono: row.telefono as string,
+    responsable: (row.responsable as string | null) ?? "",
     juntaId: row.junta_id as string,
     recintoCodigo: row.recinto_codigo as number,
     parroquiaCodigo: row.parroquia_codigo as number,
@@ -33,6 +35,7 @@ export function rowToCoordinador(row: Record<string, unknown>): Coordinador {
     cedula: row.cedula as string,
     nombres: row.nombres as string,
     telefono: row.telefono as string,
+    responsable: (row.responsable as string | null) ?? "",
     recintoCodigo: row.recinto_codigo as number,
     parroquiaCodigo: row.parroquia_codigo as number,
     tipo: row.tipo as TipoAsignacion,
@@ -50,6 +53,7 @@ export function rowToAcreditadoCda(
     cedula: row.cedula as string,
     nombres: row.nombres as string,
     telefono: row.telefono as string,
+    responsable: (row.responsable as string | null) ?? "",
     recintoCodigo: row.recinto_codigo as number,
     parroquiaCodigo: row.parroquia_codigo as number,
     tipo: row.tipo as TipoAsignacion,
@@ -69,6 +73,8 @@ export function rowToLider(row: Record<string, unknown>): Lider {
     ambito: row.ambito as AmbitoLider,
     parroquiaCodigo: (row.parroquia_codigo as number | null) ?? null,
     recintoCodigos: (row.recinto_codigos as number[] | null) ?? [],
+    cargo: (row.cargo as Cargo | null) ?? null,
+    foto: (row.foto as string | null) ?? null,
     creadoEn: row.creado_en as string,
   };
 }

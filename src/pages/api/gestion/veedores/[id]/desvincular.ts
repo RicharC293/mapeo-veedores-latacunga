@@ -15,8 +15,13 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
     if (!id) throw new Error("Falta el id del veedor.");
     const body = (await request.json().catch(() => ({}))) as {
       motivo?: string;
+      listaNegra?: boolean;
     };
-    await desvincularVeedor(id, body.motivo?.trim() || null);
+    await desvincularVeedor(
+      id,
+      body.motivo?.trim() || null,
+      body.listaNegra ?? true,
+    );
     return json({ ok: true });
   });
 };

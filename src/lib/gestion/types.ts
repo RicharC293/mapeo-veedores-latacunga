@@ -14,6 +14,7 @@ export interface Veedor {
   cedula: string;
   nombres: string;
   telefono: string;
+  responsable: string;
   juntaId: string;
   recintoCodigo: number;
   parroquiaCodigo: number;
@@ -28,6 +29,7 @@ export interface Coordinador {
   cedula: string;
   nombres: string;
   telefono: string;
+  responsable: string;
   recintoCodigo: number;
   parroquiaCodigo: number;
   tipo: TipoAsignacion;
@@ -44,6 +46,7 @@ export interface AcreditadoCda {
   cedula: string;
   nombres: string;
   telefono: string;
+  responsable: string;
   recintoCodigo: number;
   parroquiaCodigo: number;
   tipo: TipoAsignacion;
@@ -54,6 +57,29 @@ export interface AcreditadoCda {
 
 export type AmbitoLider = "general" | "parroquia";
 
+// Dignidad electa que puede ostentar un líder, además de su rol
+// organizativo (ambito). Un concejal o el alcalde son líderes con cargo.
+export type Cargo =
+  | "alcalde"
+  | "concejal_urbano"
+  | "concejal_rural"
+  | "vocal_junta_parroquial";
+
+export const CUPO_CARGO: Record<Cargo, number> = {
+  alcalde: 1,
+  concejal_urbano: 6,
+  concejal_rural: 5,
+  // Es 1 por cada parroquia rural, no un cupo cantonal plano.
+  vocal_junta_parroquial: 1,
+};
+
+export const CARGO_LABEL: Record<Cargo, string> = {
+  alcalde: "Alcalde",
+  concejal_urbano: "Concejal urbano",
+  concejal_rural: "Concejal rural",
+  vocal_junta_parroquial: "Vocal de junta parroquial",
+};
+
 export interface Lider {
   id: string;
   cedula: string;
@@ -63,6 +89,8 @@ export interface Lider {
   ambito: AmbitoLider;
   parroquiaCodigo: number | null;
   recintoCodigos: number[];
+  cargo: Cargo | null;
+  foto: string | null;
   creadoEn: string;
 }
 

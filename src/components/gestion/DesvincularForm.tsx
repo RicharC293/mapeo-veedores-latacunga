@@ -1,12 +1,13 @@
 import { useState } from "preact/hooks";
 
 interface Props {
-  onConfirm: (motivo: string | null) => Promise<void>;
+  onConfirm: (motivo: string | null, listaNegra: boolean) => Promise<void>;
   onCancel: () => void;
 }
 
 export default function DesvincularForm({ onConfirm, onCancel }: Props) {
   const [motivo, setMotivo] = useState("");
+  const [listaNegra, setListaNegra] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -15,7 +16,7 @@ export default function DesvincularForm({ onConfirm, onCancel }: Props) {
     setError(null);
     setEnviando(true);
     try {
-      await onConfirm(motivo.trim() || null);
+      await onConfirm(motivo.trim() || null, listaNegra);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado.");
       setEnviando(false);
@@ -24,7 +25,7 @@ export default function DesvincularForm({ onConfirm, onCancel }: Props) {
 
   return (
     <form class="g-form g-form-danger" onSubmit={submit}>
-      <p class="g-form-title">Desvincular y enviar a la lista negra</p>
+      <p class="g-form-title">Desvincular</p>
       <label>
         Observación (opcional)
         <textarea
@@ -35,10 +36,20 @@ export default function DesvincularForm({ onConfirm, onCancel }: Props) {
           rows={2}
         />
       </label>
+      <label class="g-check g-check-verificado">
+        <input
+          type="checkbox"
+          checked={listaNegra}
+          onChange={(e) =>
+            setListaNegra((e.currentTarget as HTMLInputElement).checked)
+          }
+        />
+        Enviar a la lista negra
+      </label>
       {error ? <p class="g-error">{error}</p> : null}
       <div class="g-form-actions">
         <button type="submit" class="g-btn-danger" disabled={enviando}>
-          {enviando ? "Desvinculando…" : "Confirmar desvinculación"}
+          {enviando ? "Enviando…" : "Confirmar"}
         </button>
         <button type="button" class="g-btn-ghost" onClick={onCancel}>
           Cancelar

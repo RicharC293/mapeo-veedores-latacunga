@@ -128,10 +128,10 @@ export default function GestionCoordinadores({
               });
               await refrescar();
             }}
-            onDesvincular={async (id, motivo) => {
+            onDesvincular={async (id, motivo, listaNegra) => {
               await api(`/api/gestion/coordinadores/${id}/desvincular`, {
                 method: "POST",
-                body: JSON.stringify({ motivo }),
+                body: JSON.stringify({ motivo, listaNegra }),
               });
               await refrescar();
             }}

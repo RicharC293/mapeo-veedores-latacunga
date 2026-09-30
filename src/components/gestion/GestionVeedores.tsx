@@ -139,10 +139,10 @@ export default function GestionVeedores({
                   });
                   await refrescar();
                 }}
-                onDesvincular={async (id, motivo) => {
+                onDesvincular={async (id, motivo, listaNegra) => {
                   await api(`/api/gestion/veedores/${id}/desvincular`, {
                     method: "POST",
-                    body: JSON.stringify({ motivo }),
+                    body: JSON.stringify({ motivo, listaNegra }),
                   });
                   await refrescar();
                 }}

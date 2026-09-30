@@ -15,8 +15,13 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
     if (!id) throw new Error("Falta el id del acreditado CDA.");
     const body = (await request.json().catch(() => ({}))) as {
       motivo?: string;
+      listaNegra?: boolean;
     };
-    await desvincularAcreditadoCda(id, body.motivo?.trim() || null);
+    await desvincularAcreditadoCda(
+      id,
+      body.motivo?.trim() || null,
+      body.listaNegra ?? true,
+    );
     return json({ ok: true });
   });
 };

@@ -7,6 +7,7 @@ export interface PersonaAsignada {
   cedula: string;
   nombres: string;
   telefono: string;
+  responsable: string;
   verificado: boolean;
 }
 
@@ -18,13 +19,19 @@ interface Props {
     cedula: string;
     nombres: string;
     telefono: string;
+    responsable: string;
   }) => Promise<void>;
   onAgregarSuplente: (input: {
     cedula: string;
     nombres: string;
     telefono: string;
+    responsable: string;
   }) => Promise<void>;
-  onDesvincular: (id: string, motivo: string | null) => Promise<void>;
+  onDesvincular: (
+    id: string,
+    motivo: string | null,
+    listaNegra: boolean,
+  ) => Promise<void>;
   onVerificar: (id: string, verificado: boolean) => Promise<void>;
 }
 
@@ -71,8 +78,8 @@ export default function AsignacionCard({
         typeof abierto === "object" &&
         abierto.desvincular === titular?.id ? (
           <DesvincularForm
-            onConfirm={async (motivo) => {
-              await onDesvincular(titular!.id, motivo);
+            onConfirm={async (motivo, listaNegra) => {
+              await onDesvincular(titular!.id, motivo, listaNegra);
               setAbierto(null);
             }}
             onCancel={() => setAbierto(null)}
@@ -94,8 +101,8 @@ export default function AsignacionCard({
               typeof abierto === "object" &&
               abierto.desvincular === s.id ? (
                 <DesvincularForm
-                  onConfirm={async (motivo) => {
-                    await onDesvincular(s.id, motivo);
+                  onConfirm={async (motivo, listaNegra) => {
+                    await onDesvincular(s.id, motivo, listaNegra);
                     setAbierto(null);
                   }}
                   onCancel={() => setAbierto(null)}
@@ -141,6 +148,7 @@ function PersonaRow({
         <small>
           CI {persona.cedula}
           {persona.telefono ? ` · ${persona.telefono}` : ""}
+          {persona.responsable ? ` · ${persona.responsable}` : ""}
         </small>
         <label class="g-check g-check-verificado">
           <input

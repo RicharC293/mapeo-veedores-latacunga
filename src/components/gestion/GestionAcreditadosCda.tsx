@@ -132,10 +132,10 @@ export default function GestionAcreditadosCda({
               });
               await refrescar();
             }}
-            onDesvincular={async (id, motivo) => {
+            onDesvincular={async (id, motivo, listaNegra) => {
               await api(`/api/gestion/acreditados-cda/${id}/desvincular`, {
                 method: "POST",
-                body: JSON.stringify({ motivo }),
+                body: JSON.stringify({ motivo, listaNegra }),
               });
               await refrescar();
             }}

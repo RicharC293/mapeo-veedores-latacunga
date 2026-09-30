@@ -111,7 +111,7 @@
   font-weight: 700;
 }
 .g-selects select,
-.g-form input,
+.g-form input:not([type="checkbox"]),
 .g-form select,
 .g-form textarea {
   font: inherit;
@@ -238,6 +238,28 @@
   background: var(--chip);
 }
 
+.g-chip-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: -4px;
+}
+.g-chip {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+.g-chip-active {
+  background: var(--sel);
+  border-color: var(--sel);
+  color: var(--panel);
+  font-weight: 700;
+}
+
 .login-page {
   min-height: 100dvh;
   display: flex;
@@ -329,6 +351,14 @@
 }
 .g-check-verificado input {
   cursor: pointer;
+}
+/* ".g-form label" (columna, para Cédula/Nombres/etc.) tiene más
+   especificidad que ".g-check" solo: sin esto, un checkbox ".g-check"
+   dentro de un ".g-form" queda apilado en vez de en fila. */
+.g-form .g-check {
+  flex-direction: row;
+  align-items: center;
+  width: auto;
 }
 
 .g-list {
@@ -542,4 +572,145 @@
 }
 .g-chart-wrap {
   position: relative;
+}
+
+/* Árbol colapsable (Estructura organizativa): nodos expandibles con
+   animación, en vez del árbol estático de .g-org (Organigrama). */
+.g-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.g-tree-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  text-align: left;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--ink);
+  transition:
+    border-color 150ms ease,
+    background 150ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .g-tree-toggle:hover {
+    border-color: var(--sel);
+  }
+}
+.g-tree-chevron {
+  flex-shrink: 0;
+  color: var(--muted);
+  transition: transform 200ms ease;
+}
+.g-tree-chevron-abierto {
+  transform: rotate(90deg);
+  color: var(--sel);
+}
+.g-tree-titulo {
+  font-weight: 700;
+}
+.g-tree-subtitulo {
+  margin-left: auto;
+  padding-left: 10px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.g-tree-children {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms ease;
+  margin-left: 18px;
+  border-left: 2px solid var(--line);
+  padding-left: 16px;
+}
+.g-tree-children-abierto {
+  grid-template-rows: 1fr;
+}
+.g-tree-children-inner {
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 10px;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.g-tree-children-abierto .g-tree-children-inner {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .g-tree-children,
+  .g-tree-chevron,
+  .g-tree-children-inner {
+    transition: none;
+  }
+}
+
+.g-alianza {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.g-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  background: var(--chip);
+  flex-shrink: 0;
+}
+.g-avatar-placeholder {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--chip);
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+}
+.g-dignidad-card {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.g-dignidad-card .g-card {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.g-dignidad-card .g-card h4 {
+  margin: 0 0 4px;
+}
+.g-dignidad-card .g-card small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.g-foto-uploader {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin-top: 6px;
+}
+.g-foto-uploader label {
+  cursor: pointer;
 }

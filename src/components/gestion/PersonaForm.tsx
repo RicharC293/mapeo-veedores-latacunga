@@ -1,10 +1,12 @@
 import { useState } from "preact/hooks";
+import { RESPONSABLES_PRESET } from "../../lib/gestion/responsables";
 
 interface Props {
   onSubmit: (input: {
     cedula: string;
     nombres: string;
     telefono: string;
+    responsable: string;
   }) => Promise<void>;
   onCancel: () => void;
   etiqueta: string;
@@ -14,6 +16,7 @@ export default function PersonaForm({ onSubmit, onCancel, etiqueta }: Props) {
   const [cedula, setCedula] = useState("");
   const [nombres, setNombres] = useState("");
   const [telefono, setTelefono] = useState("");
+  const [responsable, setResponsable] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -22,7 +25,7 @@ export default function PersonaForm({ onSubmit, onCancel, etiqueta }: Props) {
     setError(null);
     setEnviando(true);
     try {
-      await onSubmit({ cedula, nombres, telefono });
+      await onSubmit({ cedula, nombres, telefono, responsable });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado.");
     } finally {
@@ -64,6 +67,30 @@ export default function PersonaForm({ onSubmit, onCancel, etiqueta }: Props) {
           }
         />
       </label>
+      <label>
+        Responsable
+        <input
+          value={responsable}
+          onInput={(e) =>
+            setResponsable((e.currentTarget as HTMLInputElement).value)
+          }
+          placeholder="Escribe o elige una opción abajo"
+        />
+      </label>
+      <div class="g-chip-picker">
+        {RESPONSABLES_PRESET.map((opcion) => (
+          <button
+            key={opcion}
+            type="button"
+            class={
+              "g-chip" + (responsable === opcion ? " g-chip-active" : "")
+            }
+            onClick={() => setResponsable(opcion)}
+          >
+            {opcion}
+          </button>
+        ))}
+      </div>
       {error ? <p class="g-error">{error}</p> : null}
       <div class="g-form-actions">
         <button type="submit" disabled={enviando}>

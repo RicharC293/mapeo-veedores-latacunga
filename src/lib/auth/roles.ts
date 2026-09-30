@@ -16,6 +16,7 @@ export const PAGINAS_GESTION: Record<string, Rol[]> = {
   cobertura: ["militante", "gestor", "administrador"],
   crecimiento: ["militante", "gestor", "administrador"],
   organigrama: ["militante", "gestor", "administrador"],
+  estructura: ["militante", "gestor", "administrador"],
   accesos: ["administrador"],
 };
 

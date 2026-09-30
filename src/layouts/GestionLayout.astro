@@ -15,6 +15,7 @@ interface Props {
     | "cobertura"
     | "crecimiento"
     | "organigrama"
+    | "estructura"
     | "accesos";
 }
 
@@ -69,6 +70,12 @@ const links = [
     href: "/gestion/organigrama",
     key: "organigrama",
     label: "Organigrama",
+    group: "reportes",
+  },
+  {
+    href: "/gestion/estructura",
+    key: "estructura",
+    label: "Estructura organizativa",
     group: "reportes",
   },
   { href: "/gestion/accesos", key: "accesos", label: "Accesos", group: "admin" },

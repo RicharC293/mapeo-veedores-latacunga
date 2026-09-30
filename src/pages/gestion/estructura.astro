@@ -1,0 +1,42 @@
+---
+import GestionLayout from "../../layouts/GestionLayout.astro";
+import DiagramaEstructura from "../../components/gestion/DiagramaEstructura";
+import DiagramaResponsables from "../../components/gestion/DiagramaResponsables";
+import { getMapData } from "../../lib/data";
+import { listLideres } from "../../lib/gestion/lideres";
+import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
+
+if (!PAGINAS_GESTION.estructura.includes(Astro.locals.rol)) {
+  return Astro.redirect(rutaPorDefecto(Astro.locals.rol));
+}
+
+const data = await getMapData();
+const lideres = await listLideres();
+---
+
+<GestionLayout title="Estructura organizativa" activo="estructura">
+  <h1>Estructura organizativa</h1>
+  <p class="g-sub">
+    Alianza Campo Ciudad y las dignidades a elegir: alcalde, concejales
+    urbanos, concejales rurales y un vocal por cada junta parroquial rural.
+  </p>
+  <DiagramaEstructura
+    client:load
+    lideres={lideres}
+    parroquias={data.parroquias.features}
+    recintos={data.recintos}
+  />
+
+  <h2>Responsables por recinto</h2>
+  <p class="g-sub">
+    Recintos agrupados por parroquia, con el líder o dignidad a cargo de cada
+    uno. Es un control organizativo, distinto de la cobertura electoral del
+    Organigrama.
+  </p>
+  <DiagramaResponsables
+    client:load
+    lideres={lideres}
+    parroquias={data.parroquias.features}
+    recintos={data.recintos}
+  />
+</GestionLayout>

@@ -34,6 +34,7 @@ export async function agregarVeedor(input: {
   cedula: string;
   nombres: string;
   telefono: string;
+  responsable: string;
   juntaId: string;
   recintoCodigo: number;
   parroquiaCodigo: number;
@@ -53,6 +54,7 @@ export async function agregarVeedor(input: {
       p_recinto_codigo: input.recintoCodigo,
       p_parroquia_codigo: input.parroquiaCodigo,
       p_tipo: input.tipo,
+      p_responsable: input.responsable,
     });
     if (error) throw new Error(error.message);
     return rowToVeedor(data);
@@ -92,6 +94,7 @@ export async function agregarVeedor(input: {
       cedula,
       nombres: input.nombres.trim(),
       telefono: input.telefono.trim(),
+      responsable: input.responsable.trim(),
       juntaId: input.juntaId,
       recintoCodigo: input.recintoCodigo,
       parroquiaCodigo: input.parroquiaCodigo,
@@ -116,6 +119,7 @@ export async function agregarVeedor(input: {
 export async function desvincularVeedor(
   id: string,
   motivo: string | null,
+  listaNegra = true,
 ): Promise<void> {
   if (supabaseSecret) {
     const { error } = await supabaseSecret.rpc("desvincular_veedor", {
@@ -124,6 +128,7 @@ export async function desvincularVeedor(
       // de Supabase no marca los parámetros como anulables (solo detecta
       // opcionalidad por valores por defecto).
       p_motivo: motivo as string,
+      p_lista_negra: listaNegra,
     });
     if (error) throw new Error(error.message);
     return;
@@ -173,13 +178,15 @@ export async function desvincularVeedor(
   if (!desvinculado) return;
   const d = desvinculado as Veedor;
 
-  await agregarAListaNegra({
-    cedula: d.cedula,
-    nombres: d.nombres,
-    telefono: d.telefono,
-    motivo,
-    origen: "veedor",
-  });
+  if (listaNegra) {
+    await agregarAListaNegra({
+      cedula: d.cedula,
+      nombres: d.nombres,
+      telefono: d.telefono,
+      motivo,
+      origen: "veedor",
+    });
+  }
   await registrarEvento({
     tipo: "baja_veedor",
     cedula: d.cedula,
