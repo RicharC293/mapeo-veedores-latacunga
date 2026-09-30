@@ -53,9 +53,14 @@ export default function GraficoCrecimiento({
     [eventos, parroquiaCod, recintoCod],
   );
 
-  const { dias, veedorSerie, coordinadorSerie } = useMemo(() => {
+  const { dias, veedorSerie, coordinadorSerie, cdaSerie } = useMemo(() => {
     if (eventosFiltrados.length === 0)
-      return { dias: [] as string[], veedorSerie: [], coordinadorSerie: [] };
+      return {
+        dias: [] as string[],
+        veedorSerie: [],
+        coordinadorSerie: [],
+        cdaSerie: [],
+      };
     const fechas = eventosFiltrados.map((e) => e.fecha).sort();
     const hoy = new Date().toISOString().slice(0, 10);
     const dias = enumerarDias(
@@ -65,8 +70,10 @@ export default function GraficoCrecimiento({
 
     let netoV = 0;
     let netoC = 0;
+    let netoCda = 0;
     const veedorSerie: number[] = [];
     const coordinadorSerie: number[] = [];
+    const cdaSerie: number[] = [];
     for (const dia of dias) {
       for (const e of eventosFiltrados) {
         if (e.fecha !== dia) continue;
@@ -74,11 +81,14 @@ export default function GraficoCrecimiento({
         else if (e.tipo === "baja_veedor") netoV -= 1;
         else if (e.tipo === "alta_coordinador") netoC += 1;
         else if (e.tipo === "baja_coordinador") netoC -= 1;
+        else if (e.tipo === "alta_acreditado_cda") netoCda += 1;
+        else if (e.tipo === "baja_acreditado_cda") netoCda -= 1;
       }
       veedorSerie.push(netoV);
       coordinadorSerie.push(netoC);
+      cdaSerie.push(netoCda);
     }
-    return { dias, veedorSerie, coordinadorSerie };
+    return { dias, veedorSerie, coordinadorSerie, cdaSerie };
   }, [eventosFiltrados]);
 
   if (eventos.length === 0) {
@@ -93,15 +103,15 @@ export default function GraficoCrecimiento({
           setRecintoCod={setRecintoCod}
         />
         <p class="g-empty">
-          Todavía no hay altas ni bajas de veedores o coordinadores registradas.
-          El gráfico se irá llenando a medida que se use la gestión de veedores
-          y coordinadores.
+          Todavía no hay altas ni bajas de veedores, coordinadores o
+          acreditados CDA registradas. El gráfico se irá llenando a medida
+          que se use la gestión.
         </p>
       </div>
     );
   }
 
-  const maxVal = Math.max(1, ...veedorSerie, ...coordinadorSerie);
+  const maxVal = Math.max(1, ...veedorSerie, ...coordinadorSerie, ...cdaSerie);
   const innerW = W - MARGIN.left - MARGIN.right;
   const innerH = H - MARGIN.top - MARGIN.bottom;
   const x = (i: number) =>
@@ -148,6 +158,9 @@ export default function GraficoCrecimiento({
           <span>
             <i style={{ background: "var(--series-2)" }} /> Coordinadores (neto)
           </span>
+          <span>
+            <i style={{ background: "var(--series-3)" }} /> Acreditados CDA (neto)
+          </span>
         </div>
         <div class="g-chart-wrap">
           <svg
@@ -156,7 +169,7 @@ export default function GraficoCrecimiento({
             onMouseMove={onMove}
             onMouseLeave={() => setHoverIdx(null)}
             role="img"
-            aria-label="Crecimiento diario neto de veedores y coordinadores"
+            aria-label="Crecimiento diario neto de veedores, coordinadores y acreditados CDA"
           >
             {yTicks.map((t) => (
               <g key={t}>
@@ -219,6 +232,14 @@ export default function GraficoCrecimiento({
               stroke-linecap="round"
               stroke-linejoin="round"
             />
+            <path
+              d={pathFor(cdaSerie)}
+              fill="none"
+              stroke="var(--series-3)"
+              stroke-width={2}
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
 
             {hoverIdx !== null ? (
               <>
@@ -246,6 +267,14 @@ export default function GraficoCrecimiento({
                   stroke="var(--chart-surface)"
                   stroke-width={2}
                 />
+                <circle
+                  cx={x(hoverIdx)}
+                  cy={y(cdaSerie[hoverIdx])}
+                  r={5}
+                  fill="var(--series-3)"
+                  stroke="var(--chart-surface)"
+                  stroke-width={2}
+                />
               </>
             ) : null}
           </svg>
@@ -263,29 +292,37 @@ export default function GraficoCrecimiento({
                 Coordinadores:{" "}
                 <span class="g-tt-value">{coordinadorSerie[hoverIdx]}</span>
               </div>
+              <div>
+                Acreditados CDA:{" "}
+                <span class="g-tt-value">{cdaSerie[hoverIdx]}</span>
+              </div>
             </div>
           ) : null}
         </div>
       </div>
 
-      <table class="g-table">
-        <thead>
-          <tr>
-            <th>Fecha</th>
-            <th>Veedores (neto)</th>
-            <th>Coordinadores (neto)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {dias.map((d, i) => (
-            <tr key={d}>
-              <td>{d}</td>
-              <td>{veedorSerie[i]}</td>
-              <td>{coordinadorSerie[i]}</td>
+      <div class="g-table-scroll">
+        <table class="g-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Veedores (neto)</th>
+              <th>Coordinadores (neto)</th>
+              <th>Acreditados CDA (neto)</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {dias.map((d, i) => (
+              <tr key={d}>
+                <td>{d}</td>
+                <td>{veedorSerie[i]}</td>
+                <td>{coordinadorSerie[i]}</td>
+                <td>{cdaSerie[i]}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

@@ -175,3 +175,27 @@ export interface CoberturaParroquia {
   pctCda: number;
   pctCdaVerificado: number;
 }
+
+// Agregado de CoberturaParroquia sobre todo el cantón (misma forma, sin
+// parroquiaCodigo).
+export interface CoberturaCanton {
+  totalJuntas: number;
+  juntasConVeedor: number;
+  juntasConVeedorVerificado: number;
+  pctVeedores: number;
+  pctVeedoresVerificado: number;
+  totalRecintos: number;
+  recintosConCoordinador: number;
+  recintosConCoordinadorVerificado: number;
+  pctCoordinador: number;
+  pctCoordinadorVerificado: number;
+  totalRecintosCda: number;
+  recintosConCda: number;
+  recintosConCdaVerificado: number;
+  pctCda: number;
+  pctCdaVerificado: number;
+}
+
+// A qué "track" (rol) se refiere un gráfico de cobertura: veedores (por
+// junta), coordinadores o acreditados CDA (por recinto).
+export type CoberturaTrack = "veedores" | "coordinadores" | "cda";

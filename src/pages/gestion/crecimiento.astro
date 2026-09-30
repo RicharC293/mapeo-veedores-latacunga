@@ -16,8 +16,10 @@ const eventos = await listEventos();
 <GestionLayout title="Crecimiento" activo="crecimiento">
   <h1>Crecimiento diario</h1>
   <p class="g-sub">
-    Altas y bajas netas de veedores y coordinadores por día. Filtra por
-    parroquia y recinto; sin filtro se muestra todo el cantón.
+    Altas y bajas netas de veedores, coordinadores y acreditados CDA por día.
+    Filtra por parroquia y recinto; sin filtro se muestra todo el cantón.
+    Para ver el estado actual, revisa{" "}
+    <a href="/gestion/cobertura">Cobertura</a>.
   </p>
   <GraficoCrecimiento
     client:load

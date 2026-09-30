@@ -3,12 +3,14 @@ import { listJuntasDeRecinto } from "./juntas";
 import type {
   AcreditadoCda,
   Coordinador,
+  CoberturaCanton,
   CoberturaParroquia,
   CoberturaRecinto,
+  CoberturaTrack,
   Veedor,
 } from "./types";
 
-function pct(parte: number, total: number): number {
+export function pct(parte: number, total: number): number {
   return total > 0 ? Math.round((parte / total) * 1000) / 10 : 0;
 }
 
@@ -175,4 +177,109 @@ export function calcularCoberturaPorParroquia(
   }
 
   return resultado;
+}
+
+// Agrega el mapa por parroquia (ya calculado) en un solo total de cantón.
+// No hay ningún otro lugar del código que sume "todo el cantón" hoy: se
+// arma aquí en vez de recalcular desde cero los veedores/coordinadores/CDA.
+export function calcularCoberturaCanton(
+  porParroquia: Record<number, CoberturaParroquia>,
+): CoberturaCanton {
+  const valores = Object.values(porParroquia);
+  const sumar = (f: (p: CoberturaParroquia) => number) =>
+    valores.reduce((acc, p) => acc + f(p), 0);
+
+  const totalJuntas = sumar((p) => p.totalJuntas);
+  const juntasConVeedor = sumar((p) => p.juntasConVeedor);
+  const juntasConVeedorVerificado = sumar((p) => p.juntasConVeedorVerificado);
+  const totalRecintos = sumar((p) => p.totalRecintos);
+  const recintosConCoordinador = sumar((p) => p.recintosConCoordinador);
+  const recintosConCoordinadorVerificado = sumar(
+    (p) => p.recintosConCoordinadorVerificado,
+  );
+  const totalRecintosCda = sumar((p) => p.totalRecintosCda);
+  const recintosConCda = sumar((p) => p.recintosConCda);
+  const recintosConCdaVerificado = sumar((p) => p.recintosConCdaVerificado);
+
+  return {
+    totalJuntas,
+    juntasConVeedor,
+    juntasConVeedorVerificado,
+    pctVeedores: pct(juntasConVeedor, totalJuntas),
+    pctVeedoresVerificado: pct(juntasConVeedorVerificado, totalJuntas),
+    totalRecintos,
+    recintosConCoordinador,
+    recintosConCoordinadorVerificado,
+    pctCoordinador: pct(recintosConCoordinador, totalRecintos),
+    pctCoordinadorVerificado: pct(
+      recintosConCoordinadorVerificado,
+      totalRecintos,
+    ),
+    totalRecintosCda,
+    recintosConCda,
+    recintosConCdaVerificado,
+    pctCda: pct(recintosConCda, totalRecintosCda),
+    pctCdaVerificado: pct(recintosConCdaVerificado, totalRecintosCda),
+  };
+}
+
+// Extrae el par (pct, pctVerificado) correspondiente a un track, tanto para
+// el agregado de cantón como para una fila de CoberturaParroquia (misma
+// forma de campos en ambos tipos).
+export function extraerPct(
+  track: CoberturaTrack,
+  c: CoberturaCanton | CoberturaParroquia,
+): { pct: number; pctVerificado: number } {
+  if (track === "veedores") {
+    return { pct: c.pctVeedores, pctVerificado: c.pctVeedoresVerificado };
+  }
+  if (track === "coordinadores") {
+    return { pct: c.pctCoordinador, pctVerificado: c.pctCoordinadorVerificado };
+  }
+  return { pct: c.pctCda, pctVerificado: c.pctCdaVerificado };
+}
+
+// Igual que extraerPct, pero para una fila de CoberturaRecinto. Devuelve
+// null cuando el track es "cda" y el recinto no es un CDA (se excluye del
+// gráfico en vez de mostrar un 0% engañoso).
+export function extraerPctRecinto(
+  track: CoberturaTrack,
+  r: CoberturaRecinto,
+): { pct: number; pctVerificado: number } | null {
+  if (track === "veedores") {
+    return { pct: r.pctVeedores, pctVerificado: r.pctVeedoresVerificado };
+  }
+  if (track === "coordinadores") {
+    return { pct: r.pctCoordinador, pctVerificado: r.pctCoordinadorVerificado };
+  }
+  if (!r.cdaAplica) return null;
+  return { pct: r.pctCda, pctVerificado: r.pctCdaVerificado };
+}
+
+// Totales crudos (numerador/denominador) del track, usados por el donut de
+// cobertura y por los tooltips de las barras (más informativos que solo el
+// porcentaje).
+export function totalesDeTrack(
+  track: CoberturaTrack,
+  c: CoberturaCanton,
+): { total: number; cubiertos: number; verificados: number } {
+  if (track === "veedores") {
+    return {
+      total: c.totalJuntas,
+      cubiertos: c.juntasConVeedor,
+      verificados: c.juntasConVeedorVerificado,
+    };
+  }
+  if (track === "coordinadores") {
+    return {
+      total: c.totalRecintos,
+      cubiertos: c.recintosConCoordinador,
+      verificados: c.recintosConCoordinadorVerificado,
+    };
+  }
+  return {
+    total: c.totalRecintosCda,
+    cubiertos: c.recintosConCda,
+    verificados: c.recintosConCdaVerificado,
+  };
 }

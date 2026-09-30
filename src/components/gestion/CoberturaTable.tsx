@@ -143,46 +143,48 @@ export default function CoberturaTable({ filas, parroquias }: Props) {
       {filasFiltradas.length === 0 ? (
         <p class="g-empty">No hay recintos para este filtro.</p>
       ) : (
-        <table class="g-table">
-          <thead>
-            <tr>
-              <th>Parroquia</th>
-              <th>Recinto</th>
-              <th>Coordinador</th>
-              <th>Juntas cubiertas</th>
-              <th>% cobertura</th>
-              <th>% cobertura verificada</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filasFiltradas.map((f) => (
-              <tr key={f.recintoCodigo}>
-                <td>{f.nombreParroquia}</td>
-                <td>{f.nombreRecinto}</td>
-                <td>{f.tieneCoordinadorTitular ? "Sí" : "No"}</td>
-                <td>
-                  {f.juntasCubiertas} / {f.totalJuntas}
-                </td>
-                <td>
-                  <div class="g-bar">
-                    <span
-                      style={`width:${f.pct}%; background:${colorFor(f.pct)}`}
-                    />
-                  </div>
-                  {f.pct}%
-                </td>
-                <td>
-                  <div class="g-bar">
-                    <span
-                      style={`width:${f.pctVerificado}%; background:${colorFor(f.pctVerificado)}`}
-                    />
-                  </div>
-                  {f.pctVerificado}%
-                </td>
+        <div class="g-table-scroll">
+          <table class="g-table">
+            <thead>
+              <tr>
+                <th>Parroquia</th>
+                <th>Recinto</th>
+                <th>Coordinador</th>
+                <th>Juntas cubiertas</th>
+                <th>% cobertura</th>
+                <th>% cobertura verificada</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filasFiltradas.map((f) => (
+                <tr key={f.recintoCodigo}>
+                  <td>{f.nombreParroquia}</td>
+                  <td>{f.nombreRecinto}</td>
+                  <td>{f.tieneCoordinadorTitular ? "Sí" : "No"}</td>
+                  <td>
+                    {f.juntasCubiertas} / {f.totalJuntas}
+                  </td>
+                  <td>
+                    <div class="g-bar">
+                      <span
+                        style={`width:${f.pct}%; background:${colorFor(f.pct)}`}
+                      />
+                    </div>
+                    {f.pct}%
+                  </td>
+                  <td>
+                    <div class="g-bar">
+                      <span
+                        style={`width:${f.pctVerificado}%; background:${colorFor(f.pctVerificado)}`}
+                      />
+                    </div>
+                    {f.pctVerificado}%
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

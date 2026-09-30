@@ -476,8 +476,12 @@
   border-top: 1px solid var(--line);
 }
 
+.g-table-scroll {
+  overflow-x: auto;
+}
 .g-table {
   width: 100%;
+  min-width: 560px;
   border-collapse: collapse;
   font-size: 0.9rem;
 }
@@ -611,6 +615,7 @@
 .g-chart {
   --series-1: #2a78d6;
   --series-2: #eb6834;
+  --series-3: #8b5cf6;
   --chart-surface: var(--panel);
   --chart-grid: #e1e0d9;
   --chart-axis: #c3c2b7;
@@ -619,6 +624,7 @@
   :root:not([data-theme="light"]) .g-chart {
     --series-1: #3987e5;
     --series-2: #d95926;
+    --series-3: #a78bfa;
     --chart-grid: #2c2c2a;
     --chart-axis: #383835;
   }
@@ -626,6 +632,7 @@
 :root[data-theme="dark"] .g-chart {
   --series-1: #3987e5;
   --series-2: #d95926;
+  --series-3: #a78bfa;
   --chart-grid: #2c2c2a;
   --chart-axis: #383835;
 }
@@ -672,6 +679,34 @@
 }
 .g-chart-wrap {
   position: relative;
+}
+.g-chart-scroll {
+  overflow-x: auto;
+  border-radius: 12px;
+}
+
+.g-cobertura-track {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 32px;
+}
+.g-cobertura-track h2 {
+  grid-column: 1 / -1;
+  margin: 0 0 4px;
+  font-size: 1.1rem;
+}
+.g-cobertura-lateral {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+@media (max-width: 780px) {
+  .g-cobertura-track {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Árbol colapsable (Estructura organizativa): nodos expandibles con

@@ -24,6 +24,8 @@
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
     "astro": "^7.3.5",
+    "chart.js": "^4.5.1",
+    "chartjs-plugin-datalabels": "^2.2.0",
     "d3-array": "^3.2.4",
     "d3-geo": "^3.1.1",
     "d3-scale": "^4.0.2",
