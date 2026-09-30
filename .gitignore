@@ -27,3 +27,6 @@ pnpm-debug.log*
 supabase/.temp
 supabase/.branches
 .vercel
+
+# Impeccable design-skill local/session state (machine paths, live-mode journals)
+.impeccable/
