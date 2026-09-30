@@ -75,10 +75,10 @@ function coordinadorTitular(recintoCodigo: number) {
             {g.recintos.map((r) => {
               const c = coordinadorTitular(r.cod);
               return (
-                <span class="g-org-leaf">
-                  {titleCase(r.nombre)}
-                  {c ? ` · ${c.nombres}` : " · sin coordinador"}
-                </span>
+                <div class="g-org-leaf">
+                  <strong>{titleCase(r.nombre)}</strong>
+                  <small>{c ? c.nombres : "Sin coordinador"}</small>
+                </div>
               );
             })}
           </div>
