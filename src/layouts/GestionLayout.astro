@@ -22,6 +22,12 @@ interface Props {
 const { title, activo } = Astro.props;
 const rol = Astro.locals.rol;
 
+const GROUP_LABEL: Record<string, string> = {
+  gestion: "Gestión",
+  reportes: "Reportes",
+  admin: "Administración",
+};
+
 const links = [
   { href: "/gestion", key: "index", label: "Resumen", group: "gestion" },
   {
@@ -80,42 +86,71 @@ const links = [
   },
   { href: "/gestion/accesos", key: "accesos", label: "Accesos", group: "admin" },
 ].filter((l) => tienePermiso(rol, PAGINAS_GESTION[l.key]));
+
+const principal = links.find((l) => l.key === "index") ?? null;
+const resto = links.filter((l) => l.key !== "index");
 ---
 
 <Base title={`${title} · Gestión`}>
-  <div class="g-shell">
-    <nav class="g-nav">
-      <a class="g-nav-back" href="/">
-        ‹ Mapa
-      </a>
-      <div class="g-nav-links">
-        {links.map((l, i) => (
-          <>
-            {i > 0 && l.group !== links[i - 1].group ? (
-              <span class="g-nav-sep" aria-hidden="true" />
-            ) : null}
+  <div class="g-shell-wrap">
+    <header class="g-topbar">
+      <a class="g-topbar-back" href="/">‹ Mapa</a>
+      <span class="g-topbar-title">{title}</span>
+      <input
+        type="checkbox"
+        id="g-nav-check"
+        class="g-nav-toggle"
+        aria-label="Abrir menú"
+      />
+    </header>
+    <label for="g-nav-check" class="g-nav-backdrop" aria-hidden="true"></label>
+    <div class="g-shell">
+      <nav class="g-sidebar" aria-label="Menú de gestión">
+        <a class="g-sidebar-back" href="/">‹ Volver al mapa</a>
+        <div class="g-sidebar-links">
+          {principal ? (
             <a
-              href={l.href}
-              aria-current={activo === l.key ? "page" : undefined}
+              href={principal.href}
+              class="g-sidebar-link"
+              aria-current={activo === principal.key ? "page" : undefined}
             >
-              {l.label}
+              {principal.label}
             </a>
-          </>
-        ))}
-      </div>
-      {rol !== "invitado" ? (
-        <form
-          method="POST"
-          action={
-            rol === "administrador"
-              ? "/api/admin/logout"
-              : "/api/acceso/salir"
-          }
-        >
-          <button type="submit" class="g-nav-salir">Cerrar sesión</button>
-        </form>
-      ) : null}
-    </nav>
-    <slot />
+          ) : null}
+          {resto.map((l, i) => (
+            <>
+              {i === 0 || l.group !== resto[i - 1].group ? (
+                <p class="g-sidebar-group-label">{GROUP_LABEL[l.group]}</p>
+              ) : null}
+              <a
+                href={l.href}
+                class="g-sidebar-link"
+                aria-current={activo === l.key ? "page" : undefined}
+              >
+                {l.label}
+              </a>
+            </>
+          ))}
+        </div>
+        {rol !== "invitado" ? (
+          <form
+            class="g-sidebar-footer"
+            method="POST"
+            action={
+              rol === "administrador"
+                ? "/api/admin/logout"
+                : "/api/acceso/salir"
+            }
+          >
+            <button type="submit" class="g-sidebar-salir">
+              Cerrar sesión
+            </button>
+          </form>
+        ) : null}
+      </nav>
+      <main class="g-main">
+        <slot />
+      </main>
+    </div>
   </div>
 </Base>
