@@ -13,6 +13,7 @@ import type {
 import type { ParroquiaFeature, Recinto } from "../../lib/types";
 
 type Nivel = "canton" | "parroquia" | "recinto";
+type Ambito = "todas" | "urbanas" | "rurales";
 
 interface Props {
   track: CoberturaTrack;
@@ -45,10 +46,27 @@ export default function GraficoCobertura({
   recintos,
 }: Props) {
   const [nivel, setNivel] = useState<Nivel>("canton");
+  const [ambito, setAmbito] = useState<Ambito>("todas");
+  const [parroquiaFiltro, setParroquiaFiltro] = useState<number | "">("");
 
   const recintoByCode = useMemo(
     () => new Map(recintos.map((r) => [r.cod, r])),
     [recintos],
+  );
+
+  const parByCode = useMemo(
+    () => new Map(parroquias.map((p) => [p.properties.code, p])),
+    [parroquias],
+  );
+
+  const parroquiasOpciones = useMemo(
+    () =>
+      parroquias
+        .filter((p) =>
+          ambito === "todas" ? true : p.properties.urbana === (ambito === "urbanas"),
+        )
+        .sort((a, b) => a.properties.name.localeCompare(b.properties.name)),
+    [parroquias, ambito],
   );
 
   const { labels, cobertura, verificado } = useMemo(() => {
@@ -58,6 +76,9 @@ export default function GraficoCobertura({
     }
     if (nivel === "parroquia") {
       const filas = parroquias
+        .filter((p) =>
+          ambito === "todas" ? true : p.properties.urbana === (ambito === "urbanas"),
+        )
         .map((p) => {
           const c = porParroquia[p.properties.code];
           if (!c) return null;
@@ -73,6 +94,16 @@ export default function GraficoCobertura({
       };
     }
     const filas = porRecinto
+      .filter((r) => {
+        if (parroquiaFiltro !== "" && r.parroquiaCodigo !== parroquiaFiltro) {
+          return false;
+        }
+        if (ambito !== "todas") {
+          const urbana = parByCode.get(r.parroquiaCodigo)?.properties.urbana ?? false;
+          if (urbana !== (ambito === "urbanas")) return false;
+        }
+        return true;
+      })
       .map((r) => {
         const datos = extraerPctRecinto(track, r);
         if (!datos) return null;
@@ -89,7 +120,18 @@ export default function GraficoCobertura({
       cobertura: filas.map((f) => f.pct),
       verificado: filas.map((f) => f.pctVerificado),
     };
-  }, [nivel, track, canton, porParroquia, porRecinto, parroquias, recintoByCode]);
+  }, [
+    nivel,
+    track,
+    canton,
+    porParroquia,
+    porRecinto,
+    parroquias,
+    recintoByCode,
+    parByCode,
+    ambito,
+    parroquiaFiltro,
+  ]);
 
   const data: ChartData<"bar"> = useMemo(
     () => ({
@@ -183,6 +225,44 @@ export default function GraficoCobertura({
             <option value="recinto">Recinto</option>
           </select>
         </label>
+        {nivel !== "canton" ? (
+          <label>
+            Ámbito
+            <select
+              value={ambito}
+              onChange={(e) => {
+                const value = (e.currentTarget as HTMLSelectElement)
+                  .value as Ambito;
+                setAmbito(value);
+                setParroquiaFiltro("");
+              }}
+            >
+              <option value="todas">Todas</option>
+              <option value="urbanas">Urbanas</option>
+              <option value="rurales">Rurales</option>
+            </select>
+          </label>
+        ) : null}
+        {nivel === "recinto" ? (
+          <label>
+            Parroquia
+            <select
+              value={parroquiaFiltro}
+              onChange={(e) =>
+                setParroquiaFiltro(
+                  Number((e.currentTarget as HTMLSelectElement).value) || "",
+                )
+              }
+            >
+              <option value="">Todas</option>
+              {parroquiasOpciones.map((p) => (
+                <option key={p.properties.code} value={p.properties.code}>
+                  {p.properties.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
       </div>
       {labels.length === 0 ? (
         <p class="g-empty">No hay datos para {titulo.toLowerCase()} en este nivel.</p>
