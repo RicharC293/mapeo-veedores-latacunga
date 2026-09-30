@@ -31,6 +31,10 @@ function colorSerie1(ctx: { chart: { canvas: HTMLCanvasElement } }): string {
   );
 }
 
+function truncar(nombre: string, max = 26): string {
+  return nombre.length > max ? `${nombre.slice(0, max - 1).trimEnd()}…` : nombre;
+}
+
 export default function GraficoCobertura({
   track,
   titulo,
@@ -112,23 +116,26 @@ export default function GraficoCobertura({
 
   const buildOptions = useCallback(
     (colores: TemaColores): ChartOptions<"bar"> => ({
+      indexAxis: "y" as const,
       responsive: true,
       maintainAspectRatio: false,
       scales: {
         x: {
-          ticks: {
-            color: colores.muted,
-            autoSkip: false,
-            maxRotation: nivel === "canton" ? 0 : 60,
-            minRotation: nivel === "canton" ? 0 : 60,
-          },
-          grid: { display: false },
-        },
-        y: {
           min: 0,
           max: 100,
           ticks: { color: colores.muted, callback: (v) => `${v}%` },
           grid: { color: colores.chartGrid },
+        },
+        y: {
+          afterFit: (scale) => {
+            scale.width = 170;
+          },
+          ticks: {
+            color: colores.muted,
+            autoSkip: false,
+            callback: (value) => truncar(labels[value as number] ?? ""),
+          },
+          grid: { display: false },
         },
       },
       plugins: {
@@ -140,29 +147,25 @@ export default function GraficoCobertura({
           borderColor: colores.line,
           borderWidth: 1,
           callbacks: {
+            title: (items) => labels[items[0]?.dataIndex ?? 0] ?? "",
             label: (ctx) => `${ctx.dataset.label}: ${ctx.formattedValue}%`,
           },
         },
         datalabels: {
           color: colores.ink,
           anchor: "end",
-          align: "top",
+          align: "end",
           font: { weight: "bold", size: 10 },
           formatter: (v: number) => `${v}%`,
         },
       },
     }),
-    [nivel],
+    [labels],
   );
 
-  const grafico = (
-    <ChartCanvas
-      type="bar"
-      data={data}
-      buildOptions={buildOptions}
-      height={nivel === "canton" ? 240 : 320}
-    />
-  );
+  const alturaPorFila = nivel === "parroquia" ? 42 : 30;
+  const altura =
+    nivel === "canton" ? 140 : Math.max(220, labels.length * alturaPorFila + 60);
 
   return (
     <div class="g-panel">
@@ -183,14 +186,8 @@ export default function GraficoCobertura({
       </div>
       {labels.length === 0 ? (
         <p class="g-empty">No hay datos para {titulo.toLowerCase()} en este nivel.</p>
-      ) : nivel === "recinto" ? (
-        <div class="g-chart-scroll">
-          <div style={{ minWidth: `${Math.max(600, labels.length * 46)}px` }}>
-            {grafico}
-          </div>
-        </div>
       ) : (
-        grafico
+        <ChartCanvas type="bar" data={data} buildOptions={buildOptions} height={altura} />
       )}
     </div>
   );
