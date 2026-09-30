@@ -94,6 +94,26 @@ export interface Lider {
   creadoEn: string;
 }
 
+// Persona con datos básicos cargada en "Militancia", pendiente de
+// asignación como veedor, coordinador o acreditado CDA. recintoCodigo/
+// parroquiaCodigo/tipoPreasignado son opcionales: los deja precargados una
+// importación masiva que eligió destino para todo el lote, pero no asignan
+// a la persona por sí solos (eso pasa al confirmar la fila en la UI).
+export type TipoMilitancia = "veedor" | "coordinador" | "cda";
+
+export interface Militante {
+  id: string;
+  cedula: string;
+  nombres: string;
+  telefono: string;
+  responsableLiderId: string | null;
+  recintoCodigo: number | null;
+  parroquiaCodigo: number | null;
+  tipoPreasignado: TipoMilitancia | null;
+  creadoEn: string;
+  duplicado: boolean;
+}
+
 export type OrigenListaNegra =
   "veedor" | "coordinador" | "acreditado_cda" | "manual";
 

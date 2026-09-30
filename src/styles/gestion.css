@@ -376,6 +376,47 @@
   cursor: pointer;
   font-weight: 700;
 }
+.g-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) {
+  .g-btn-icon:not(:disabled):hover {
+    background: var(--chip);
+  }
+}
+.g-btn-icon:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.g-btn-icon-ok {
+  color: #2f9e57;
+  border-color: #2f9e57;
+}
+.g-btn-icon-danger {
+  color: #c94b4b;
+  border-color: #c94b4b;
+}
+.g-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 
 .g-form {
   display: flex;
@@ -506,6 +547,15 @@
 
 .g-table-scroll {
   overflow-x: auto;
+  /* Sin esto, en móvil una tabla ancha (con varios <select>, como en
+     Militancia) sigue haciendo scroll correctamente aquí adentro, pero su
+     contenido fuera de pantalla igual infla el ancho que el navegador usa
+     para posicionar elementos position:fixed con inset:0 (el fondo oscuro
+     del menú móvil), empujando toda la página a un scroll horizontal
+     fantasma. contain:layout aísla el contenido interno para que nada de
+     esto se filtre hacia afuera. Medido: sin esto, scrollWidth del
+     documento pasaba de 375 a 1230px con una tabla de 10 columnas. */
+  contain: layout;
 }
 .g-table {
   width: 100%;
@@ -524,6 +574,25 @@
   font-size: 0.76rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+.g-table select {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 5px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  min-width: 130px;
+}
+.g-table-row-error {
+  color: #c94b4b;
+  font-size: 0.76rem;
+  margin-top: 4px;
+  max-width: 160px;
+}
+.g-table .chip-estado {
+  margin-left: 6px;
 }
 .g-bar {
   height: 8px;

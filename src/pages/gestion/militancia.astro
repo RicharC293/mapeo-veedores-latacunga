@@ -1,0 +1,32 @@
+---
+import GestionLayout from "../../layouts/GestionLayout.astro";
+import GestionMilitancia from "../../components/gestion/GestionMilitancia";
+import { getMapData } from "../../lib/data";
+import { listMilitantes } from "../../lib/gestion/militancia";
+import { listLideres } from "../../lib/gestion/lideres";
+import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
+
+if (!PAGINAS_GESTION.militancia.includes(Astro.locals.rol)) {
+  return Astro.redirect(rutaPorDefecto(Astro.locals.rol));
+}
+
+const data = await getMapData();
+const militantes = await listMilitantes();
+const lideres = await listLideres();
+---
+
+<GestionLayout title="Militancia" activo="militancia">
+  <h1>Militancia</h1>
+  <p class="g-sub">
+    Carga personas con sus datos básicos, una por una o en bloque, y
+    asígnalas después como veedor, coordinador o acreditado CDA sin tener
+    que volver a escribir cédula, nombre o teléfono.
+  </p>
+  <GestionMilitancia
+    client:load
+    parroquias={data.parroquias.features}
+    recintos={data.recintos}
+    lideres={lideres}
+    militantesIniciales={militantes}
+  />
+</GestionLayout>

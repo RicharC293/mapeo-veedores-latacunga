@@ -7,8 +7,10 @@ import type {
   Coordinador,
   Lider,
   ListaNegraEntry,
+  Militante,
   OrigenListaNegra,
   TipoAsignacion,
+  TipoMilitancia,
   Veedor,
 } from "./types";
 
@@ -75,6 +77,22 @@ export function rowToLider(row: Record<string, unknown>): Lider {
     recintoCodigos: (row.recinto_codigos as number[] | null) ?? [],
     cargo: (row.cargo as Cargo | null) ?? null,
     foto: (row.foto as string | null) ?? null,
+    creadoEn: row.creado_en as string,
+  };
+}
+
+export function rowToMilitante(
+  row: Record<string, unknown>,
+): Omit<Militante, "duplicado"> {
+  return {
+    id: row.id as string,
+    cedula: row.cedula as string,
+    nombres: row.nombres as string,
+    telefono: row.telefono as string,
+    responsableLiderId: (row.responsable_lider_id as string | null) ?? null,
+    recintoCodigo: (row.recinto_codigo as number | null) ?? null,
+    parroquiaCodigo: (row.parroquia_codigo as number | null) ?? null,
+    tipoPreasignado: (row.tipo_preasignado as TipoMilitancia | null) ?? null,
     creadoEn: row.creado_en as string,
   };
 }

@@ -10,6 +10,7 @@ export const PAGINAS_GESTION: Record<string, Rol[]> = {
   veedores: ["gestor", "administrador"],
   coordinadores: ["gestor", "administrador"],
   "acreditados-cda": ["gestor", "administrador"],
+  militancia: ["gestor", "administrador"],
   lideres: ["administrador"],
   // Ver y eliminar; el alta/edición manual se filtra aparte (solo admin).
   "lista-negra": ["gestor", "administrador"],

@@ -313,6 +313,50 @@ export type Database = {
         }
         Relationships: []
       }
+      militantes: {
+        Row: {
+          cedula: string
+          creado_en: string
+          id: string
+          nombres: string
+          parroquia_codigo: number | null
+          recinto_codigo: number | null
+          responsable_lider_id: string | null
+          telefono: string
+          tipo_preasignado: string | null
+        }
+        Insert: {
+          cedula: string
+          creado_en?: string
+          id?: string
+          nombres: string
+          parroquia_codigo?: number | null
+          recinto_codigo?: number | null
+          responsable_lider_id?: string | null
+          telefono?: string
+          tipo_preasignado?: string | null
+        }
+        Update: {
+          cedula?: string
+          creado_en?: string
+          id?: string
+          nombres?: string
+          parroquia_codigo?: number | null
+          recinto_codigo?: number | null
+          responsable_lider_id?: string | null
+          telefono?: string
+          tipo_preasignado?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "militantes_responsable_lider_id_fkey"
+            columns: ["responsable_lider_id"]
+            isOneToOne: false
+            referencedRelation: "lideres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parroquias: {
         Row: {
           canton_codigo: number
