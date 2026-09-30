@@ -3,6 +3,7 @@ import GestionLayout from "../../layouts/GestionLayout.astro";
 import GestionVeedores from "../../components/gestion/GestionVeedores";
 import { getMapData } from "../../lib/data";
 import { listVeedores } from "../../lib/gestion/veedores";
+import { listLideres } from "../../lib/gestion/lideres";
 import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
 
 if (!PAGINAS_GESTION.veedores.includes(Astro.locals.rol)) {
@@ -11,6 +12,7 @@ if (!PAGINAS_GESTION.veedores.includes(Astro.locals.rol)) {
 
 const data = await getMapData();
 const veedores = await listVeedores();
+const lideres = await listLideres();
 ---
 
 <GestionLayout title="Veedores" activo="veedores">
@@ -23,6 +25,7 @@ const veedores = await listVeedores();
     client:load
     parroquias={data.parroquias.features}
     recintos={data.recintos}
+    lideres={lideres}
     veedoresIniciales={veedores}
   />
 </GestionLayout>

@@ -78,7 +78,7 @@ export type Database = {
           orden: number
           parroquia_codigo: number
           recinto_codigo: number
-          responsable: string
+          responsable_lider_id: string | null
           telefono: string
           tipo: string
           verificado: boolean
@@ -91,7 +91,7 @@ export type Database = {
           orden?: number
           parroquia_codigo: number
           recinto_codigo: number
-          responsable?: string
+          responsable_lider_id?: string | null
           telefono?: string
           tipo: string
           verificado?: boolean
@@ -104,12 +104,20 @@ export type Database = {
           orden?: number
           parroquia_codigo?: number
           recinto_codigo?: number
-          responsable?: string
+          responsable_lider_id?: string | null
           telefono?: string
           tipo?: string
           verificado?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "acreditados_cda_responsable_lider_id_fkey"
+            columns: ["responsable_lider_id"]
+            isOneToOne: false
+            referencedRelation: "lideres"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       canton_base: {
         Row: {
@@ -135,7 +143,7 @@ export type Database = {
           orden: number
           parroquia_codigo: number
           recinto_codigo: number
-          responsable: string
+          responsable_lider_id: string | null
           telefono: string
           tipo: string
           verificado: boolean
@@ -148,7 +156,7 @@ export type Database = {
           orden?: number
           parroquia_codigo: number
           recinto_codigo: number
-          responsable?: string
+          responsable_lider_id?: string | null
           telefono?: string
           tipo: string
           verificado?: boolean
@@ -161,12 +169,20 @@ export type Database = {
           orden?: number
           parroquia_codigo?: number
           recinto_codigo?: number
-          responsable?: string
+          responsable_lider_id?: string | null
           telefono?: string
           tipo?: string
           verificado?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "coordinadores_responsable_lider_id_fkey"
+            columns: ["responsable_lider_id"]
+            isOneToOne: false
+            referencedRelation: "lideres"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       distributivo_cortes: {
         Row: {
@@ -427,7 +443,7 @@ export type Database = {
           orden: number
           parroquia_codigo: number
           recinto_codigo: number
-          responsable: string
+          responsable_lider_id: string | null
           telefono: string
           tipo: string
           verificado: boolean
@@ -441,7 +457,7 @@ export type Database = {
           orden?: number
           parroquia_codigo: number
           recinto_codigo: number
-          responsable?: string
+          responsable_lider_id?: string | null
           telefono?: string
           tipo: string
           verificado?: boolean
@@ -455,12 +471,20 @@ export type Database = {
           orden?: number
           parroquia_codigo?: number
           recinto_codigo?: number
-          responsable?: string
+          responsable_lider_id?: string | null
           telefono?: string
           tipo?: string
           verificado?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "veedores_responsable_lider_id_fkey"
+            columns: ["responsable_lider_id"]
+            isOneToOne: false
+            referencedRelation: "lideres"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -477,7 +501,7 @@ export type Database = {
           p_nombres: string
           p_parroquia_codigo: number
           p_recinto_codigo: number
-          p_responsable?: string
+          p_responsable_lider_id?: string
           p_telefono: string
           p_tipo: string
         }
@@ -489,7 +513,7 @@ export type Database = {
           orden: number
           parroquia_codigo: number
           recinto_codigo: number
-          responsable: string
+          responsable_lider_id: string | null
           telefono: string
           tipo: string
           verificado: boolean
@@ -507,7 +531,7 @@ export type Database = {
           p_nombres: string
           p_parroquia_codigo: number
           p_recinto_codigo: number
-          p_responsable?: string
+          p_responsable_lider_id?: string
           p_telefono: string
           p_tipo: string
         }
@@ -519,7 +543,7 @@ export type Database = {
           orden: number
           parroquia_codigo: number
           recinto_codigo: number
-          responsable: string
+          responsable_lider_id: string | null
           telefono: string
           tipo: string
           verificado: boolean
@@ -538,7 +562,7 @@ export type Database = {
           p_nombres: string
           p_parroquia_codigo: number
           p_recinto_codigo: number
-          p_responsable?: string
+          p_responsable_lider_id?: string
           p_telefono: string
           p_tipo: string
         }
@@ -551,7 +575,7 @@ export type Database = {
           orden: number
           parroquia_codigo: number
           recinto_codigo: number
-          responsable: string
+          responsable_lider_id: string | null
           telefono: string
           tipo: string
           verificado: boolean

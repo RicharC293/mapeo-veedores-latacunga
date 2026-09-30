@@ -3,6 +3,7 @@ import GestionLayout from "../../layouts/GestionLayout.astro";
 import GestionCoordinadores from "../../components/gestion/GestionCoordinadores";
 import { getMapData } from "../../lib/data";
 import { listCoordinadores } from "../../lib/gestion/coordinadores";
+import { listLideres } from "../../lib/gestion/lideres";
 import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
 
 if (!PAGINAS_GESTION.coordinadores.includes(Astro.locals.rol)) {
@@ -11,6 +12,7 @@ if (!PAGINAS_GESTION.coordinadores.includes(Astro.locals.rol)) {
 
 const data = await getMapData();
 const coordinadores = await listCoordinadores();
+const lideres = await listLideres();
 ---
 
 <GestionLayout title="Coordinadores" activo="coordinadores">
@@ -22,6 +24,7 @@ const coordinadores = await listCoordinadores();
     client:load
     parroquias={data.parroquias.features}
     recintos={data.recintos}
+    lideres={lideres}
     coordinadoresIniciales={coordinadores}
   />
 </GestionLayout>

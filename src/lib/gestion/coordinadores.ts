@@ -38,7 +38,7 @@ export async function agregarCoordinador(input: {
   cedula: string;
   nombres: string;
   telefono: string;
-  responsable: string;
+  responsableLiderId: string | null;
   recintoCodigo: number;
   parroquiaCodigo: number;
   tipo: "titular" | "suplente";
@@ -56,7 +56,10 @@ export async function agregarCoordinador(input: {
       p_recinto_codigo: input.recintoCodigo,
       p_parroquia_codigo: input.parroquiaCodigo,
       p_tipo: input.tipo,
-      p_responsable: input.responsable,
+      // La función SQL acepta NULL para p_responsable_lider_id, pero el
+      // generador de tipos de Supabase no marca los parámetros como
+      // anulables (solo detecta opcionalidad por valores por defecto).
+      p_responsable_lider_id: input.responsableLiderId as string,
     });
     if (error) throw new Error(error.message);
     return rowToCoordinador(data);
@@ -98,7 +101,7 @@ export async function agregarCoordinador(input: {
       cedula,
       nombres: input.nombres.trim(),
       telefono: input.telefono.trim(),
-      responsable: input.responsable.trim(),
+      responsableLiderId: input.responsableLiderId,
       recintoCodigo: input.recintoCodigo,
       parroquiaCodigo: input.parroquiaCodigo,
       tipo: input.tipo,

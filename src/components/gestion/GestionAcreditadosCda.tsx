@@ -2,11 +2,12 @@ import { useMemo, useState } from "preact/hooks";
 import AsignacionCard from "./AsignacionCard";
 import { title } from "../../lib/format";
 import type { ParroquiaFeature, Recinto } from "../../lib/types";
-import type { AcreditadoCda } from "../../lib/gestion/types";
+import type { AcreditadoCda, Lider } from "../../lib/gestion/types";
 
 interface Props {
   parroquias: ParroquiaFeature[];
   recintosCda: Recinto[];
+  lideres: Lider[];
   acreditadosIniciales: AcreditadoCda[];
 }
 
@@ -23,6 +24,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 export default function GestionAcreditadosCda({
   parroquias,
   recintosCda,
+  lideres,
   acreditadosIniciales,
 }: Props) {
   const [acreditados, setAcreditados] = useState(acreditadosIniciales);
@@ -110,6 +112,7 @@ export default function GestionAcreditadosCda({
             titulo={`Acreditado CDA de ${title(recinto.nombre)}`}
             titular={titular}
             suplentes={suplentes}
+            lideres={lideres}
             onAgregarTitular={async (input) => {
               await api("/api/gestion/acreditados-cda", {
                 method: "POST",

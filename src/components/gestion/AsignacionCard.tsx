@@ -1,13 +1,14 @@
 import { useState } from "preact/hooks";
 import PersonaForm from "./PersonaForm";
 import DesvincularForm from "./DesvincularForm";
+import type { Lider } from "../../lib/gestion/types";
 
 export interface PersonaAsignada {
   id: string;
   cedula: string;
   nombres: string;
   telefono: string;
-  responsable: string;
+  responsableLiderId: string | null;
   verificado: boolean;
 }
 
@@ -15,17 +16,18 @@ interface Props {
   titulo: string;
   titular: PersonaAsignada | null;
   suplentes: PersonaAsignada[];
+  lideres: Lider[];
   onAgregarTitular: (input: {
     cedula: string;
     nombres: string;
     telefono: string;
-    responsable: string;
+    responsableLiderId: string | null;
   }) => Promise<void>;
   onAgregarSuplente: (input: {
     cedula: string;
     nombres: string;
     telefono: string;
-    responsable: string;
+    responsableLiderId: string | null;
   }) => Promise<void>;
   onDesvincular: (
     id: string,
@@ -41,6 +43,7 @@ export default function AsignacionCard({
   titulo,
   titular,
   suplentes,
+  lideres,
   onAgregarTitular,
   onAgregarSuplente,
   onDesvincular,
@@ -57,12 +60,14 @@ export default function AsignacionCard({
         {titular ? (
           <PersonaRow
             persona={titular}
+            lideres={lideres}
             onDesvincular={() => setAbierto({ desvincular: titular.id })}
             onVerificar={(v) => onVerificar(titular.id, v)}
           />
         ) : abierto === "titular" ? (
           <PersonaForm
             etiqueta="Agregar titular"
+            lideres={lideres}
             onSubmit={async (input) => {
               await onAgregarTitular(input);
               setAbierto(null);
@@ -94,6 +99,7 @@ export default function AsignacionCard({
             <li key={s.id}>
               <PersonaRow
                 persona={s}
+                lideres={lideres}
                 onDesvincular={() => setAbierto({ desvincular: s.id })}
                 onVerificar={(v) => onVerificar(s.id, v)}
               />
@@ -114,6 +120,7 @@ export default function AsignacionCard({
         {abierto === "suplente" ? (
           <PersonaForm
             etiqueta="Agregar suplente"
+            lideres={lideres}
             onSubmit={async (input) => {
               await onAgregarSuplente(input);
               setAbierto(null);
@@ -132,14 +139,19 @@ export default function AsignacionCard({
 
 function PersonaRow({
   persona,
+  lideres,
   onDesvincular,
   onVerificar,
 }: {
   persona: PersonaAsignada;
+  lideres: Lider[];
   onDesvincular: () => void;
   onVerificar: (verificado: boolean) => Promise<void>;
 }) {
   const [enviando, setEnviando] = useState(false);
+  const responsable = lideres.find(
+    (l) => l.id === persona.responsableLiderId,
+  );
 
   return (
     <div class="g-persona">
@@ -148,7 +160,7 @@ function PersonaRow({
         <small>
           CI {persona.cedula}
           {persona.telefono ? ` · ${persona.telefono}` : ""}
-          {persona.responsable ? ` · ${persona.responsable}` : ""}
+          {responsable ? ` · ${responsable.nombres}` : ""}
         </small>
         <label class="g-check g-check-verificado">
           <input

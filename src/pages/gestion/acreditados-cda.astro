@@ -3,6 +3,7 @@ import GestionLayout from "../../layouts/GestionLayout.astro";
 import GestionAcreditadosCda from "../../components/gestion/GestionAcreditadosCda";
 import { getMapData } from "../../lib/data";
 import { listAcreditadosCda } from "../../lib/gestion/acreditadosCda";
+import { listLideres } from "../../lib/gestion/lideres";
 import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
 
 if (!PAGINAS_GESTION["acreditados-cda"].includes(Astro.locals.rol)) {
@@ -11,6 +12,7 @@ if (!PAGINAS_GESTION["acreditados-cda"].includes(Astro.locals.rol)) {
 
 const data = await getMapData();
 const acreditados = await listAcreditadosCda();
+const lideres = await listLideres();
 const recintosCda = data.recintos.filter((r) => r.cda);
 ---
 
@@ -25,6 +27,7 @@ const recintosCda = data.recintos.filter((r) => r.cda);
     client:load
     parroquias={data.parroquias.features}
     recintosCda={recintosCda}
+    lideres={lideres}
     acreditadosIniciales={acreditados}
   />
 </GestionLayout>

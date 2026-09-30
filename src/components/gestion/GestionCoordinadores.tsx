@@ -2,11 +2,12 @@ import { useMemo, useState } from "preact/hooks";
 import AsignacionCard from "./AsignacionCard";
 import { title } from "../../lib/format";
 import type { ParroquiaFeature, Recinto } from "../../lib/types";
-import type { Coordinador } from "../../lib/gestion/types";
+import type { Coordinador, Lider } from "../../lib/gestion/types";
 
 interface Props {
   parroquias: ParroquiaFeature[];
   recintos: Recinto[];
+  lideres: Lider[];
   coordinadoresIniciales: Coordinador[];
 }
 
@@ -23,6 +24,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 export default function GestionCoordinadores({
   parroquias,
   recintos,
+  lideres,
   coordinadoresIniciales,
 }: Props) {
   const [coordinadores, setCoordinadores] = useState(coordinadoresIniciales);
@@ -106,6 +108,7 @@ export default function GestionCoordinadores({
             titulo={`Coordinador de ${title(recinto.nombre)}`}
             titular={titular}
             suplentes={suplentes}
+            lideres={lideres}
             onAgregarTitular={async (input) => {
               await api("/api/gestion/coordinadores", {
                 method: "POST",

@@ -1,22 +1,28 @@
 import { useState } from "preact/hooks";
-import { RESPONSABLES_PRESET } from "../../lib/gestion/responsables";
+import type { Lider } from "../../lib/gestion/types";
 
 interface Props {
+  lideres: Lider[];
   onSubmit: (input: {
     cedula: string;
     nombres: string;
     telefono: string;
-    responsable: string;
+    responsableLiderId: string | null;
   }) => Promise<void>;
   onCancel: () => void;
   etiqueta: string;
 }
 
-export default function PersonaForm({ onSubmit, onCancel, etiqueta }: Props) {
+export default function PersonaForm({
+  lideres,
+  onSubmit,
+  onCancel,
+  etiqueta,
+}: Props) {
   const [cedula, setCedula] = useState("");
   const [nombres, setNombres] = useState("");
   const [telefono, setTelefono] = useState("");
-  const [responsable, setResponsable] = useState("");
+  const [responsableLiderId, setResponsableLiderId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -25,7 +31,12 @@ export default function PersonaForm({ onSubmit, onCancel, etiqueta }: Props) {
     setError(null);
     setEnviando(true);
     try {
-      await onSubmit({ cedula, nombres, telefono, responsable });
+      await onSubmit({
+        cedula,
+        nombres,
+        telefono,
+        responsableLiderId: responsableLiderId || null,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado.");
     } finally {
@@ -69,28 +80,25 @@ export default function PersonaForm({ onSubmit, onCancel, etiqueta }: Props) {
       </label>
       <label>
         Responsable
-        <input
-          value={responsable}
-          onInput={(e) =>
-            setResponsable((e.currentTarget as HTMLInputElement).value)
+        <select
+          value={responsableLiderId}
+          onChange={(e) =>
+            setResponsableLiderId(
+              (e.currentTarget as HTMLSelectElement).value,
+            )
           }
-          placeholder="Escribe o elige una opción abajo"
-        />
+        >
+          <option value="">Sin responsable</option>
+          {lideres
+            .slice()
+            .sort((a, b) => a.nombres.localeCompare(b.nombres))
+            .map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.nombres}
+              </option>
+            ))}
+        </select>
       </label>
-      <div class="g-chip-picker">
-        {RESPONSABLES_PRESET.map((opcion) => (
-          <button
-            key={opcion}
-            type="button"
-            class={
-              "g-chip" + (responsable === opcion ? " g-chip-active" : "")
-            }
-            onClick={() => setResponsable(opcion)}
-          >
-            {opcion}
-          </button>
-        ))}
-      </div>
       {error ? <p class="g-error">{error}</p> : null}
       <div class="g-form-actions">
         <button type="submit" disabled={enviando}>

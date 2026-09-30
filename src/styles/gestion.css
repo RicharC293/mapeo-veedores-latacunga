@@ -238,28 +238,6 @@
   background: var(--chip);
 }
 
-.g-chip-picker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: -4px;
-}
-.g-chip {
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 99px;
-  padding: 4px 10px;
-  font-size: 0.78rem;
-  color: var(--ink);
-  cursor: pointer;
-}
-.g-chip-active {
-  background: var(--sel);
-  border-color: var(--sel);
-  color: var(--panel);
-  font-weight: 700;
-}
-
 .login-page {
   min-height: 100dvh;
   display: flex;

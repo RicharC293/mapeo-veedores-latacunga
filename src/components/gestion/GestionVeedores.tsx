@@ -3,11 +3,12 @@ import AsignacionCard from "./AsignacionCard";
 import { listJuntasDeRecinto } from "../../lib/gestion/juntas";
 import { title } from "../../lib/format";
 import type { ParroquiaFeature, Recinto } from "../../lib/types";
-import type { Veedor } from "../../lib/gestion/types";
+import type { Lider, Veedor } from "../../lib/gestion/types";
 
 interface Props {
   parroquias: ParroquiaFeature[];
   recintos: Recinto[];
+  lideres: Lider[];
   veedoresIniciales: Veedor[];
 }
 
@@ -24,6 +25,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 export default function GestionVeedores({
   parroquias,
   recintos,
+  lideres,
   veedoresIniciales,
 }: Props) {
   const [veedores, setVeedores] = useState(veedoresIniciales);
@@ -113,6 +115,7 @@ export default function GestionVeedores({
                 titulo={`Junta ${junta.genero}${junta.numero}`}
                 titular={tit}
                 suplentes={sup}
+                lideres={lideres}
                 onAgregarTitular={async (input) => {
                   await api("/api/gestion/veedores", {
                     method: "POST",

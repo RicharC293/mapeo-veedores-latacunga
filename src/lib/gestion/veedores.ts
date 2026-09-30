@@ -34,7 +34,7 @@ export async function agregarVeedor(input: {
   cedula: string;
   nombres: string;
   telefono: string;
-  responsable: string;
+  responsableLiderId: string | null;
   juntaId: string;
   recintoCodigo: number;
   parroquiaCodigo: number;
@@ -54,7 +54,10 @@ export async function agregarVeedor(input: {
       p_recinto_codigo: input.recintoCodigo,
       p_parroquia_codigo: input.parroquiaCodigo,
       p_tipo: input.tipo,
-      p_responsable: input.responsable,
+      // La función SQL acepta NULL para p_responsable_lider_id, pero el
+      // generador de tipos de Supabase no marca los parámetros como
+      // anulables (solo detecta opcionalidad por valores por defecto).
+      p_responsable_lider_id: input.responsableLiderId as string,
     });
     if (error) throw new Error(error.message);
     return rowToVeedor(data);
@@ -94,7 +97,7 @@ export async function agregarVeedor(input: {
       cedula,
       nombres: input.nombres.trim(),
       telefono: input.telefono.trim(),
-      responsable: input.responsable.trim(),
+      responsableLiderId: input.responsableLiderId,
       juntaId: input.juntaId,
       recintoCodigo: input.recintoCodigo,
       parroquiaCodigo: input.parroquiaCodigo,
