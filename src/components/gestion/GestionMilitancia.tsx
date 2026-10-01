@@ -1,4 +1,5 @@
-import { useMemo, useState } from "preact/hooks";
+import { useMemo, useRef, useState } from "preact/hooks";
+import * as XLSX from "xlsx";
 import PersonaForm from "./PersonaForm";
 import MilitanteRow from "./MilitanteRow";
 import type { ParroquiaFeature, Recinto } from "../../lib/types";
@@ -27,6 +28,14 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+// Excel guarda una cédula/celular como número si la columna no está en
+// formato texto, y de paso le come el cero inicial (0501234567 -> 501234567).
+// Las cédulas y celulares ecuatorianos siempre tienen 10 dígitos y a lo
+// sumo un cero inicial, así que se puede recuperar con confianza.
+function restaurarCeroInicial(valor: string): string {
+  return /^\d{9}$/.test(valor) ? `0${valor}` : valor;
+}
+
 function parsearFilas(
   texto: string,
 ): { cedula: string; nombres: string; telefono: string }[] {
@@ -39,11 +48,59 @@ function parsearFilas(
         linea.includes("\t") ? linea.split("\t") : linea.split(",")
       ).map((p) => p.trim().replace(/^["']|["']$/g, ""));
       return {
-        cedula: partes[0] ?? "",
+        cedula: restaurarCeroInicial(partes[0] ?? ""),
         nombres: partes[1] ?? "",
-        telefono: partes[2] ?? "",
+        telefono: restaurarCeroInicial(partes[2] ?? ""),
       };
     });
+}
+
+const PLANTILLA_ENCABEZADOS = ["Nombres y apellidos", "Cédula", "Celular"];
+
+function descargarPlantilla() {
+  const hoja = XLSX.utils.aoa_to_sheet([PLANTILLA_ENCABEZADOS]);
+  hoja["!cols"] = [{ wch: 32 }, { wch: 14 }, { wch: 14 }];
+  const libro = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(libro, hoja, "Militancia");
+  XLSX.writeFile(libro, "plantilla-militancia.xlsx");
+}
+
+function normalizarEncabezado(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z]/g, "");
+}
+
+async function leerArchivoPlantilla(
+  file: File,
+): Promise<{ cedula: string; nombres: string; telefono: string }[]> {
+  const buffer = await file.arrayBuffer();
+  const libro = XLSX.read(buffer, { type: "array" });
+  const hoja = libro.Sheets[libro.SheetNames[0]];
+  const filas = XLSX.utils.sheet_to_json<Record<string, unknown>>(hoja, {
+    defval: "",
+  });
+
+  const valorPara = (fila: Record<string, unknown>, patrones: string[]) => {
+    for (const [clave, valor] of Object.entries(fila)) {
+      if (patrones.some((p) => normalizarEncabezado(clave).includes(p))) {
+        return String(valor ?? "").trim();
+      }
+    }
+    return "";
+  };
+
+  return filas
+    .map((fila) => ({
+      nombres: valorPara(fila, ["nombre"]),
+      cedula: restaurarCeroInicial(valorPara(fila, ["cedula"])),
+      telefono: restaurarCeroInicial(
+        valorPara(fila, ["celular", "telefono", "movil"]),
+      ),
+    }))
+    .filter((f) => f.cedula || f.nombres);
 }
 
 export default function GestionMilitancia({
@@ -73,6 +130,8 @@ export default function GestionMilitancia({
     creados: number;
     omitidos: number;
   } | null>(null);
+  const [archivoMensaje, setArchivoMensaje] = useState<string | null>(null);
+  const archivoInputRef = useRef<HTMLInputElement | null>(null);
 
   const lideresOrdenados = useMemo(
     () => lideres.slice().sort((a, b) => a.nombres.localeCompare(b.nombres)),
@@ -119,6 +178,35 @@ export default function GestionMilitancia({
       }),
     [militantes, filtroDuplicados, filtroResponsable],
   );
+
+  const cargarArchivo = async (e: Event) => {
+    const file = (e.currentTarget as HTMLInputElement).files?.[0] ?? null;
+    if (archivoInputRef.current) archivoInputRef.current.value = "";
+    if (!file) return;
+    setArchivoMensaje(null);
+    setErrorImport(null);
+    try {
+      const filas = await leerArchivoPlantilla(file);
+      if (filas.length === 0) {
+        setArchivoMensaje(
+          "No se encontraron filas con Cédula o Nombres en el archivo.",
+        );
+        return;
+      }
+      setTextoImport(
+        filas
+          .map((f) => `${f.cedula}\t${f.nombres}\t${f.telefono}`)
+          .join("\n"),
+      );
+      setArchivoMensaje(
+        `${filas.length} fila(s) cargadas desde el archivo. Revisa el texto antes de importar.`,
+      );
+    } catch {
+      setErrorImport(
+        "No se pudo leer el archivo. Verifica que sea un .xlsx o .csv válido.",
+      );
+    }
+  };
 
   const importar = async (e: Event) => {
     e.preventDefault();
@@ -252,6 +340,30 @@ export default function GestionMilitancia({
             </select>
           </label>
         </div>
+        <div class="g-form-actions">
+          <button
+            type="button"
+            class="g-btn-ghost"
+            onClick={descargarPlantilla}
+          >
+            Descargar plantilla (Excel)
+          </button>
+          <button
+            type="button"
+            class="g-btn-ghost"
+            onClick={() => archivoInputRef.current?.click()}
+          >
+            Cargar archivo lleno
+          </button>
+          <input
+            ref={archivoInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            class="g-sr-only"
+            onChange={cargarArchivo}
+          />
+        </div>
+        {archivoMensaje ? <p class="g-empty">{archivoMensaje}</p> : null}
         <label>
           Personas (una por línea: cédula, nombres y apellidos, celular)
           <textarea
