@@ -7,6 +7,7 @@ interface Props {
     cedula: string;
     nombres: string;
     telefono: string;
+    email: string;
     responsableLiderId: string | null;
   }) => Promise<void>;
   onCancel: () => void;
@@ -22,6 +23,7 @@ export default function PersonaForm({
   const [cedula, setCedula] = useState("");
   const [nombres, setNombres] = useState("");
   const [telefono, setTelefono] = useState("");
+  const [email, setEmail] = useState("");
   const [responsableLiderId, setResponsableLiderId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -35,6 +37,7 @@ export default function PersonaForm({
         cedula,
         nombres,
         telefono,
+        email,
         responsableLiderId: responsableLiderId || null,
       });
     } catch (err) {
@@ -76,6 +79,15 @@ export default function PersonaForm({
           onInput={(e) =>
             setTelefono((e.currentTarget as HTMLInputElement).value)
           }
+        />
+      </label>
+      <label>
+        Correo electrónico
+        <input
+          type="email"
+          value={email}
+          onInput={(e) => setEmail((e.currentTarget as HTMLInputElement).value)}
+          placeholder="Opcional"
         />
       </label>
       <label>

@@ -17,7 +17,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       responsableLiderId: string;
       recintoCodigo?: number;
       tipoPreasignado?: TipoMilitancia;
-      filas: { cedula: string; nombres: string; telefono: string }[];
+      filas: { cedula: string; nombres: string; telefono: string; email?: string }[];
     };
 
     let parroquiaCodigo: number | undefined;

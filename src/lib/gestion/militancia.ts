@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { supabaseSecret } from "../supabase";
 import { mutateCollection, readCollection } from "./jsonStore";
 import { cedulaValida, normalizarCedula } from "./cedula";
+import { emailValido, normalizarEmail, resolverEmail } from "./email";
 import { rowToMilitante } from "./rows";
 import { agregarVeedor, veedoresPorJunta } from "./veedores";
 import { agregarCoordinador, coordinadoresPorRecinto } from "./coordinadores";
@@ -66,18 +67,21 @@ export async function agregarMilitante(input: {
   cedula: string;
   nombres: string;
   telefono: string;
+  email?: string;
   responsableLiderId: string | null;
 }): Promise<Militante> {
   const cedula = normalizarCedula(input.cedula);
   if (!cedulaValida(cedula))
     throw new Error("Cédula inválida: debe tener 10 dígitos.");
   if (!input.nombres.trim()) throw new Error("El nombre es obligatorio.");
+  const email = resolverEmail(input.email);
 
   const nueva: MilitanteSinDuplicado = {
     id: randomUUID(),
     cedula,
     nombres: input.nombres.trim(),
     telefono: input.telefono.trim(),
+    email,
     responsableLiderId: input.responsableLiderId,
     recintoCodigo: null,
     parroquiaCodigo: null,
@@ -92,6 +96,7 @@ export async function agregarMilitante(input: {
         cedula: nueva.cedula,
         nombres: nueva.nombres,
         telefono: nueva.telefono,
+        email: nueva.email,
         responsable_lider_id: nueva.responsableLiderId,
       })
       .select()
@@ -112,14 +117,17 @@ export async function importarMilitantes(input: {
   recintoCodigo?: number;
   parroquiaCodigo?: number;
   tipoPreasignado?: TipoMilitancia;
-  filas: { cedula: string; nombres: string; telefono: string }[];
-}): Promise<{ creados: number; omitidos: number }> {
+  filas: { cedula: string; nombres: string; telefono: string; email?: string }[];
+}): Promise<{ creados: number; omitidos: number; correosIgnorados: number }> {
   if (!input.responsableLiderId) {
     throw new Error("Debes elegir un responsable antes de importar.");
   }
 
   const validas: MilitanteSinDuplicado[] = [];
   let omitidos = 0;
+  // Un correo con formato inválido no descarta a la persona: se carga sin
+  // correo y se cuenta aparte para avisarlo.
+  let correosIgnorados = 0;
   for (const fila of input.filas) {
     const cedula = normalizarCedula(fila.cedula ?? "");
     const nombres = (fila.nombres ?? "").trim();
@@ -127,11 +135,17 @@ export async function importarMilitantes(input: {
       omitidos += 1;
       continue;
     }
+    let email = normalizarEmail(fila.email);
+    if (email && !emailValido(email)) {
+      email = "";
+      correosIgnorados += 1;
+    }
     validas.push({
       id: randomUUID(),
       cedula,
       nombres,
       telefono: (fila.telefono ?? "").trim(),
+      email,
       responsableLiderId: input.responsableLiderId,
       recintoCodigo: input.recintoCodigo ?? null,
       parroquiaCodigo: input.parroquiaCodigo ?? null,
@@ -140,7 +154,7 @@ export async function importarMilitantes(input: {
     });
   }
 
-  if (validas.length === 0) return { creados: 0, omitidos };
+  if (validas.length === 0) return { creados: 0, omitidos, correosIgnorados };
 
   if (supabaseSecret) {
     const { error } = await supabaseSecret.from("militantes").insert(
@@ -148,6 +162,7 @@ export async function importarMilitantes(input: {
         cedula: v.cedula,
         nombres: v.nombres,
         telefono: v.telefono,
+        email: v.email,
         responsable_lider_id: v.responsableLiderId,
         recinto_codigo: v.recintoCodigo,
         parroquia_codigo: v.parroquiaCodigo,
@@ -155,14 +170,14 @@ export async function importarMilitantes(input: {
       })),
     );
     if (error) throw new Error(error.message);
-    return { creados: validas.length, omitidos };
+    return { creados: validas.length, omitidos, correosIgnorados };
   }
 
   await mutateCollection<MilitanteSinDuplicado>(COLLECTION, (items) => [
     ...items,
     ...validas,
   ]);
-  return { creados: validas.length, omitidos };
+  return { creados: validas.length, omitidos, correosIgnorados };
 }
 
 export async function eliminarMilitante(id: string): Promise<void> {
@@ -201,6 +216,7 @@ export async function asignarMilitante(
     cedula: militante.cedula,
     nombres: militante.nombres,
     telefono: militante.telefono,
+    email: militante.email,
     responsableLiderId: militante.responsableLiderId,
     recintoCodigo: destino.recintoCodigo,
     parroquiaCodigo: destino.parroquiaCodigo,

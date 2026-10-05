@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { supabaseSecret } from "../supabase";
 import { mutateCollection, readCollection } from "./jsonStore";
 import { cedulaValida, normalizarCedula } from "./cedula";
+import { resolverEmail } from "./email";
 import { estaEnListaNegra, agregarAListaNegra } from "./listaNegra";
 import { registrarEvento } from "./eventos";
 import { rowToAcreditadoCda } from "./rows";
@@ -38,6 +39,7 @@ export async function agregarAcreditadoCda(input: {
   cedula: string;
   nombres: string;
   telefono: string;
+  email?: string;
   responsableLiderId: string | null;
   recintoCodigo: number;
   parroquiaCodigo: number;
@@ -47,6 +49,7 @@ export async function agregarAcreditadoCda(input: {
   if (!cedulaValida(cedula))
     throw new Error("Cédula inválida: debe tener 10 dígitos.");
   if (!input.nombres.trim()) throw new Error("El nombre es obligatorio.");
+  const email = resolverEmail(input.email);
 
   if (supabaseSecret) {
     const { data, error } = await supabaseSecret.rpc(
@@ -55,6 +58,7 @@ export async function agregarAcreditadoCda(input: {
         p_cedula: cedula,
         p_nombres: input.nombres,
         p_telefono: input.telefono,
+        p_email: email,
         p_recinto_codigo: input.recintoCodigo,
         p_parroquia_codigo: input.parroquiaCodigo,
         p_tipo: input.tipo,
@@ -104,6 +108,7 @@ export async function agregarAcreditadoCda(input: {
       cedula,
       nombres: input.nombres.trim(),
       telefono: input.telefono.trim(),
+      email,
       responsableLiderId: input.responsableLiderId,
       recintoCodigo: input.recintoCodigo,
       parroquiaCodigo: input.parroquiaCodigo,

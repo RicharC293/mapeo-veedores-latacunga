@@ -141,6 +141,7 @@ export default function MilitanteRow({
       </td>
       <td>{militante.nombres}</td>
       <td>{militante.telefono || "—"}</td>
+      <td>{militante.email || "—"}</td>
       <td>{responsable?.nombres ?? "—"}</td>
       <td>
         <select

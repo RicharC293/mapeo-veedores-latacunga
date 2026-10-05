@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { supabaseSecret } from "../supabase";
 import { mutateCollection, readCollection } from "./jsonStore";
 import { cedulaValida, normalizarCedula } from "./cedula";
+import { resolverEmail } from "./email";
 import { estaEnListaNegra, agregarAListaNegra } from "./listaNegra";
 import { registrarEvento } from "./eventos";
 import { rowToVeedor } from "./rows";
@@ -34,6 +35,7 @@ export async function agregarVeedor(input: {
   cedula: string;
   nombres: string;
   telefono: string;
+  email?: string;
   responsableLiderId: string | null;
   juntaId: string;
   recintoCodigo: number;
@@ -44,12 +46,14 @@ export async function agregarVeedor(input: {
   if (!cedulaValida(cedula))
     throw new Error("Cédula inválida: debe tener 10 dígitos.");
   if (!input.nombres.trim()) throw new Error("El nombre es obligatorio.");
+  const email = resolverEmail(input.email);
 
   if (supabaseSecret) {
     const { data, error } = await supabaseSecret.rpc("agregar_veedor", {
       p_cedula: cedula,
       p_nombres: input.nombres,
       p_telefono: input.telefono,
+      p_email: email,
       p_junta_id: input.juntaId,
       p_recinto_codigo: input.recintoCodigo,
       p_parroquia_codigo: input.parroquiaCodigo,
@@ -97,6 +101,7 @@ export async function agregarVeedor(input: {
       cedula,
       nombres: input.nombres.trim(),
       telefono: input.telefono.trim(),
+      email,
       responsableLiderId: input.responsableLiderId,
       juntaId: input.juntaId,
       recintoCodigo: input.recintoCodigo,

@@ -36,9 +36,16 @@ function restaurarCeroInicial(valor: string): string {
   return /^\d{9}$/.test(valor) ? `0${valor}` : valor;
 }
 
+interface FilaImport {
+  cedula: string;
+  nombres: string;
+  telefono: string;
+  email: string;
+}
+
 function parsearFilas(
   texto: string,
-): { cedula: string; nombres: string; telefono: string }[] {
+): FilaImport[] {
   return texto
     .split(/\r?\n/)
     .map((l) => l.trim())
@@ -51,15 +58,21 @@ function parsearFilas(
         cedula: restaurarCeroInicial(partes[0] ?? ""),
         nombres: partes[1] ?? "",
         telefono: restaurarCeroInicial(partes[2] ?? ""),
+        email: partes[3] ?? "",
       };
     });
 }
 
-const PLANTILLA_ENCABEZADOS = ["Nombres y apellidos", "Cédula", "Celular"];
+const PLANTILLA_ENCABEZADOS = [
+  "Nombres y apellidos",
+  "Cédula",
+  "Celular",
+  "Correo electrónico",
+];
 
 function descargarPlantilla() {
   const hoja = XLSX.utils.aoa_to_sheet([PLANTILLA_ENCABEZADOS]);
-  hoja["!cols"] = [{ wch: 32 }, { wch: 14 }, { wch: 14 }];
+  hoja["!cols"] = [{ wch: 32 }, { wch: 14 }, { wch: 14 }, { wch: 30 }];
   const libro = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(libro, hoja, "Militancia");
   XLSX.writeFile(libro, "plantilla-militancia.xlsx");
@@ -75,7 +88,7 @@ function normalizarEncabezado(s: string): string {
 
 async function leerArchivoPlantilla(
   file: File,
-): Promise<{ cedula: string; nombres: string; telefono: string }[]> {
+): Promise<FilaImport[]> {
   const buffer = await file.arrayBuffer();
   const libro = XLSX.read(buffer, { type: "array" });
   const hoja = libro.Sheets[libro.SheetNames[0]];
@@ -99,6 +112,7 @@ async function leerArchivoPlantilla(
       telefono: restaurarCeroInicial(
         valorPara(fila, ["celular", "telefono", "movil"]),
       ),
+      email: valorPara(fila, ["correo", "email", "mail"]),
     }))
     .filter((f) => f.cedula || f.nombres);
 }
@@ -129,6 +143,7 @@ export default function GestionMilitancia({
   const [resultadoImport, setResultadoImport] = useState<{
     creados: number;
     omitidos: number;
+    correosIgnorados: number;
   } | null>(null);
   const [archivoMensaje, setArchivoMensaje] = useState<string | null>(null);
   const archivoInputRef = useRef<HTMLInputElement | null>(null);
@@ -195,7 +210,9 @@ export default function GestionMilitancia({
       }
       setTextoImport(
         filas
-          .map((f) => `${f.cedula}\t${f.nombres}\t${f.telefono}`)
+          .map(
+            (f) => `${f.cedula}\t${f.nombres}\t${f.telefono}\t${f.email}`,
+          )
           .join("\n"),
       );
       setArchivoMensaje(
@@ -216,7 +233,11 @@ export default function GestionMilitancia({
     setEnviandoImport(true);
     try {
       const filas = parsearFilas(textoImport);
-      const resultado = await api<{ creados: number; omitidos: number }>(
+      const resultado = await api<{
+        creados: number;
+        omitidos: number;
+        correosIgnorados: number;
+      }>(
         "/api/gestion/militancia/importar",
         {
           method: "POST",
@@ -365,11 +386,11 @@ export default function GestionMilitancia({
         </div>
         {archivoMensaje ? <p class="g-empty">{archivoMensaje}</p> : null}
         <label>
-          Personas (una por línea: cédula, nombres y apellidos, celular)
+          Personas (una por línea: cédula, nombres y apellidos, celular, correo)
           <textarea
             value={textoImport}
             rows={6}
-            placeholder={"0501234567\tJuan Pérez\t0991234567"}
+            placeholder={"0501234567\tJuan Pérez\t0991234567\tjuan@correo.com"}
             onInput={(e) =>
               setTextoImport((e.currentTarget as HTMLTextAreaElement).value)
             }
@@ -381,6 +402,9 @@ export default function GestionMilitancia({
             {resultadoImport.creados} importados
             {resultadoImport.omitidos > 0
               ? `, ${resultadoImport.omitidos} omitidos por datos incompletos`
+              : ""}
+            {resultadoImport.correosIgnorados > 0
+              ? `, ${resultadoImport.correosIgnorados} correo(s) con formato inválido se cargaron vacíos`
               : ""}
             .
           </p>
@@ -456,6 +480,7 @@ export default function GestionMilitancia({
                 <th>Cédula</th>
                 <th>Nombres</th>
                 <th>Celular</th>
+                <th>Correo</th>
                 <th>Responsable</th>
                 <th>Tipo de parroquia</th>
                 <th>Parroquia</th>

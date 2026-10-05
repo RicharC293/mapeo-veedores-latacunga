@@ -14,6 +14,7 @@ export interface Veedor {
   cedula: string;
   nombres: string;
   telefono: string;
+  email: string;
   responsableLiderId: string | null;
   juntaId: string;
   recintoCodigo: number;
@@ -29,6 +30,7 @@ export interface Coordinador {
   cedula: string;
   nombres: string;
   telefono: string;
+  email: string;
   responsableLiderId: string | null;
   recintoCodigo: number;
   parroquiaCodigo: number;
@@ -46,6 +48,7 @@ export interface AcreditadoCda {
   cedula: string;
   nombres: string;
   telefono: string;
+  email: string;
   responsableLiderId: string | null;
   recintoCodigo: number;
   parroquiaCodigo: number;
@@ -115,6 +118,7 @@ export interface Militante {
   cedula: string;
   nombres: string;
   telefono: string;
+  email: string;
   responsableLiderId: string | null;
   recintoCodigo: number | null;
   parroquiaCodigo: number | null;

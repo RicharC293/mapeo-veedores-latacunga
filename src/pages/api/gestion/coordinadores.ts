@@ -25,6 +25,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       cedula: string;
       nombres: string;
       telefono: string;
+      email?: string;
       responsableLiderId: string | null;
       recintoCodigo: number;
       tipo: "titular" | "suplente";
@@ -37,6 +38,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       cedula: body.cedula,
       nombres: body.nombres,
       telefono: body.telefono,
+      email: body.email,
       responsableLiderId: body.responsableLiderId ?? null,
       recintoCodigo: recinto.cod,
       parroquiaCodigo: recinto.par,

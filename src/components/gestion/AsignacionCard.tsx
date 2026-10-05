@@ -8,6 +8,7 @@ export interface PersonaAsignada {
   cedula: string;
   nombres: string;
   telefono: string;
+  email: string;
   responsableLiderId: string | null;
   verificado: boolean;
 }
@@ -21,12 +22,14 @@ interface Props {
     cedula: string;
     nombres: string;
     telefono: string;
+    email: string;
     responsableLiderId: string | null;
   }) => Promise<void>;
   onAgregarSuplente: (input: {
     cedula: string;
     nombres: string;
     telefono: string;
+    email: string;
     responsableLiderId: string | null;
   }) => Promise<void>;
   onDesvincular: (
@@ -160,6 +163,7 @@ function PersonaRow({
         <small>
           CI {persona.cedula}
           {persona.telefono ? ` · ${persona.telefono}` : ""}
+          {persona.email ? ` · ${persona.email}` : ""}
           {responsable ? ` · ${responsable.nombres}` : ""}
         </small>
         <label class="g-check g-check-verificado">

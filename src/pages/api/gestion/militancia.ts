@@ -20,6 +20,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       cedula: string;
       nombres: string;
       telefono: string;
+      email?: string;
       responsableLiderId: string | null;
     };
     const militante = await agregarMilitante(body);

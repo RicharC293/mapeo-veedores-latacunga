@@ -74,6 +74,7 @@ export type Database = {
           cedula: string
           creado_en: string
           id: string
+          email: string
           nombres: string
           orden: number
           parroquia_codigo: number
@@ -87,6 +88,7 @@ export type Database = {
           cedula: string
           creado_en?: string
           id?: string
+          email?: string
           nombres: string
           orden?: number
           parroquia_codigo: number
@@ -100,6 +102,7 @@ export type Database = {
           cedula?: string
           creado_en?: string
           id?: string
+          email?: string
           nombres?: string
           orden?: number
           parroquia_codigo?: number
@@ -139,6 +142,7 @@ export type Database = {
           cedula: string
           creado_en: string
           id: string
+          email: string
           nombres: string
           orden: number
           parroquia_codigo: number
@@ -152,6 +156,7 @@ export type Database = {
           cedula: string
           creado_en?: string
           id?: string
+          email?: string
           nombres: string
           orden?: number
           parroquia_codigo: number
@@ -165,6 +170,7 @@ export type Database = {
           cedula?: string
           creado_en?: string
           id?: string
+          email?: string
           nombres?: string
           orden?: number
           parroquia_codigo?: number
@@ -321,6 +327,7 @@ export type Database = {
           cedula: string
           creado_en: string
           id: string
+          email: string
           nombres: string
           parroquia_codigo: number | null
           recinto_codigo: number | null
@@ -332,6 +339,7 @@ export type Database = {
           cedula: string
           creado_en?: string
           id?: string
+          email?: string
           nombres: string
           parroquia_codigo?: number | null
           recinto_codigo?: number | null
@@ -343,6 +351,7 @@ export type Database = {
           cedula?: string
           creado_en?: string
           id?: string
+          email?: string
           nombres?: string
           parroquia_codigo?: number | null
           recinto_codigo?: number | null
@@ -486,6 +495,7 @@ export type Database = {
           creado_en: string
           id: string
           junta_id: string
+          email: string
           nombres: string
           orden: number
           parroquia_codigo: number
@@ -500,6 +510,7 @@ export type Database = {
           creado_en?: string
           id?: string
           junta_id: string
+          email?: string
           nombres: string
           orden?: number
           parroquia_codigo: number
@@ -514,6 +525,7 @@ export type Database = {
           creado_en?: string
           id?: string
           junta_id?: string
+          email?: string
           nombres?: string
           orden?: number
           parroquia_codigo?: number
@@ -545,6 +557,7 @@ export type Database = {
       agregar_acreditado_cda: {
         Args: {
           p_cedula: string
+          p_email?: string
           p_nombres: string
           p_parroquia_codigo: number
           p_recinto_codigo: number
@@ -555,6 +568,7 @@ export type Database = {
         Returns: {
           cedula: string
           creado_en: string
+          email: string
           id: string
           nombres: string
           orden: number
@@ -575,6 +589,7 @@ export type Database = {
       agregar_coordinador: {
         Args: {
           p_cedula: string
+          p_email?: string
           p_nombres: string
           p_parroquia_codigo: number
           p_recinto_codigo: number
@@ -585,6 +600,7 @@ export type Database = {
         Returns: {
           cedula: string
           creado_en: string
+          email: string
           id: string
           nombres: string
           orden: number
@@ -605,6 +621,7 @@ export type Database = {
       agregar_veedor: {
         Args: {
           p_cedula: string
+          p_email?: string
           p_junta_id: string
           p_nombres: string
           p_parroquia_codigo: number
@@ -616,6 +633,7 @@ export type Database = {
         Returns: {
           cedula: string
           creado_en: string
+          email: string
           id: string
           junta_id: string
           nombres: string
