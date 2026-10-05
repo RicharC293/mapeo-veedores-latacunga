@@ -25,6 +25,10 @@ describe("recintoDePreferencia", () => {
     ["Unidad Educativa Primero de Abril", 6324],
     ["Unidad Educativa Ramón Barba Naranjo", 6332],
     ["Eloy Alfaro, San Felipe, Esuela Ana Páez", 354],
+    ["Semillas de Vida", 6461],
+    ["Escuela 11 de Noviembre", 1575],
+    ["Sindicato de Choferes", 6459],
+    ["Colegio Vicente León La Cocha", 1605],
   ])("reconoce %s", (texto, esperado) => {
     expect(cod(texto)).toBe(esperado);
   });
@@ -36,6 +40,8 @@ describe("recintoDePreferencia", () => {
     "Latacunga",
     "San Buenaventura",
     "San Sebatián - Escuela",
+    "La Matriz Centro",
+    "CUALQUIER RECINTO",
     "",
     "Escuela",
   ])("no adivina cuando hay duda: %s", (texto) => {

@@ -51,10 +51,14 @@ function distancia(a: string, b: string): number {
   return fila[b.length];
 }
 
-// Igualdad que tolera una errata en palabras largas ("Unida", "Esuela").
+// Igualdad que tolera erratas en palabras largas: una letra en palabras de 5+
+// ("Unida", "Esuela") y dos en las de 8+ ("Semillas" por "Semillitas").
 function parecidas(a: string, b: string): boolean {
   if (a === b) return true;
-  return a.length >= 5 && b.length >= 5 && distancia(a, b) <= 1;
+  const minimo = Math.min(a.length, b.length);
+  if (minimo < 5) return false;
+  const d = distancia(a, b);
+  return d <= 1 || (minimo >= 8 && d <= 2);
 }
 
 function tokens(texto: string): string[] {
