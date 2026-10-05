@@ -73,18 +73,26 @@ function tokens(texto: string): string[] {
 
 const esGenerica = (t: string) => GENERICAS.some((g) => parecidas(t, g));
 
+// Prefijos institucionales que casi todos los recintos comparten ("U.E.",
+// "Unidad Educativa"): no deben contar como coincidencia al desempatar, o un
+// recinto que empieza igual que el texto gana sin merecerlo.
+const RUIDO = ["unidad", "educativa", "ue", "u", "e"];
+const esRuido = (t: string) => RUIDO.some((r) => parecidas(t, r));
+
 // Mayor cantidad de palabras seguidas de la preferencia que aparecen también
 // seguidas en el nombre del recinto. Desempata "Escuela Ana Páez" de
 // "Escuela Manuel Salcedo", que comparten palabras sueltas.
 function rachaMaxima(pref: string[], nombre: string[]): number {
+  const p = pref.filter((t) => !esRuido(t));
+  const n = nombre.filter((t) => !esRuido(t));
   let mejor = 0;
-  for (let i = 0; i < pref.length; i += 1) {
-    for (let j = 0; j < nombre.length; j += 1) {
+  for (let i = 0; i < p.length; i += 1) {
+    for (let j = 0; j < n.length; j += 1) {
       let k = 0;
       while (
-        i + k < pref.length &&
-        j + k < nombre.length &&
-        parecidas(pref[i + k], nombre[j + k])
+        i + k < p.length &&
+        j + k < n.length &&
+        parecidas(p[i + k], n[j + k])
       ) {
         k += 1;
       }

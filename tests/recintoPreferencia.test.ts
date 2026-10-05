@@ -41,6 +41,8 @@ describe("recintoDePreferencia", () => {
     "San Buenaventura",
     "San Sebatián - Escuela",
     "La Matriz Centro",
+    "U.E. Vicente León Centro",
+    "U.E. Ana Paez",
     "CUALQUIER RECINTO",
     "",
     "Escuela",
