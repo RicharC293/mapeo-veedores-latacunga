@@ -1242,3 +1242,43 @@ select.g-campo-error {
     flex: 1 1 140px;
   }
 }
+
+/* Diálogo de aviso al asignar a un lugar ya ocupado. */
+.g-dialogo {
+  width: min(440px, calc(100% - 32px));
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--ink);
+}
+.g-dialogo::backdrop {
+  background: rgb(8 16 24 / 0.6);
+}
+.g-dialogo h3 {
+  margin: 0 0 10px;
+  font-size: 1.1rem;
+}
+.g-dialogo p {
+  margin: 0 0 12px;
+  line-height: 1.45;
+}
+.g-dialogo .g-sub {
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+.g-dialogo .g-form-actions {
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+/* Botones del diálogo: a todo el ancho en pantallas angostas para que el
+   texto nunca se desborde ni se parta. */
+@media (max-width: 480px) {
+  .g-dialogo .g-form-actions > button {
+    flex: 1 1 100%;
+  }
+}
+.g-dialogo button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}

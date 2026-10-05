@@ -4,6 +4,7 @@ import { mutateCollection, readCollection } from "./jsonStore";
 import { cedulaValida, normalizarCedula } from "./cedula";
 import { resolverEmail } from "./email";
 import { estaEnListaNegra, agregarAListaNegra } from "./listaNegra";
+import { devolverAMilitanciaLocal } from "./devolucionMilitancia";
 import { registrarEvento } from "./eventos";
 import { rowToVeedor } from "./rows";
 import type { Veedor } from "./types";
@@ -194,6 +195,18 @@ export async function desvincularVeedor(
       motivo,
       origen: "veedor",
     });
+  } else {
+    await devolverAMilitanciaLocal({
+      cedula: d.cedula,
+      nombres: d.nombres,
+      telefono: d.telefono,
+      email: d.email,
+      responsableLiderId: d.responsableLiderId,
+      recintoCodigo: d.recintoCodigo,
+      parroquiaCodigo: d.parroquiaCodigo,
+      tipo: "veedor",
+      juntaId: d.juntaId,
+    });
   }
   await registrarEvento({
     tipo: "baja_veedor",
@@ -203,7 +216,10 @@ export async function desvincularVeedor(
   });
 }
 
-export async function marcarVerificadoVeedor(id: string, verificado: boolean): Promise<Veedor> {
+export async function marcarVerificadoVeedor(
+  id: string,
+  verificado: boolean,
+): Promise<Veedor> {
   if (supabaseSecret) {
     const { data, error } = await supabaseSecret
       .from("veedores")

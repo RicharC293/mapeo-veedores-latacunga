@@ -4,6 +4,7 @@ import { mutateCollection, readCollection } from "./jsonStore";
 import { cedulaValida, normalizarCedula } from "./cedula";
 import { resolverEmail } from "./email";
 import { estaEnListaNegra, agregarAListaNegra } from "./listaNegra";
+import { devolverAMilitanciaLocal } from "./devolucionMilitancia";
 import { registrarEvento } from "./eventos";
 import { rowToCoordinador } from "./rows";
 import type { Coordinador } from "./types";
@@ -204,6 +205,17 @@ export async function desvincularCoordinador(
       telefono: d.telefono,
       motivo,
       origen: "coordinador",
+    });
+  } else {
+    await devolverAMilitanciaLocal({
+      cedula: d.cedula,
+      nombres: d.nombres,
+      telefono: d.telefono,
+      email: d.email,
+      responsableLiderId: d.responsableLiderId,
+      recintoCodigo: d.recintoCodigo,
+      parroquiaCodigo: d.parroquiaCodigo,
+      tipo: "coordinador",
     });
   }
   await registrarEvento({

@@ -4,6 +4,7 @@ import { mutateCollection, readCollection } from "./jsonStore";
 import { cedulaValida, normalizarCedula } from "./cedula";
 import { resolverEmail } from "./email";
 import { estaEnListaNegra, agregarAListaNegra } from "./listaNegra";
+import { devolverAMilitanciaLocal } from "./devolucionMilitancia";
 import { registrarEvento } from "./eventos";
 import { rowToAcreditadoCda } from "./rows";
 import type { AcreditadoCda } from "./types";
@@ -207,6 +208,17 @@ export async function desvincularAcreditadoCda(
       telefono: d.telefono,
       motivo,
       origen: "acreditado_cda",
+    });
+  } else {
+    await devolverAMilitanciaLocal({
+      cedula: d.cedula,
+      nombres: d.nombres,
+      telefono: d.telefono,
+      email: d.email,
+      responsableLiderId: d.responsableLiderId,
+      recintoCodigo: d.recintoCodigo,
+      parroquiaCodigo: d.parroquiaCodigo,
+      tipo: "cda",
     });
   }
   await registrarEvento({

@@ -108,6 +108,7 @@ export async function agregarMilitante(input: {
     recintoCodigo: input.recintoCodigo ?? null,
     parroquiaCodigo: input.parroquiaCodigo ?? null,
     tipoPreasignado: null,
+    juntaPreasignada: null,
     creadoEn: new Date().toISOString(),
   };
 
@@ -186,6 +187,7 @@ export async function importarMilitantes(input: {
       recintoCodigo: input.recintoCodigo ?? fila.recintoCodigo ?? null,
       parroquiaCodigo: input.parroquiaCodigo ?? fila.parroquiaCodigo ?? null,
       tipoPreasignado: input.tipoPreasignado ?? null,
+      juntaPreasignada: null,
       creadoEn: new Date().toISOString(),
     });
   }
@@ -287,16 +289,57 @@ export type AsignarDestino =
   | { tipo: "coordinador"; recintoCodigo: number; parroquiaCodigo: number }
   | { tipo: "cda"; recintoCodigo: number; parroquiaCodigo: number };
 
+// Cada junta (veedor) y cada recinto (coordinador, CDA) admite un titular y
+// un solo suplente. Asignar a un lugar con titular exige confirmar que la
+// persona quedará como suplente; si el suplente también está ocupado, no hay
+// cupo y no se asigna.
+export type ResultadoAsignacion =
+  | {
+      estado: "asignado";
+      rol: "titular" | "suplente";
+      persona: Veedor | Coordinador | AcreditadoCda;
+    }
+  | { estado: "confirmar"; titular: string }
+  | { estado: "lleno"; titular: string; suplente: string };
+
 export async function asignarMilitante(
   id: string,
   destino: AsignarDestino,
-): Promise<Veedor | Coordinador | AcreditadoCda> {
+  confirmarSuplente = false,
+): Promise<ResultadoAsignacion> {
   const militante = await obtenerMilitante(id);
   if (!militante) throw new Error("No se encontró el militante.");
   if (esFilaIncorrecta(militante)) {
     throw new Error(
       "Corrige los datos marcados en rojo antes de asignar a esta persona.",
     );
+  }
+
+  // Quién ocupa hoy el lugar de destino.
+  const junta =
+    destino.tipo === "veedor"
+      ? juntaId(destino.recintoCodigo, destino.genero, destino.numero)
+      : "";
+  const ocupantes =
+    destino.tipo === "veedor"
+      ? await veedoresPorJunta(junta)
+      : destino.tipo === "coordinador"
+        ? await coordinadoresPorRecinto(destino.recintoCodigo)
+        : await acreditadosCdaPorRecinto(destino.recintoCodigo);
+
+  let rol: "titular" | "suplente" = "titular";
+  if (ocupantes.titular) {
+    if (ocupantes.suplentes.length > 0) {
+      return {
+        estado: "lleno",
+        titular: ocupantes.titular.nombres,
+        suplente: ocupantes.suplentes[0].nombres,
+      };
+    }
+    if (!confirmarSuplente) {
+      return { estado: "confirmar", titular: ocupantes.titular.nombres };
+    }
+    rol = "suplente";
   }
 
   const base = {
@@ -307,35 +350,18 @@ export async function asignarMilitante(
     responsableLiderId: militante.responsableLiderId,
     recintoCodigo: destino.recintoCodigo,
     parroquiaCodigo: destino.parroquiaCodigo,
+    tipo: rol,
   };
 
-  let creado: Veedor | Coordinador | AcreditadoCda;
+  let persona: Veedor | Coordinador | AcreditadoCda;
   if (destino.tipo === "veedor") {
-    const junta = juntaId(
-      destino.recintoCodigo,
-      destino.genero,
-      destino.numero,
-    );
-    const { titular } = await veedoresPorJunta(junta);
-    creado = await agregarVeedor({
-      ...base,
-      juntaId: junta,
-      tipo: titular ? "suplente" : "titular",
-    });
+    persona = await agregarVeedor({ ...base, juntaId: junta });
   } else if (destino.tipo === "coordinador") {
-    const { titular } = await coordinadoresPorRecinto(destino.recintoCodigo);
-    creado = await agregarCoordinador({
-      ...base,
-      tipo: titular ? "suplente" : "titular",
-    });
+    persona = await agregarCoordinador(base);
   } else {
-    const { titular } = await acreditadosCdaPorRecinto(destino.recintoCodigo);
-    creado = await agregarAcreditadoCda({
-      ...base,
-      tipo: titular ? "suplente" : "titular",
-    });
+    persona = await agregarAcreditadoCda(base);
   }
 
   await eliminarMilitante(id);
-  return creado;
+  return { estado: "asignado", rol, persona };
 }

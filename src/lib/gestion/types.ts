@@ -125,6 +125,9 @@ export interface Militante {
   recintoCodigo: number | null;
   parroquiaCodigo: number | null;
   tipoPreasignado: TipoMilitancia | null;
+  // Mesa (junta) de origen de un veedor que regresó a Militancia al
+  // desvincularse; solo preselecciona el desplegable de la fila.
+  juntaPreasignada: string | null;
   creadoEn: string;
   duplicado: boolean;
   // true si cédula, nombre, teléfono o correo tienen un error de formato

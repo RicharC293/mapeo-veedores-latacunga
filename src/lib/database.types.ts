@@ -328,6 +328,7 @@ export type Database = {
           creado_en: string
           id: string
           email: string
+          junta_preasignada: string | null
           nombres: string
           parroquia_codigo: number | null
           preferencia: string
@@ -341,6 +342,7 @@ export type Database = {
           creado_en?: string
           id?: string
           email?: string
+          junta_preasignada?: string | null
           nombres: string
           parroquia_codigo?: number | null
           preferencia?: string
@@ -354,6 +356,7 @@ export type Database = {
           creado_en?: string
           id?: string
           email?: string
+          junta_preasignada?: string | null
           nombres?: string
           parroquia_codigo?: number | null
           preferencia?: string

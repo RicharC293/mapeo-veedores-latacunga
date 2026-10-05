@@ -4,7 +4,7 @@ import PersonaForm from "./PersonaForm";
 import MilitanteCard from "./MilitanteCard";
 import type { ParroquiaFeature, Recinto } from "../../lib/types";
 import type { Lider, Militante, TipoMilitancia } from "../../lib/gestion/types";
-import type { AsignarDestino } from "../../lib/gestion/militancia";
+import type { ResultadoAsignacion } from "../../lib/gestion/militancia";
 import { normalizar, title } from "../../lib/format";
 
 interface Props {
@@ -440,14 +440,14 @@ export default function GestionMilitancia({
               class="g-btn-ghost"
               onClick={descargarPlantilla}
             >
-              Descargar plantilla (Excel)
+              Plantilla Excel
             </button>
             <button
               type="button"
               class="g-btn-ghost"
               onClick={() => archivoInputRef.current?.click()}
             >
-              Cargar archivo lleno
+              Cargar archivo
             </button>
             <input
               ref={archivoInputRef}
@@ -617,12 +617,22 @@ export default function GestionMilitancia({
                 parroquias={parroquias}
                 recintos={recintos}
                 lideres={lideres}
-                onAsignar={async (destino: AsignarDestino) => {
-                  await api(`/api/gestion/militancia/${m.id}/asignar`, {
-                    method: "POST",
-                    body: JSON.stringify(destino),
-                  });
-                  await refrescar();
+                onAsignar={async (destino, confirmarSuplente) => {
+                  const res = await fetch(
+                    `/api/gestion/militancia/${m.id}/asignar`,
+                    {
+                      method: "POST",
+                      headers: { "content-type": "application/json" },
+                      body: JSON.stringify({ ...destino, confirmarSuplente }),
+                    },
+                  );
+                  const cuerpo = await res.json();
+                  // 409 = lugar ocupado: no es un error, es un aviso.
+                  if (!res.ok && res.status !== 409) {
+                    throw new Error(cuerpo.error ?? "Error inesperado.");
+                  }
+                  if (res.ok) await refrescar();
+                  return cuerpo as ResultadoAsignacion;
                 }}
                 onEditar={async (patch) => {
                   await api(`/api/gestion/militancia/${m.id}`, {

@@ -99,6 +99,7 @@ export function rowToMilitante(
     recintoCodigo: (row.recinto_codigo as number | null) ?? null,
     parroquiaCodigo: (row.parroquia_codigo as number | null) ?? null,
     tipoPreasignado: (row.tipo_preasignado as TipoMilitancia | null) ?? null,
+    juntaPreasignada: (row.junta_preasignada as string | null) ?? null,
     creadoEn: row.creado_en as string,
   };
 }

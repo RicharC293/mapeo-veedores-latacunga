@@ -3,7 +3,11 @@ import { listJuntasDeRecinto } from "../../lib/gestion/juntas";
 import { title } from "../../lib/format";
 import type { ParroquiaFeature, Recinto } from "../../lib/types";
 import type { Lider, Militante, TipoMilitancia } from "../../lib/gestion/types";
-import type { AsignarDestino } from "../../lib/gestion/militancia";
+import type {
+  AsignarDestino,
+  ResultadoAsignacion,
+} from "../../lib/gestion/militancia";
+import DialogoAsignacion, { type AvisoAsignacion } from "./DialogoAsignacion";
 import {
   MENSAJE_ERROR,
   erroresMilitante,
@@ -15,7 +19,10 @@ interface Props {
   parroquias: ParroquiaFeature[];
   recintos: Recinto[];
   lideres: Lider[];
-  onAsignar: (destino: AsignarDestino) => Promise<void>;
+  onAsignar: (
+    destino: AsignarDestino,
+    confirmarSuplente: boolean,
+  ) => Promise<ResultadoAsignacion>;
   onEditar: (patch: {
     cedula: string;
     nombres: string;
@@ -65,11 +72,12 @@ export default function MilitanteCard({
   const [tipo, setTipo] = useState<TipoMilitancia | "">(
     militante.tipoPreasignado ?? "",
   );
-  const [juntaSel, setJuntaSel] = useState("");
+  const [juntaSel, setJuntaSel] = useState(militante.juntaPreasignada ?? "");
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editando, setEditando] = useState(false);
   const [confirmandoBorrar, setConfirmandoBorrar] = useState(false);
+  const [aviso, setAviso] = useState<AvisoAsignacion | null>(null);
   const [borrador, setBorrador] = useState<Borrador>({
     cedula: militante.cedula,
     nombres: militante.nombres,
@@ -143,7 +151,19 @@ export default function MilitanteCard({
     }
   };
 
-  const asignar = () => {
+  // Descripción del lugar elegido, para el aviso de cupos.
+  const descripcionLugar = () => {
+    const nombre = recinto ? title(recinto.nombre) : "";
+    if (tipo === "veedor") {
+      const j = juntas.find((x) => x.id === juntaSel);
+      return `La junta ${j ? `${j.genero}${j.numero}` : ""} de ${nombre}`;
+    }
+    return tipo === "cda"
+      ? `El CDA de ${nombre}`
+      : `La coordinación de ${nombre}`;
+  };
+
+  const asignar = (confirmarSuplente = false) => {
     if (!puedeAsignar) return;
     return ejecutar(async () => {
       let destino: AsignarDestino;
@@ -164,7 +184,19 @@ export default function MilitanteCard({
           parroquiaCodigo: parroquiaCod as number,
         };
       }
-      await onAsignar(destino);
+      const resultado = await onAsignar(destino, confirmarSuplente);
+      // Lugar ocupado: se avisa en un diálogo en vez de asignar en silencio.
+      if (resultado.estado === "confirmar") {
+        setAviso({ tipo: "confirmar", titular: resultado.titular });
+      } else if (resultado.estado === "lleno") {
+        setAviso({
+          tipo: "lleno",
+          titular: resultado.titular,
+          suplente: resultado.suplente,
+        });
+      } else {
+        setAviso(null);
+      }
     });
   };
 
@@ -319,8 +351,8 @@ export default function MilitanteCard({
             value={tipo}
             disabled={enviando}
             onChange={(e) => {
-              const nuevo = (e.currentTarget as HTMLSelectElement)
-                .value as TipoMilitancia | "";
+              const nuevo = (e.currentTarget as HTMLSelectElement).value as
+                TipoMilitancia | "";
               setTipo(nuevo);
               // Se conserva el recinto ya elegido o autocompletado; solo se
               // descarta si el nuevo tipo (CDA) no lo admite.
@@ -389,7 +421,7 @@ export default function MilitanteCard({
               disabled={enviando}
               onClick={guardarEdicion}
             >
-              {enviando ? "Guardando…" : "Guardar cambios"}
+              {enviando ? "Guardando…" : "Guardar"}
             </button>
             <button
               type="button"
@@ -412,7 +444,7 @@ export default function MilitanteCard({
               disabled={enviando}
               onClick={() => ejecutar(onEliminar)}
             >
-              Sí, eliminar
+              Eliminar
             </button>
             <button
               type="button"
@@ -429,7 +461,7 @@ export default function MilitanteCard({
               type="button"
               class="g-btn-accion"
               disabled={!puedeAsignar || enviando}
-              onClick={asignar}
+              onClick={() => asignar()}
             >
               {enviando ? "Asignando…" : "Asignar"}
             </button>
@@ -454,6 +486,24 @@ export default function MilitanteCard({
           </>
         )}
       </div>
+
+      {aviso ? (
+        <DialogoAsignacion
+          aviso={aviso}
+          lugar={descripcionLugar()}
+          persona={militante.nombres}
+          seccion={
+            tipo === "veedor"
+              ? "Veedores"
+              : tipo === "cda"
+                ? "Acreditados CDA"
+                : "Coordinadores"
+          }
+          enviando={enviando}
+          onConfirmar={() => asignar(true)}
+          onCerrar={() => setAviso(null)}
+        />
+      ) : null}
 
       {!editando && ayuda ? <p class="g-mil-ayuda">{ayuda}</p> : null}
       {error ? <p class="g-error g-mil-ayuda">{error}</p> : null}

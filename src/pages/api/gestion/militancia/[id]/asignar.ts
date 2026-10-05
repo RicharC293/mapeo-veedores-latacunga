@@ -16,8 +16,19 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
   return handle(async () => {
     const id = params.id;
     if (!id) throw new Error("Falta el id del militante.");
-    const destino = (await request.json()) as AsignarDestino;
-    const creado = await asignarMilitante(id, destino);
-    return json(creado, { status: 201 });
+    const { confirmarSuplente, ...destino } =
+      (await request.json()) as AsignarDestino & {
+        confirmarSuplente?: boolean;
+      };
+    const resultado = await asignarMilitante(
+      id,
+      destino as AsignarDestino,
+      confirmarSuplente === true,
+    );
+    // 409: el destino ya está ocupado; el cliente muestra el aviso o pide
+    // confirmar que la persona quedará como suplente.
+    return json(resultado, {
+      status: resultado.estado === "asignado" ? 201 : 409,
+    });
   });
 };
