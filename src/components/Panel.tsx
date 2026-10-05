@@ -10,6 +10,7 @@ import {
   calcularCobertura,
   calcularCoberturaPorParroquia,
 } from "../lib/gestion/coverage";
+import { responsablesDeRecinto } from "../lib/gestion/responsables";
 import { fmt, normalizar, rango, title } from "../lib/format";
 import type {
   MapData,
@@ -44,19 +45,6 @@ interface PersonaInfo {
   telefono: string;
   organizacion?: string;
   asignado: boolean;
-}
-
-function lideresDe(lideres: Lider[], recinto: Recinto): Lider[] {
-  const especificos = lideres.filter(
-    (l) => l.ambito === "parroquia" && l.recintoCodigos.includes(recinto.cod),
-  );
-  return especificos.length > 0
-    ? especificos
-    : lideres.filter(
-        (l) =>
-          (l.ambito === "parroquia" && l.parroquiaCodigo === recinto.par) ||
-          (l.ambito === "candidato" && l.parroquiaCodigos.includes(recinto.par)),
-      );
 }
 
 function coordinadorDe(
@@ -285,16 +273,14 @@ export default function Panel({
     const f = r ? parByCode.get(r.par) : undefined;
     if (!r || !f) return null;
     const maps = `https://www.google.com/maps/search/?api=1&query=${r.lat},${r.lon}`;
-    const lideresRecinto = lideresDe(lideres, r);
+    const lideresRecinto = responsablesDeRecinto(lideres, r);
     const coordinadorRecinto = coordinadorDe(coordinadores, r.cod);
     const acreditadoCdaRecinto = r.cda
       ? acreditadoCdaDe(acreditadosCda, r.cod)
       : null;
     const contactos: PersonaInfo[] = [
       ...(lideresRecinto.length > 0
-        ? lideresRecinto.map((l) =>
-            personaDe(l.ambito === "candidato" ? "Candidato" : "Líder", l),
-          )
+        ? lideresRecinto.map((l) => personaDe("Líder", l))
         : [personaSinAsignar("Líder", "Líder")]),
       coordinadorRecinto
         ? personaDe("Coordinador de recinto", coordinadorRecinto, "Coordinador")

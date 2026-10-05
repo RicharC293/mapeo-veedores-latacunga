@@ -63,25 +63,23 @@ function DignidadCard({
           <small>{nombreParroquia(parroquias, lider.parroquiaCodigo)}</small>
         ) : null}
         {lider.organizacion ? <small>{lider.organizacion}</small> : null}
-        {lider.ambito === "candidato" ? (
+        {lider.ambito === "general" ? <small>Líder general</small> : null}
+        {lider.ambito === "parroquia" ? (
           <small>
-            {lider.parroquiaCodigos.length > 0
-              ? `Parroquias a cargo: ${lider.parroquiaCodigos
-                  .map((cod) => nombreParroquia(parroquias, cod))
-                  .join(", ")}`
-              : "Sin parroquias asignadas"}
+            {`Líder de: ${lider.parroquiaCodigos
+              .map((cod) => nombreParroquia(parroquias, cod))
+              .join(", ")}`}
           </small>
-        ) : (
+        ) : null}
+        {lider.recintoCodigos.length > 0 ? (
           <small>
-            {lider.recintoCodigos.length > 0
-              ? `Recintos: ${lider.recintoCodigos
-                  .map((cod) =>
-                    title(recintos.find((r) => r.cod === cod)?.nombre ?? ""),
-                  )
-                  .join(", ")}`
-              : "Sin recintos asignados"}
+            {`Recintos: ${lider.recintoCodigos
+              .map((cod) =>
+                title(recintos.find((r) => r.cod === cod)?.nombre ?? ""),
+              )
+              .join(", ")}`}
           </small>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -92,10 +90,6 @@ export default function DiagramaEstructura({
   parroquias,
   recintos,
 }: Props) {
-  const candidatos = lideres
-    .filter((l) => l.ambito === "candidato")
-    .sort((a, b) => a.nombres.localeCompare(b.nombres));
-
   return (
     <div>
       <div class="g-alianza">
@@ -141,24 +135,6 @@ export default function DiagramaEstructura({
             </ArbolNodo>
           );
         })}
-        <ArbolNodo
-          titulo="Candidatos"
-          subtitulo={`${candidatos.length}`}
-          defaultAbierto
-        >
-          {candidatos.length === 0 ? (
-            <p class="g-empty">Sin candidatos registrados.</p>
-          ) : (
-            candidatos.map((l) => (
-              <DignidadCard
-                key={l.id}
-                lider={l}
-                parroquias={parroquias}
-                recintos={recintos}
-              />
-            ))
-          )}
-        </ArbolNodo>
       </div>
     </div>
   );

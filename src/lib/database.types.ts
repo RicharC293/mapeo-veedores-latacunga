@@ -243,7 +243,7 @@ export type Database = {
       }
       lideres: {
         Row: {
-          ambito: string
+          ambito: string | null
           cargo: string | null
           cedula: string | null
           creado_en: string
@@ -257,7 +257,7 @@ export type Database = {
           telefono: string
         }
         Insert: {
-          ambito: string
+          ambito?: string | null
           cargo?: string | null
           cedula?: string | null
           creado_en?: string
@@ -271,7 +271,7 @@ export type Database = {
           telefono?: string
         }
         Update: {
-          ambito?: string
+          ambito?: string | null
           cargo?: string | null
           cedula?: string | null
           creado_en?: string

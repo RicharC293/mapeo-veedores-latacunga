@@ -24,7 +24,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       nombres: string;
       telefono: string;
       organizacion: string;
-      ambito: AmbitoLider;
+      ambito?: AmbitoLider | null;
       parroquiaCodigo: number | null;
       parroquiaCodigos?: number[];
       recintoCodigos: number[];
@@ -44,6 +44,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
     const lider = await agregarLider({
       ...body,
+      ambito: body.ambito ?? null,
       parroquiaCodigos: body.parroquiaCodigos ?? [],
     });
     return json(lider, { status: 201 });

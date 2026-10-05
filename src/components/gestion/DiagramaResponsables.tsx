@@ -1,5 +1,6 @@
 import ArbolNodo from "./ArbolNodo";
 import { title } from "../../lib/format";
+import { responsablesDeRecinto } from "../../lib/gestion/responsables";
 import type { Lider } from "../../lib/gestion/types";
 import type { ParroquiaFeature, Recinto } from "../../lib/types";
 
@@ -20,14 +21,7 @@ export default function DiagramaResponsables({
         .filter((r) => r.par === p.properties.code)
         .map((r) => ({
           recinto: r,
-          // Un candidato no se asigna por recinto sino por parroquia: es
-          // responsable de todos los recintos de las parroquias a su cargo.
-          responsables: lideres.filter(
-            (l) =>
-              l.recintoCodigos.includes(r.cod) ||
-              (l.ambito === "candidato" &&
-                l.parroquiaCodigos.includes(r.par)),
-          ),
+          responsables: responsablesDeRecinto(lideres, r),
         }));
       return { parroquia: p, filas };
     })
@@ -62,13 +56,7 @@ export default function DiagramaResponsables({
                   <strong>{title(f.recinto.nombre)}</strong>
                   <small>
                     {f.responsables.length > 0
-                      ? f.responsables
-                          .map(
-                            (l) =>
-                              l.nombres +
-                              (l.ambito === "candidato" ? " (candidato)" : ""),
-                          )
-                          .join(", ")
+                      ? f.responsables.map((l) => l.nombres).join(", ")
                       : "Sin responsable"}
                   </small>
                 </div>

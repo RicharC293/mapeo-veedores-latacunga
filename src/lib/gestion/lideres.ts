@@ -10,13 +10,6 @@ type LiderUpdate = Database["public"]["Tables"]["lideres"]["Update"];
 
 const COLLECTION = "lideres";
 
-// Cargos de alcance cantonal: no están atados a una sola parroquia.
-const CARGO_CANTONAL: Cargo[] = [
-  "alcalde",
-  "concejal_urbano",
-  "concejal_rural",
-];
-
 const MENSAJE_CARGO: Record<Cargo, string> = {
   alcalde: "Ya existe un alcalde registrado.",
   concejal_urbano: `Ya se alcanzó el máximo de ${CUPO_CARGO.concejal_urbano} concejales urbanos.`,
@@ -51,45 +44,38 @@ function validarCupoCargo(
   }
 }
 
-// La tabla exige ambito='parroquia' <=> parroquia_codigo no nulo (constraint
-// lideres_parroquia_segun_ambito), así que "ambito" no es un input libre: se
-// deriva de si el resultado final necesita una parroquia. Un cargo cantonal
-// (alcalde/concejal) nunca la necesita, aunque el ambito recibido diga
-// "parroquia"; un vocal siempre la necesita, aunque el ambito recibido diga
-// "general". "candidato" es la excepción: solo se respeta si no hay cargo
-// (quien ya ostenta una dignidad deja de ser candidato) y entonces no usa
-// parroquia_codigo ni recintos, sino la lista parroquiaCodigos.
-function resolverAsignacion(input: {
-  ambito: AmbitoLider;
+// Cargo (dignidad) y ámbito de liderazgo son ejes independientes. Esta
+// función deja el resultado consistente con los constraints de la tabla:
+//  * parroquia_codigo solo existe para el vocal (la parroquia de su junta);
+//  * sin ámbito no hay parroquias ni recintos a cargo;
+//  * con ámbito "general" no hay lista de parroquias;
+//  * con ámbito "parroquia" hace falta al menos una parroquia.
+type Asignacion = {
+  ambito: AmbitoLider | null;
   parroquiaCodigo: number | null;
   parroquiaCodigos: number[];
   recintoCodigos: number[];
   cargo: Cargo | null;
-}): {
-  ambito: AmbitoLider;
-  parroquiaCodigo: number | null;
-  parroquiaCodigos: number[];
-  recintoCodigos: number[];
-} {
-  if (input.cargo == null && input.ambito === "candidato") {
-    return {
-      ambito: "candidato",
-      parroquiaCodigo: null,
-      parroquiaCodigos: [...new Set(input.parroquiaCodigos)],
-      recintoCodigos: [],
-    };
+};
+
+function normalizarAsignacion(input: Asignacion): Asignacion {
+  const ambito = input.ambito ?? null;
+  const parroquiaCodigos =
+    ambito === "parroquia" ? [...new Set(input.parroquiaCodigos)] : [];
+  if (ambito === "parroquia" && parroquiaCodigos.length === 0) {
+    throw new Error("Elige al menos una parroquia para el líder de parroquia.");
   }
-
-  const cantonal = input.cargo != null && CARGO_CANTONAL.includes(input.cargo);
   const esVocal = input.cargo === "vocal_junta_parroquial";
-  const usaParroquia = esVocal || (!cantonal && input.ambito === "parroquia");
-
-  const parroquiaCodigo = usaParroquia ? input.parroquiaCodigo : null;
-  const recintoCodigos =
-    usaParroquia || input.cargo != null ? input.recintoCodigos : [];
-  const ambito: AmbitoLider = parroquiaCodigo != null ? "parroquia" : "general";
-
-  return { ambito, parroquiaCodigo, parroquiaCodigos: [], recintoCodigos };
+  if (esVocal && input.parroquiaCodigo == null) {
+    throw new Error("Debe indicar la parroquia del vocal.");
+  }
+  return {
+    ambito,
+    cargo: input.cargo,
+    parroquiaCodigo: esVocal ? input.parroquiaCodigo : null,
+    parroquiaCodigos,
+    recintoCodigos: ambito ? [...new Set(input.recintoCodigos)] : [],
+  };
 }
 
 export async function listLideres(): Promise<Lider[]> {
@@ -106,7 +92,7 @@ export async function agregarLider(input: {
   nombres: string;
   telefono: string;
   organizacion: string;
-  ambito: AmbitoLider;
+  ambito: AmbitoLider | null;
   parroquiaCodigo: number | null;
   parroquiaCodigos: number[];
   recintoCodigos: number[];
@@ -120,10 +106,7 @@ export async function agregarLider(input: {
     throw new Error("Cédula inválida: debe tener 10 dígitos.");
   if (!input.nombres.trim()) throw new Error("El nombre es obligatorio.");
 
-  const resuelto = resolverAsignacion(input);
-  if (resuelto.ambito === "parroquia" && resuelto.parroquiaCodigo == null) {
-    throw new Error("Debe indicar la parroquia del líder.");
-  }
+  const resuelto = normalizarAsignacion(input);
 
   if (supabaseSecret) {
     const { data, error } = await supabaseSecret
@@ -137,7 +120,7 @@ export async function agregarLider(input: {
         parroquia_codigo: resuelto.parroquiaCodigo,
         parroquia_codigos: resuelto.parroquiaCodigos,
         recinto_codigos: resuelto.recintoCodigos,
-        cargo: input.cargo,
+        cargo: resuelto.cargo,
       })
       .select()
       .single();
@@ -154,7 +137,7 @@ export async function agregarLider(input: {
     if (cedula && items.some((l) => l.cedula === cedula)) {
       throw new Error("Esta cédula ya está registrada como líder.");
     }
-    validarCupoCargo(items, input.cargo, resuelto.parroquiaCodigo);
+    validarCupoCargo(items, resuelto.cargo, resuelto.parroquiaCodigo);
     const lider: Lider = {
       id: randomUUID(),
       cedula,
@@ -165,7 +148,7 @@ export async function agregarLider(input: {
       parroquiaCodigo: resuelto.parroquiaCodigo,
       parroquiaCodigos: resuelto.parroquiaCodigos,
       recintoCodigos: resuelto.recintoCodigos,
-      cargo: input.cargo,
+      cargo: resuelto.cargo,
       foto: null,
       creadoEn: new Date().toISOString(),
     };
@@ -189,8 +172,8 @@ type LiderPatch = Partial<
   >
 >;
 
-// true si el patch toca algo que afecta la asignación de parroquia/recintos,
-// y por lo tanto hay que re-derivar ambito con resolverAsignacion.
+// true si el patch toca algo del cargo/ámbito/parroquias/recintos, y por lo
+// tanto hay que volver a normalizar la asignación completa.
 function tocaAsignacion(patch: LiderPatch): boolean {
   return (
     patch.cargo !== undefined ||
@@ -220,25 +203,21 @@ export async function editarLider(
         .single();
       if (errActual) throw new Error(errActual.message);
       const base = rowToLider(actual);
-      const cargo = patch.cargo !== undefined ? patch.cargo : base.cargo;
-      const resuelto = resolverAsignacion({
-        ambito: patch.ambito ?? base.ambito,
+      const resuelto = normalizarAsignacion({
+        ambito: patch.ambito !== undefined ? patch.ambito : base.ambito,
+        cargo: patch.cargo !== undefined ? patch.cargo : base.cargo,
         parroquiaCodigo:
           patch.parroquiaCodigo !== undefined
             ? patch.parroquiaCodigo
             : base.parroquiaCodigo,
         parroquiaCodigos: patch.parroquiaCodigos ?? base.parroquiaCodigos,
         recintoCodigos: patch.recintoCodigos ?? base.recintoCodigos,
-        cargo,
       });
-      if (resuelto.ambito === "parroquia" && resuelto.parroquiaCodigo == null) {
-        throw new Error("Debe indicar la parroquia del líder.");
-      }
       dbPatch.ambito = resuelto.ambito;
       dbPatch.parroquia_codigo = resuelto.parroquiaCodigo;
       dbPatch.parroquia_codigos = resuelto.parroquiaCodigos;
       dbPatch.recinto_codigos = resuelto.recintoCodigos;
-      dbPatch.cargo = cargo;
+      dbPatch.cargo = resuelto.cargo;
     }
 
     const { data, error } = await supabaseSecret
@@ -257,17 +236,16 @@ export async function editarLider(
     if (!actual) throw new Error("No se encontró el líder.");
     let fusionado: Lider = { ...actual, ...patch };
     if (tocaAsignacion(patch)) {
-      const resuelto = resolverAsignacion({
-        ambito: fusionado.ambito,
-        parroquiaCodigo: fusionado.parroquiaCodigo,
-        parroquiaCodigos: fusionado.parroquiaCodigos,
-        recintoCodigos: fusionado.recintoCodigos,
-        cargo: fusionado.cargo,
-      });
-      if (resuelto.ambito === "parroquia" && resuelto.parroquiaCodigo == null) {
-        throw new Error("Debe indicar la parroquia del líder.");
-      }
-      fusionado = { ...fusionado, ...resuelto };
+      fusionado = {
+        ...fusionado,
+        ...normalizarAsignacion({
+          ambito: fusionado.ambito,
+          cargo: fusionado.cargo,
+          parroquiaCodigo: fusionado.parroquiaCodigo,
+          parroquiaCodigos: fusionado.parroquiaCodigos,
+          recintoCodigos: fusionado.recintoCodigos,
+        }),
+      };
     }
     validarCupoCargo(items, fusionado.cargo, fusionado.parroquiaCodigo, id);
     actualizado = fusionado;

@@ -55,10 +55,10 @@ export interface AcreditadoCda {
   creadoEn: string;
 }
 
-// "candidato": todavía no es líder de una parroquia ni líder general; se
-// guarda sin parroquia y después se le eligen las parroquias a su cargo
-// (parroquiaCodigos). No tiene cargo.
-export type AmbitoLider = "general" | "parroquia" | "candidato";
+// Ámbito de liderazgo. Es opcional (null = ninguno) y es independiente del
+// cargo (dignidad): se elige solo cuando la persona realmente lidera, tenga
+// o no una candidatura.
+export type AmbitoLider = "general" | "parroquia";
 
 // Dignidad electa que puede ostentar un líder, además de su rol
 // organizativo (ambito). Un concejal o el alcalde son líderes con cargo.
@@ -91,10 +91,11 @@ export interface Lider {
   nombres: string;
   telefono: string;
   organizacion: string;
-  ambito: AmbitoLider;
+  // null = sin ámbito de liderazgo.
+  ambito: AmbitoLider | null;
+  // Solo para el vocal de junta parroquial: la parroquia de su junta.
   parroquiaCodigo: number | null;
-  // Solo para ambito "candidato": las parroquias de las que es responsable
-  // (una o varias). Vacío en los demás ámbitos.
+  // Con ambito "parroquia": las parroquias a su cargo (una o varias).
   parroquiaCodigos: number[];
   recintoCodigos: number[];
   cargo: Cargo | null;

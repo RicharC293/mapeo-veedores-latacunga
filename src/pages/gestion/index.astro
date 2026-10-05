@@ -34,8 +34,8 @@ const totalCubiertas = cobertura.reduce((a, c) => a + c.juntasCubiertas, 0);
 const pctGlobal =
   totalJuntas > 0 ? Math.round((totalCubiertas / totalJuntas) * 1000) / 10 : 0;
 
-const totalCandidatos = lideres.filter((l) => l.ambito === "candidato").length;
-const totalLideres = lideres.length - totalCandidatos;
+const totalCandidatos = lideres.filter((l) => l.cargo !== null).length;
+const totalLideres = lideres.filter((l) => l.ambito !== null).length;
 const veedoresTitulares = veedores.filter((v) => v.tipo === "titular").length;
 const coordinadoresTitulares = coordinadores.filter(
   (c) => c.tipo === "titular",
