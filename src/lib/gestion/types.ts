@@ -119,12 +119,17 @@ export interface Militante {
   nombres: string;
   telefono: string;
   email: string;
+  // Recinto de preferencia tal como llegó en el dato (texto libre).
+  preferencia: string;
   responsableLiderId: string | null;
   recintoCodigo: number | null;
   parroquiaCodigo: number | null;
   tipoPreasignado: TipoMilitancia | null;
   creadoEn: string;
   duplicado: boolean;
+  // true si cédula, nombre, teléfono o correo tienen un error de formato
+  // (calculado, no viene de la tabla). Ver validacionMilitante.ts.
+  incorrecto: boolean;
 }
 
 export type OrigenListaNegra =

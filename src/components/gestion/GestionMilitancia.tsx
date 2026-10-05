@@ -1,11 +1,11 @@
 import { useMemo, useRef, useState } from "preact/hooks";
 import * as XLSX from "xlsx";
 import PersonaForm from "./PersonaForm";
-import MilitanteRow from "./MilitanteRow";
+import MilitanteCard from "./MilitanteCard";
 import type { ParroquiaFeature, Recinto } from "../../lib/types";
 import type { Lider, Militante, TipoMilitancia } from "../../lib/gestion/types";
 import type { AsignarDestino } from "../../lib/gestion/militancia";
-import { title } from "../../lib/format";
+import { normalizar, title } from "../../lib/format";
 
 interface Props {
   parroquias: ParroquiaFeature[];
@@ -15,7 +15,8 @@ interface Props {
 }
 
 type TipoParroquiaFiltro = "todas" | "urbanas" | "rurales";
-type FiltroDuplicados = "todos" | "duplicados";
+type Vista = "todos" | "incorrectos" | "duplicados" | "sinrecinto";
+type Panel = null | "importar" | "agregar";
 type FiltroResponsable = "todos" | "sin" | string;
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
@@ -41,11 +42,10 @@ interface FilaImport {
   nombres: string;
   telefono: string;
   email: string;
+  preferencia: string;
 }
 
-function parsearFilas(
-  texto: string,
-): FilaImport[] {
+function parsearFilas(texto: string): FilaImport[] {
   return texto
     .split(/\r?\n/)
     .map((l) => l.trim())
@@ -59,6 +59,7 @@ function parsearFilas(
         nombres: partes[1] ?? "",
         telefono: restaurarCeroInicial(partes[2] ?? ""),
         email: partes[3] ?? "",
+        preferencia: partes[4] ?? "",
       };
     });
 }
@@ -68,11 +69,18 @@ const PLANTILLA_ENCABEZADOS = [
   "Cédula",
   "Celular",
   "Correo electrónico",
+  "Recinto de preferencia",
 ];
 
 function descargarPlantilla() {
   const hoja = XLSX.utils.aoa_to_sheet([PLANTILLA_ENCABEZADOS]);
-  hoja["!cols"] = [{ wch: 32 }, { wch: 14 }, { wch: 14 }, { wch: 30 }];
+  hoja["!cols"] = [
+    { wch: 32 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 30 },
+    { wch: 36 },
+  ];
   const libro = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(libro, hoja, "Militancia");
   XLSX.writeFile(libro, "plantilla-militancia.xlsx");
@@ -86,9 +94,7 @@ function normalizarEncabezado(s: string): string {
     .replace(/[^a-z]/g, "");
 }
 
-async function leerArchivoPlantilla(
-  file: File,
-): Promise<FilaImport[]> {
+async function leerArchivoPlantilla(file: File): Promise<FilaImport[]> {
   const buffer = await file.arrayBuffer();
   const libro = XLSX.read(buffer, { type: "array" });
   const hoja = libro.Sheets[libro.SheetNames[0]];
@@ -113,6 +119,7 @@ async function leerArchivoPlantilla(
         valorPara(fila, ["celular", "telefono", "movil"]),
       ),
       email: valorPara(fila, ["correo", "email", "mail"]),
+      preferencia: valorPara(fila, ["preferencia", "recinto"]),
     }))
     .filter((f) => f.cedula || f.nombres);
 }
@@ -124,10 +131,14 @@ export default function GestionMilitancia({
   militantesIniciales,
 }: Props) {
   const [militantes, setMilitantes] = useState(militantesIniciales);
-  const [filtroDuplicados, setFiltroDuplicados] =
-    useState<FiltroDuplicados>("todos");
+  const [vista, setVista] = useState<Vista>("todos");
+  const [busqueda, setBusqueda] = useState("");
   const [filtroResponsable, setFiltroResponsable] =
     useState<FiltroResponsable>("todos");
+  // Con la bandeja vacía lo primero que hace falta es cargar gente.
+  const [panel, setPanel] = useState<Panel>(
+    militantesIniciales.length === 0 ? "importar" : null,
+  );
   const [formKey, setFormKey] = useState(0);
 
   // Importación masiva
@@ -143,7 +154,8 @@ export default function GestionMilitancia({
   const [resultadoImport, setResultadoImport] = useState<{
     creados: number;
     omitidos: number;
-    correosIgnorados: number;
+    incorrectos: number;
+    precargados: number;
   } | null>(null);
   const [archivoMensaje, setArchivoMensaje] = useState<string | null>(null);
   const archivoInputRef = useRef<HTMLInputElement | null>(null);
@@ -178,21 +190,46 @@ export default function GestionMilitancia({
     setMilitantes(await api<Militante[]>("/api/gestion/militancia"));
   };
 
-  const filtrados = useMemo(
-    () =>
-      militantes.filter((m) => {
-        if (filtroDuplicados === "duplicados" && !m.duplicado) return false;
-        if (filtroResponsable === "sin" && m.responsableLiderId) return false;
-        if (
-          filtroResponsable !== "todos" &&
-          filtroResponsable !== "sin" &&
-          m.responsableLiderId !== filtroResponsable
-        )
-          return false;
-        return true;
-      }),
-    [militantes, filtroDuplicados, filtroResponsable],
+  const conteos = useMemo(
+    () => ({
+      todos: militantes.length,
+      incorrectos: militantes.filter((m) => m.incorrecto).length,
+      duplicados: militantes.filter((m) => m.duplicado).length,
+      sinrecinto: militantes.filter((m) => m.recintoCodigo === null).length,
+    }),
+    [militantes],
   );
+
+  const filtrados = useMemo(() => {
+    const q = normalizar(busqueda);
+    return militantes.filter((m) => {
+      if (vista === "incorrectos" && !m.incorrecto) return false;
+      if (vista === "duplicados" && !m.duplicado) return false;
+      if (vista === "sinrecinto" && m.recintoCodigo !== null) return false;
+      if (filtroResponsable === "sin" && m.responsableLiderId) return false;
+      if (
+        filtroResponsable !== "todos" &&
+        filtroResponsable !== "sin" &&
+        m.responsableLiderId !== filtroResponsable
+      )
+        return false;
+      if (q) {
+        const texto = normalizar(
+          `${m.nombres} ${m.cedula} ${m.telefono} ${m.email} ${m.preferencia}`,
+        );
+        if (!texto.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [militantes, vista, busqueda, filtroResponsable]);
+
+  const hayFiltros =
+    vista !== "todos" || busqueda !== "" || filtroResponsable !== "todos";
+  const limpiarFiltros = () => {
+    setVista("todos");
+    setBusqueda("");
+    setFiltroResponsable("todos");
+  };
 
   const cargarArchivo = async (e: Event) => {
     const file = (e.currentTarget as HTMLInputElement).files?.[0] ?? null;
@@ -211,7 +248,8 @@ export default function GestionMilitancia({
       setTextoImport(
         filas
           .map(
-            (f) => `${f.cedula}\t${f.nombres}\t${f.telefono}\t${f.email}`,
+            (f) =>
+              `${f.cedula}\t${f.nombres}\t${f.telefono}\t${f.email}\t${f.preferencia}`,
           )
           .join("\n"),
       );
@@ -236,19 +274,17 @@ export default function GestionMilitancia({
       const resultado = await api<{
         creados: number;
         omitidos: number;
-        correosIgnorados: number;
-      }>(
-        "/api/gestion/militancia/importar",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            responsableLiderId: respImportacion,
-            recintoCodigo: recintoImport || undefined,
-            tipoPreasignado: tipoImport || undefined,
-            filas,
-          }),
-        },
-      );
+        incorrectos: number;
+        precargados: number;
+      }>("/api/gestion/militancia/importar", {
+        method: "POST",
+        body: JSON.stringify({
+          responsableLiderId: respImportacion,
+          recintoCodigo: recintoImport || undefined,
+          tipoPreasignado: tipoImport || undefined,
+          filas,
+        }),
+      });
       setResultadoImport(resultado);
       setTextoImport("");
       await refrescar();
@@ -259,263 +295,352 @@ export default function GestionMilitancia({
     }
   };
 
+  const chips: { clave: Vista; etiqueta: string }[] = [
+    { clave: "todos", etiqueta: "Todos" },
+    { clave: "incorrectos", etiqueta: "Incorrectos" },
+    { clave: "duplicados", etiqueta: "Duplicados" },
+    { clave: "sinrecinto", etiqueta: "Sin recinto" },
+  ];
+
+  const alternarPanel = (cual: Exclude<Panel, null>) =>
+    setPanel(panel === cual ? null : cual);
+
   return (
-    <div class="g-panel">
-      <form class="g-form" onSubmit={importar}>
-        <p class="g-form-title">Importación masiva</p>
-        <label>
-          Responsable
-          <select
-            value={respImportacion}
-            required
-            onChange={(e) =>
-              setRespImportacion((e.currentTarget as HTMLSelectElement).value)
-            }
+    <div class="g-panel g-mil">
+      <div class="g-mil-barra">
+        <div class="g-mil-barra-acciones">
+          <button
+            type="button"
+            class={panel === "importar" ? "g-btn-accion" : "g-btn-ghost"}
+            aria-expanded={panel === "importar"}
+            onClick={() => alternarPanel("importar")}
           >
-            <option value="">Selecciona…</option>
-            {lideresOrdenados.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.nombres}
-              </option>
-            ))}
-          </select>
-        </label>
-        <p class="g-sub" style={{ margin: "4px 0" }}>
-          Opcional: preasigna Recinto y Tipo a todo el lote (se puede ajustar
-          después, fila por fila).
-        </p>
-        <div class="g-selects">
+            Importar lista
+          </button>
+          <button
+            type="button"
+            class={panel === "agregar" ? "g-btn-accion" : "g-btn-ghost"}
+            aria-expanded={panel === "agregar"}
+            onClick={() => alternarPanel("agregar")}
+          >
+            Agregar persona
+          </button>
+        </div>
+      </div>
+
+      {panel === "importar" ? (
+        <form class="g-form g-mil-panel" onSubmit={importar}>
+          <p class="g-form-title">Importar lista</p>
           <label>
-            Tipo de parroquia
+            Responsable de todo el lote
             <select
-              value={tipoParroquiaImport}
-              onChange={(e) => {
-                setTipoParroquiaImport(
-                  (e.currentTarget as HTMLSelectElement)
-                    .value as TipoParroquiaFiltro,
-                );
-                setParroquiaImport("");
-                setRecintoImport("");
-              }}
+              value={respImportacion}
+              required
+              onChange={(e) =>
+                setRespImportacion((e.currentTarget as HTMLSelectElement).value)
+              }
             >
-              <option value="todas">Todas</option>
-              <option value="urbanas">Urbanas</option>
-              <option value="rurales">Rurales</option>
-            </select>
-          </label>
-          <label>
-            Parroquia
-            <select
-              value={parroquiaImport}
-              onChange={(e) => {
-                setParroquiaImport(
-                  Number((e.currentTarget as HTMLSelectElement).value) || "",
-                );
-                setRecintoImport("");
-              }}
-            >
-              <option value="">Sin preasignar</option>
-              {parroquiasImportFiltradas.map((p) => (
-                <option key={p.properties.code} value={p.properties.code}>
-                  {p.properties.name}
+              <option value="">Selecciona…</option>
+              {lideresOrdenados.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.nombres}
                 </option>
               ))}
             </select>
           </label>
-          <label>
-            Tipo
-            <select
-              value={tipoImport}
-              onChange={(e) => {
-                setTipoImport(
-                  (e.currentTarget as HTMLSelectElement).value as
-                    | TipoMilitancia
-                    | "",
-                );
-                setRecintoImport("");
-              }}
+          <fieldset class="g-mil-destino">
+            <legend>Destino para todo el lote (opcional)</legend>
+            <p class="g-sub">
+              Si lo dejas vacío, cada fila toma su recinto de la columna
+              Preferencia cuando se reconoce un único recinto. Lo que elijas
+              aquí tiene prioridad sobre eso.
+            </p>
+            <div class="g-selects">
+              <label>
+                Tipo de parroquia
+                <select
+                  value={tipoParroquiaImport}
+                  onChange={(e) => {
+                    setTipoParroquiaImport(
+                      (e.currentTarget as HTMLSelectElement)
+                        .value as TipoParroquiaFiltro,
+                    );
+                    setParroquiaImport("");
+                    setRecintoImport("");
+                  }}
+                >
+                  <option value="todas">Todas</option>
+                  <option value="urbanas">Urbanas</option>
+                  <option value="rurales">Rurales</option>
+                </select>
+              </label>
+              <label>
+                Parroquia
+                <select
+                  value={parroquiaImport}
+                  onChange={(e) => {
+                    setParroquiaImport(
+                      Number((e.currentTarget as HTMLSelectElement).value) ||
+                        "",
+                    );
+                    setRecintoImport("");
+                  }}
+                >
+                  <option value="">Sin preasignar</option>
+                  {parroquiasImportFiltradas.map((p) => (
+                    <option key={p.properties.code} value={p.properties.code}>
+                      {p.properties.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Tipo
+                <select
+                  value={tipoImport}
+                  onChange={(e) => {
+                    setTipoImport(
+                      (e.currentTarget as HTMLSelectElement).value as
+                        TipoMilitancia | "",
+                    );
+                    setRecintoImport("");
+                  }}
+                >
+                  <option value="">Sin preasignar</option>
+                  <option value="veedor">Veedor</option>
+                  <option value="coordinador">Coordinador</option>
+                  <option value="cda">Acreditado CDA</option>
+                </select>
+              </label>
+              <label>
+                Recinto
+                <select
+                  value={recintoImport}
+                  disabled={!parroquiaImport}
+                  onChange={(e) =>
+                    setRecintoImport(
+                      Number((e.currentTarget as HTMLSelectElement).value) ||
+                        "",
+                    )
+                  }
+                >
+                  <option value="">Sin preasignar</option>
+                  {recintosImportFiltrados.map((r) => (
+                    <option key={r.cod} value={r.cod}>
+                      {title(r.nombre)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </fieldset>
+          <div class="g-form-actions">
+            <button
+              type="button"
+              class="g-btn-ghost"
+              onClick={descargarPlantilla}
             >
-              <option value="">Sin preasignar</option>
-              <option value="veedor">Veedor</option>
-              <option value="coordinador">Coordinador</option>
-              <option value="cda">Acreditado CDA</option>
-            </select>
+              Descargar plantilla (Excel)
+            </button>
+            <button
+              type="button"
+              class="g-btn-ghost"
+              onClick={() => archivoInputRef.current?.click()}
+            >
+              Cargar archivo lleno
+            </button>
+            <input
+              ref={archivoInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              class="g-sr-only"
+              onChange={cargarArchivo}
+            />
+          </div>
+          {archivoMensaje ? <p class="g-empty">{archivoMensaje}</p> : null}
+          <label>
+            Personas, una por línea: cédula, nombres y apellidos, celular,
+            correo, recinto de preferencia
+            <textarea
+              value={textoImport}
+              rows={6}
+              placeholder={
+                "0501234567\tJuan Pérez\t0991234567\tjuan@correo.com\tColegio La Salle"
+              }
+              onInput={(e) =>
+                setTextoImport((e.currentTarget as HTMLTextAreaElement).value)
+              }
+            />
+          </label>
+          {errorImport ? <p class="g-error">{errorImport}</p> : null}
+          {resultadoImport ? (
+            <p class="g-mil-resultado" role="status">
+              {resultadoImport.creados} importados
+              {resultadoImport.precargados > 0
+                ? `, ${resultadoImport.precargados} con recinto precargado`
+                : ""}
+              {resultadoImport.incorrectos > 0
+                ? `, ${resultadoImport.incorrectos} con datos incorrectos`
+                : ""}
+              {resultadoImport.omitidos > 0
+                ? `, ${resultadoImport.omitidos} omitidos por venir vacíos`
+                : ""}
+              .
+            </p>
+          ) : null}
+          <div class="g-form-actions">
+            <button
+              type="submit"
+              disabled={
+                enviandoImport || !respImportacion || !textoImport.trim()
+              }
+            >
+              {enviandoImport ? "Importando…" : "Importar"}
+            </button>
+            <button
+              type="button"
+              class="g-btn-ghost"
+              onClick={() => setPanel(null)}
+            >
+              Cerrar
+            </button>
+          </div>
+        </form>
+      ) : null}
+
+      {panel === "agregar" ? (
+        <div class="g-mil-panel">
+          <PersonaForm
+            key={formKey}
+            etiqueta="Agregar persona"
+            lideres={lideres}
+            conPreferencia
+            onSubmit={async (input) => {
+              await api("/api/gestion/militancia", {
+                method: "POST",
+                body: JSON.stringify(input),
+              });
+              setFormKey((k) => k + 1);
+              await refrescar();
+            }}
+            onCancel={() => setPanel(null)}
+          />
+        </div>
+      ) : null}
+
+      <div class="g-mil-filtros">
+        <div class="g-mil-chips" role="group" aria-label="Ver">
+          {chips.map((c) => (
+            <button
+              key={c.clave}
+              type="button"
+              class="g-chip-filtro"
+              aria-pressed={vista === c.clave}
+              data-alerta={
+                (c.clave === "incorrectos" || c.clave === "duplicados") &&
+                conteos[c.clave] > 0
+                  ? "true"
+                  : undefined
+              }
+              onClick={() => setVista(c.clave)}
+            >
+              {c.etiqueta}
+              <span class="g-chip-filtro-n">{conteos[c.clave]}</span>
+            </button>
+          ))}
+        </div>
+        <div class="g-mil-buscar">
+          <label>
+            Buscar
+            <input
+              type="search"
+              value={busqueda}
+              placeholder="Nombre, cédula, correo, recinto…"
+              onInput={(e) =>
+                setBusqueda((e.currentTarget as HTMLInputElement).value)
+              }
+            />
           </label>
           <label>
-            Recinto
+            Responsable
             <select
-              value={recintoImport}
-              disabled={!parroquiaImport}
+              value={filtroResponsable}
               onChange={(e) =>
-                setRecintoImport(
-                  Number((e.currentTarget as HTMLSelectElement).value) || "",
+                setFiltroResponsable(
+                  (e.currentTarget as HTMLSelectElement).value,
                 )
               }
             >
-              <option value="">Sin preasignar</option>
-              {recintosImportFiltrados.map((r) => (
-                <option key={r.cod} value={r.cod}>
-                  {title(r.nombre)}
+              <option value="todos">Todos</option>
+              <option value="sin">Sin responsable</option>
+              {lideresOrdenados.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.nombres}
                 </option>
               ))}
             </select>
           </label>
         </div>
-        <div class="g-form-actions">
-          <button
-            type="button"
-            class="g-btn-ghost"
-            onClick={descargarPlantilla}
-          >
-            Descargar plantilla (Excel)
-          </button>
-          <button
-            type="button"
-            class="g-btn-ghost"
-            onClick={() => archivoInputRef.current?.click()}
-          >
-            Cargar archivo lleno
-          </button>
-          <input
-            ref={archivoInputRef}
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            class="g-sr-only"
-            onChange={cargarArchivo}
-          />
-        </div>
-        {archivoMensaje ? <p class="g-empty">{archivoMensaje}</p> : null}
-        <label>
-          Personas (una por línea: cédula, nombres y apellidos, celular, correo)
-          <textarea
-            value={textoImport}
-            rows={6}
-            placeholder={"0501234567\tJuan Pérez\t0991234567\tjuan@correo.com"}
-            onInput={(e) =>
-              setTextoImport((e.currentTarget as HTMLTextAreaElement).value)
-            }
-          />
-        </label>
-        {errorImport ? <p class="g-error">{errorImport}</p> : null}
-        {resultadoImport ? (
-          <p class="g-empty">
-            {resultadoImport.creados} importados
-            {resultadoImport.omitidos > 0
-              ? `, ${resultadoImport.omitidos} omitidos por datos incompletos`
-              : ""}
-            {resultadoImport.correosIgnorados > 0
-              ? `, ${resultadoImport.correosIgnorados} correo(s) con formato inválido se cargaron vacíos`
-              : ""}
-            .
-          </p>
-        ) : null}
-        <div class="g-form-actions">
-          <button
-            type="submit"
-            disabled={
-              enviandoImport || !respImportacion || !textoImport.trim()
-            }
-          >
-            {enviandoImport ? "Importando…" : "Importar"}
-          </button>
-        </div>
-      </form>
-
-      <PersonaForm
-        key={formKey}
-        etiqueta="Agregar militante"
-        lideres={lideres}
-        onSubmit={async (input) => {
-          await api("/api/gestion/militancia", {
-            method: "POST",
-            body: JSON.stringify(input),
-          });
-          setFormKey((k) => k + 1);
-          await refrescar();
-        }}
-        onCancel={() => setFormKey((k) => k + 1)}
-      />
-
-      <div class="g-selects">
-        <label>
-          Duplicados
-          <select
-            value={filtroDuplicados}
-            onChange={(e) =>
-              setFiltroDuplicados(
-                (e.currentTarget as HTMLSelectElement).value as FiltroDuplicados,
-              )
-            }
-          >
-            <option value="todos">Todos</option>
-            <option value="duplicados">Solo duplicados</option>
-          </select>
-        </label>
-        <label>
-          Responsable
-          <select
-            value={filtroResponsable}
-            onChange={(e) =>
-              setFiltroResponsable((e.currentTarget as HTMLSelectElement).value)
-            }
-          >
-            <option value="todos">Todos</option>
-            <option value="sin">Sin responsable</option>
-            {lideresOrdenados.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.nombres}
-              </option>
-            ))}
-          </select>
-        </label>
       </div>
 
-      {filtrados.length === 0 ? (
-        <p class="g-empty">No hay militantes para este filtro.</p>
-      ) : (
-        <div class="g-table-scroll">
-          <table class="g-table">
-            <thead>
-              <tr>
-                <th>Cédula</th>
-                <th>Nombres</th>
-                <th>Celular</th>
-                <th>Correo</th>
-                <th>Responsable</th>
-                <th>Tipo de parroquia</th>
-                <th>Parroquia</th>
-                <th>Tipo</th>
-                <th>Recinto</th>
-                <th>Junta</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtrados.map((m) => (
-                <MilitanteRow
-                  key={m.id}
-                  militante={m}
-                  parroquias={parroquias}
-                  recintos={recintos}
-                  lideres={lideres}
-                  onAsignar={async (destino: AsignarDestino) => {
-                    await api(`/api/gestion/militancia/${m.id}/asignar`, {
-                      method: "POST",
-                      body: JSON.stringify(destino),
-                    });
-                    await refrescar();
-                  }}
-                  onEliminar={async () => {
-                    await api(`/api/gestion/militancia/${m.id}`, {
-                      method: "DELETE",
-                    });
-                    await refrescar();
-                  }}
-                />
-              ))}
-            </tbody>
-          </table>
+      {militantes.length === 0 ? (
+        <div class="g-mil-vacio">
+          <p>
+            <strong>La bandeja está vacía.</strong>
+          </p>
+          <p class="g-sub">
+            Importa una lista (pegada o desde Excel) o agrega una persona. Luego
+            asígnala aquí como veedor, coordinador o acreditado CDA.
+          </p>
         </div>
+      ) : filtrados.length === 0 ? (
+        <div class="g-mil-vacio">
+          <p>
+            <strong>Ninguna persona coincide con estos filtros.</strong>
+          </p>
+          <button type="button" class="g-btn-ghost" onClick={limpiarFiltros}>
+            Quitar filtros
+          </button>
+        </div>
+      ) : (
+        <>
+          <p class="g-mil-contador" aria-live="polite">
+            {hayFiltros
+              ? `Mostrando ${filtrados.length} de ${militantes.length}`
+              : `${militantes.length} en la bandeja`}
+          </p>
+          <ul class="g-mil-lista">
+            {filtrados.map((m) => (
+              <MilitanteCard
+                key={m.id}
+                militante={m}
+                parroquias={parroquias}
+                recintos={recintos}
+                lideres={lideres}
+                onAsignar={async (destino: AsignarDestino) => {
+                  await api(`/api/gestion/militancia/${m.id}/asignar`, {
+                    method: "POST",
+                    body: JSON.stringify(destino),
+                  });
+                  await refrescar();
+                }}
+                onEditar={async (patch) => {
+                  await api(`/api/gestion/militancia/${m.id}`, {
+                    method: "PATCH",
+                    body: JSON.stringify(patch),
+                  });
+                  await refrescar();
+                }}
+                onEliminar={async () => {
+                  await api(`/api/gestion/militancia/${m.id}`, {
+                    method: "DELETE",
+                  });
+                  await refrescar();
+                }}
+              />
+            ))}
+          </ul>
+        </>
       )}
     </div>
   );

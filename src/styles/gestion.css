@@ -586,6 +586,29 @@
   color: var(--ink);
   min-width: 130px;
 }
+.g-campo-error {
+  color: var(--error);
+  font-weight: 700;
+}
+input.g-campo-error,
+select.g-campo-error {
+  border-color: var(--error);
+  background: color-mix(in srgb, var(--error) 10%, var(--bg));
+}
+.g-table-input {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 5px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  min-width: 120px;
+  width: 100%;
+}
+.g-table-input[type="email"] {
+  min-width: 210px;
+}
 .g-table-row-error {
   color: #c94b4b;
   font-size: 0.76rem;
@@ -945,4 +968,277 @@
 }
 .g-foto-uploader label {
   cursor: pointer;
+}
+
+/* ── Militancia ─────────────────────────────────────────────────────────
+   Bandeja de trabajo: cada persona es una tarjeta con sus datos a la
+   izquierda, la asignación en el centro y las acciones a la derecha, en vez
+   de una tabla de 11 columnas con scroll horizontal. */
+.g-mil {
+  gap: 16px;
+}
+.g-mil-barra-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.g-btn-accion {
+  background: var(--sel);
+  color: var(--panel);
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 14px;
+  min-height: 36px;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.g-btn-accion:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.g-btn-accion:focus-visible,
+.g-chip-filtro:focus-visible,
+.g-mil .g-btn-ghost:focus-visible,
+.g-mil .g-btn-danger-ghost:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.g-mil .g-btn-ghost,
+.g-mil .g-btn-danger-ghost {
+  min-height: 36px;
+  font: inherit;
+  font-size: 0.85rem;
+}
+.g-mil-panel {
+  margin-top: 0;
+}
+.g-mil-destino {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 0;
+}
+.g-mil-destino legend {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+  padding: 0 4px;
+}
+.g-mil-destino .g-sub {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.g-mil-resultado {
+  margin: 0;
+  font-weight: 700;
+}
+
+.g-mil-filtros {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.g-mil-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.g-chip-filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+.g-chip-filtro[aria-pressed="true"] {
+  background: var(--sel);
+  border-color: var(--sel);
+  color: var(--panel);
+}
+.g-chip-filtro-n {
+  padding: 1px 8px;
+  border-radius: 99px;
+  background: var(--chip);
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.g-chip-filtro[aria-pressed="true"] .g-chip-filtro-n {
+  background: color-mix(in srgb, var(--panel) 25%, transparent);
+  color: var(--panel);
+}
+.g-chip-filtro[data-alerta="true"]:not([aria-pressed="true"]) .g-chip-filtro-n {
+  background: color-mix(in srgb, var(--error) 18%, transparent);
+  color: var(--error);
+}
+.g-mil-buscar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.g-mil-buscar label {
+  flex: 1 1 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+.g-mil-buscar input,
+.g-mil-buscar select,
+.g-mil-card input,
+.g-mil-card select {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+.g-mil-contador {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.g-mil-vacio {
+  padding: 28px 20px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  text-align: center;
+}
+.g-mil-vacio p {
+  margin: 0 0 6px;
+}
+
+.g-mil-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.g-mil-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 2fr) minmax(150px, auto);
+  gap: 12px 20px;
+  align-items: start;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+.g-mil-card-alerta {
+  border-color: color-mix(in srgb, var(--error) 55%, var(--line));
+}
+.g-mil-nombre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-bottom: 6px;
+}
+.g-mil-nombre strong {
+  font-size: 1rem;
+}
+.g-mil-contacto {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin: 0 0 4px;
+}
+.g-mil-dato {
+  min-width: 0;
+}
+.g-mil-dato dt {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+.g-mil-dato dd {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.g-mil-asignacion,
+.g-mil-edicion {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+.g-mil-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+.g-mil-campo-ancho {
+  grid-column: 1 / -1;
+}
+.g-mil-error-texto {
+  color: var(--error);
+  font-size: 0.76rem;
+  font-weight: 400;
+}
+.g-mil-acciones {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.g-mil-secundarias {
+  display: flex;
+  gap: 6px;
+}
+.g-mil-secundarias > * {
+  flex: 1;
+}
+.g-mil-confirmar {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.g-mil-ayuda {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.g-mil-ayuda.g-error {
+  color: var(--error);
+}
+@media (max-width: 960px) {
+  .g-mil-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .g-mil-acciones {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .g-mil-acciones > .g-btn-accion {
+    flex: 1 1 140px;
+  }
+  .g-mil-secundarias {
+    flex: 1 1 140px;
+  }
 }

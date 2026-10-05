@@ -14,6 +14,7 @@
   --pin-edge: #14283d;
   --chip: #e6edf4;
   --focus: #2e75b6;
+  --error: #b3261e;
   --font:
     "Atkinson Hyperlegible", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   box-sizing: border-box;
@@ -37,6 +38,7 @@
     --pin-edge: #0e1a26;
     --chip: #1c3043;
     --focus: #7db3e6;
+  --error: #ff8f86;
   }
 }
 :root[data-theme="dark"] {
@@ -55,6 +57,7 @@
   --pin-edge: #0e1a26;
   --chip: #1c3043;
   --focus: #7db3e6;
+  --error: #ff8f86;
 }
 *,
 *::before,
@@ -545,8 +548,8 @@ h3 {
   color: var(--muted);
 }
 .chip-estado-pendiente {
-  background: color-mix(in srgb, #c94b4b 18%, transparent);
-  color: #c94b4b;
+  background: color-mix(in srgb, var(--error) 16%, transparent);
+  color: var(--error);
 }
 .chip-estado-ok {
   background: color-mix(in srgb, #2f9e57 18%, transparent);

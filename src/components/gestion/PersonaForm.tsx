@@ -8,10 +8,14 @@ interface Props {
     nombres: string;
     telefono: string;
     email: string;
+    preferencia?: string;
     responsableLiderId: string | null;
   }) => Promise<void>;
   onCancel: () => void;
   etiqueta: string;
+  // Solo Militancia guarda la preferencia (recinto que la persona dice
+  // poder cubrir).
+  conPreferencia?: boolean;
 }
 
 export default function PersonaForm({
@@ -19,11 +23,13 @@ export default function PersonaForm({
   onSubmit,
   onCancel,
   etiqueta,
+  conPreferencia = false,
 }: Props) {
   const [cedula, setCedula] = useState("");
   const [nombres, setNombres] = useState("");
   const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
+  const [preferencia, setPreferencia] = useState("");
   const [responsableLiderId, setResponsableLiderId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -38,6 +44,7 @@ export default function PersonaForm({
         nombres,
         telefono,
         email,
+        ...(conPreferencia ? { preferencia } : {}),
         responsableLiderId: responsableLiderId || null,
       });
     } catch (err) {
@@ -90,14 +97,24 @@ export default function PersonaForm({
           placeholder="Opcional"
         />
       </label>
+      {conPreferencia ? (
+        <label>
+          Preferencia (recinto)
+          <input
+            value={preferencia}
+            onInput={(e) =>
+              setPreferencia((e.currentTarget as HTMLInputElement).value)
+            }
+            placeholder="Opcional: recinto que puede cubrir"
+          />
+        </label>
+      ) : null}
       <label>
         Responsable
         <select
           value={responsableLiderId}
           onChange={(e) =>
-            setResponsableLiderId(
-              (e.currentTarget as HTMLSelectElement).value,
-            )
+            setResponsableLiderId((e.currentTarget as HTMLSelectElement).value)
           }
         >
           <option value="">Sin responsable</option>

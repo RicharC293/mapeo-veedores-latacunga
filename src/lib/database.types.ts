@@ -330,6 +330,7 @@ export type Database = {
           email: string
           nombres: string
           parroquia_codigo: number | null
+          preferencia: string
           recinto_codigo: number | null
           responsable_lider_id: string | null
           telefono: string
@@ -342,6 +343,7 @@ export type Database = {
           email?: string
           nombres: string
           parroquia_codigo?: number | null
+          preferencia?: string
           recinto_codigo?: number | null
           responsable_lider_id?: string | null
           telefono?: string
@@ -354,6 +356,7 @@ export type Database = {
           email?: string
           nombres?: string
           parroquia_codigo?: number | null
+          preferencia?: string
           recinto_codigo?: number | null
           responsable_lider_id?: string | null
           telefono?: string
