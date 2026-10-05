@@ -4,6 +4,8 @@ import { mutateCollection, readCollection } from "./jsonStore";
 import { normalizarCedula } from "./cedula";
 import { normalizarEmail } from "./email";
 import { erroresMilitante, esIncorrecto } from "./validacionMilitante";
+import { recintoDePreferencia } from "./recintoPreferencia";
+import type { ParroquiaFeature, Recinto } from "../types";
 import { rowToMilitante } from "./rows";
 import { agregarVeedor, veedoresPorJunta } from "./veedores";
 import { agregarCoordinador, coordinadoresPorRecinto } from "./coordinadores";
@@ -262,6 +264,46 @@ export async function editarMilitante(
     return items.map((f) => (f.id === id ? editado! : f));
   });
   return conBanderas(editado!);
+}
+
+// Completa Parroquia y Recinto de las filas que no los tienen y cuya
+// Preferencia se reconoce como un único recinto. Sirve para filas cargadas
+// antes de que el reconocimiento mejorara. Nunca pisa un recinto ya elegido.
+export async function autocompletarRecintos(
+  recintos: Recinto[],
+  parroquias: ParroquiaFeature[],
+): Promise<{ actualizados: number }> {
+  const pendientes = (await listMilitantes()).filter(
+    (m) => m.recintoCodigo === null && m.preferencia.trim() !== "",
+  );
+  const destino = new Map<string, { recinto: number; parroquia: number }>();
+  for (const m of pendientes) {
+    const r = recintoDePreferencia(m.preferencia, recintos, parroquias);
+    if (r) destino.set(m.id, { recinto: r.cod, parroquia: r.par });
+  }
+  if (destino.size === 0) return { actualizados: 0 };
+
+  if (supabaseSecret) {
+    for (const [id, d] of destino) {
+      const { error } = await supabaseSecret
+        .from("militantes")
+        .update({ recinto_codigo: d.recinto, parroquia_codigo: d.parroquia })
+        .eq("id", id)
+        .is("recinto_codigo", null);
+      if (error) throw new Error(error.message);
+    }
+    return { actualizados: destino.size };
+  }
+
+  await mutateCollection<MilitanteSinDuplicado>(COLLECTION, (items) =>
+    items.map((f) => {
+      const d = destino.get(f.id);
+      return d && f.recintoCodigo === null
+        ? { ...f, recintoCodigo: d.recinto, parroquiaCodigo: d.parroquia }
+        : f;
+    }),
+  );
+  return { actualizados: destino.size };
 }
 
 export async function eliminarMilitante(id: string): Promise<void> {

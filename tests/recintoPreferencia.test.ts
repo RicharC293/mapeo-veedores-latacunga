@@ -29,6 +29,10 @@ describe("recintoDePreferencia", () => {
     ["Escuela 11 de Noviembre", 1575],
     ["Sindicato de Choferes", 6459],
     ["Colegio Vicente León La Cocha", 1605],
+    ["Sufraga en la Jorge Icaza", 324],
+    ["Sufraga en las escuela Semillitas de Vida", 6461],
+    ["Parroquia Juan Montalvo Luis F Vivero", 2013],
+    ["En la Cocha votan", 1605],
   ])("reconoce %s", (texto, esperado) => {
     expect(cod(texto)).toBe(esperado);
   });
@@ -40,6 +44,9 @@ describe("recintoDePreferencia", () => {
     "Latacunga",
     "San Buenaventura",
     "San Sebatián - Escuela",
+    "Parroquia La Matriz Victoria Vazcones Cuvi",
+    "Recinto Palopo",
+    "Sufraga en San Felipe",
     "La Matriz Centro",
     "U.E. Vicente León Centro",
     "U.E. Ana Paez",

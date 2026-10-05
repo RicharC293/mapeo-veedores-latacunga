@@ -31,6 +31,20 @@ const GENERICAS = [
   "bloque",
   "junta",
   "gad",
+  // Frases con las que la gente cuenta dónde vota.
+  "en",
+  "sufraga",
+  "sufrago",
+  "sufragan",
+  "sufragio",
+  "sufragacion",
+  "vota",
+  "votan",
+  "voto",
+  "votacion",
+  "lugar",
+  "recinto",
+  "parroquia",
 ];
 
 function distancia(a: string, b: string): number {
@@ -71,7 +85,9 @@ function tokens(texto: string): string[] {
     .filter(Boolean);
 }
 
-const esGenerica = (t: string) => GENERICAS.some((g) => parecidas(t, g));
+// Las iniciales sueltas ("Luis F Vivero") tampoco distinguen nada.
+const esGenerica = (t: string) =>
+  t.length === 1 || GENERICAS.some((g) => parecidas(t, g));
 
 // Prefijos institucionales que casi todos los recintos comparten ("U.E.",
 // "Unidad Educativa"): no deben contar como coincidencia al desempatar, o un

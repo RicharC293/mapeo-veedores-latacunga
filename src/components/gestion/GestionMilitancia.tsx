@@ -140,6 +140,8 @@ export default function GestionMilitancia({
     militantesIniciales.length === 0 ? "importar" : null,
   );
   const [formKey, setFormKey] = useState(0);
+  const [autoMensaje, setAutoMensaje] = useState<string | null>(null);
+  const [autoEnCurso, setAutoEnCurso] = useState(false);
 
   // Importación masiva
   const [respImportacion, setRespImportacion] = useState("");
@@ -225,6 +227,32 @@ export default function GestionMilitancia({
 
   const hayFiltros =
     vista !== "todos" || busqueda !== "" || filtroResponsable !== "todos";
+  // Hay filas sin recinto con una preferencia escrita: el autocompletado
+  // puede reconocer algunas.
+  const hayAutocompletables = militantes.some(
+    (m) => m.recintoCodigo === null && m.preferencia.trim() !== "",
+  );
+  const autocompletar = async () => {
+    setAutoEnCurso(true);
+    setAutoMensaje(null);
+    try {
+      const r = await api<{ actualizados: number }>(
+        "/api/gestion/militancia/autocompletar",
+        { method: "POST" },
+      );
+      setAutoMensaje(
+        r.actualizados > 0
+          ? `${r.actualizados} recinto(s) completado(s) a partir de la preferencia.`
+          : "No se reconoció ningún recinto nuevo; los demás textos son ambiguos.",
+      );
+      await refrescar();
+    } catch (err) {
+      setAutoMensaje(err instanceof Error ? err.message : "Error inesperado.");
+    } finally {
+      setAutoEnCurso(false);
+    }
+  };
+
   const limpiarFiltros = () => {
     setVista("todos");
     setBusqueda("");
@@ -325,7 +353,23 @@ export default function GestionMilitancia({
           >
             Agregar persona
           </button>
+          {hayAutocompletables ? (
+            <button
+              type="button"
+              class="g-btn-ghost"
+              disabled={autoEnCurso}
+              title="Completa parroquia y recinto de las filas sin recinto, según su preferencia"
+              onClick={autocompletar}
+            >
+              {autoEnCurso ? "Completando…" : "Autocompletar recintos"}
+            </button>
+          ) : null}
         </div>
+        {autoMensaje ? (
+          <p class="g-mil-resultado" role="status">
+            {autoMensaje}
+          </p>
+        ) : null}
       </div>
 
       {panel === "importar" ? (
