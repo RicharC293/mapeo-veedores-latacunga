@@ -2,7 +2,7 @@ import { useMemo, useState } from "preact/hooks";
 import { title } from "../../lib/format";
 import type { ParroquiaFeature, Recinto } from "../../lib/types";
 import { CARGO_LABEL, CUPO_CARGO } from "../../lib/gestion/types";
-import type { Cargo, Lider } from "../../lib/gestion/types";
+import type { AmbitoLider, Cargo, Lider } from "../../lib/gestion/types";
 
 interface Props {
   parroquias: ParroquiaFeature[];
@@ -164,13 +164,55 @@ function RecintosCantonales({
   );
 }
 
+function ParroquiasACargo({
+  parroquias,
+  seleccion,
+  onChange,
+}: {
+  parroquias: ParroquiaFeature[];
+  seleccion: number[];
+  onChange: (next: number[]) => void;
+}) {
+  const ordenadas = useMemo(
+    () =>
+      parroquias
+        .slice()
+        .sort((a, b) => a.properties.name.localeCompare(b.properties.name)),
+    [parroquias],
+  );
+
+  return (
+    <fieldset class="g-checks">
+      <legend>Parroquias a cargo (una o varias)</legend>
+      {ordenadas.map((p) => (
+        <label key={p.properties.code} class="g-check">
+          <input
+            type="checkbox"
+            checked={seleccion.includes(p.properties.code)}
+            onChange={(e) => {
+              const checked = (e.currentTarget as HTMLInputElement).checked;
+              onChange(
+                checked
+                  ? [...seleccion, p.properties.code]
+                  : seleccion.filter((c) => c !== p.properties.code),
+              );
+            }}
+          />
+          {p.properties.name}
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
 interface FormState {
   cedula: string;
   nombres: string;
   telefono: string;
   organizacion: string;
-  ambito: "general" | "parroquia";
+  ambito: AmbitoLider;
   parroquiaCodigo: number | "";
+  parroquiaCodigos: number[];
   recintoCodigos: number[];
   cargo: Cargo | "";
 }
@@ -182,6 +224,7 @@ const vacio: FormState = {
   organizacion: "",
   ambito: "parroquia",
   parroquiaCodigo: "",
+  parroquiaCodigos: [],
   recintoCodigos: [],
   cargo: "",
 };
@@ -222,12 +265,13 @@ export default function GestionLideres({
       await api("/api/gestion/lideres", {
         method: "POST",
         body: JSON.stringify({
-          cedula: form.cedula,
+          cedula: form.cedula.trim() || null,
           nombres: form.nombres,
           telefono: form.telefono,
           organizacion: form.organizacion,
           ambito: form.ambito,
           parroquiaCodigo: form.parroquiaCodigo || null,
+          parroquiaCodigos: form.parroquiaCodigos,
           recintoCodigos: form.recintoCodigos,
           cargo: form.cargo || null,
         }),
@@ -253,8 +297,11 @@ export default function GestionLideres({
     await refrescar();
   };
 
-  const mostrarSelectorCantonal = CARGO_CANTONAL.includes(form.cargo as Cargo);
+  const esCandidato = form.ambito === "candidato";
+  const mostrarSelectorCantonal =
+    !esCandidato && CARGO_CANTONAL.includes(form.cargo as Cargo);
   const mostrarSelectorParroquia =
+    !esCandidato &&
     !mostrarSelectorCantonal &&
     (form.cargo === "vocal_junta_parroquial" || form.ambito === "parroquia");
 
@@ -262,6 +309,19 @@ export default function GestionLideres({
     <div class="g-panel">
       <form class="g-form" onSubmit={agregar}>
         <p class="g-form-title">Agregar líder</p>
+        <label>
+          Nombres y apellidos
+          <input
+            value={form.nombres}
+            onInput={(e) =>
+              setForm({
+                ...form,
+                nombres: (e.currentTarget as HTMLInputElement).value,
+              })
+            }
+            required
+          />
+        </label>
         <label>
           Cédula
           <input
@@ -274,20 +334,7 @@ export default function GestionLideres({
             }
             inputMode="numeric"
             maxLength={10}
-            required
-          />
-        </label>
-        <label>
-          Nombres y apellidos
-          <input
-            value={form.nombres}
-            onInput={(e) =>
-              setForm({
-                ...form,
-                nombres: (e.currentTarget as HTMLInputElement).value,
-              })
-            }
-            required
+            placeholder="Opcional"
           />
         </label>
         <label>
@@ -319,43 +366,61 @@ export default function GestionLideres({
           Ámbito
           <select
             value={form.ambito}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                ambito: (e.currentTarget as HTMLSelectElement)
-                  .value as FormState["ambito"],
-              })
-            }
-          >
-            <option value="parroquia">Líder de parroquia</option>
-            <option value="general">Líder general de Latacunga</option>
-          </select>
-        </label>
-        <label>
-          Cargo (dignidad)
-          <select
-            value={form.cargo}
             onChange={(e) => {
-              const cargo = (e.currentTarget as HTMLSelectElement)
-                .value as FormState["cargo"];
+              const ambito = (e.currentTarget as HTMLSelectElement)
+                .value as AmbitoLider;
               setForm({
                 ...form,
-                cargo,
-                parroquiaCodigo: "",
-                recintoCodigos: [],
+                ambito,
+                // Un candidato no tiene cargo ni recintos; y la lista de
+                // parroquias a cargo solo aplica al candidato.
+                cargo: ambito === "candidato" ? "" : form.cargo,
+                parroquiaCodigos:
+                  ambito === "candidato" ? form.parroquiaCodigos : [],
+                recintoCodigos:
+                  ambito === "candidato" ? [] : form.recintoCodigos,
               });
             }}
           >
-            <option value="">Ninguno</option>
-            {CARGOS.map((c) => (
-              <option key={c} value={c}>
-                {CARGO_LABEL[c]}
-              </option>
-            ))}
+            <option value="parroquia">Líder de parroquia</option>
+            <option value="general">Líder general de Latacunga</option>
+            <option value="candidato">Candidato</option>
           </select>
         </label>
+        {esCandidato ? null : (
+          <label>
+            Cargo (dignidad)
+            <select
+              value={form.cargo}
+              onChange={(e) => {
+                const cargo = (e.currentTarget as HTMLSelectElement)
+                  .value as FormState["cargo"];
+                setForm({
+                  ...form,
+                  cargo,
+                  parroquiaCodigo: "",
+                  recintoCodigos: [],
+                });
+              }}
+            >
+              <option value="">Ninguno</option>
+              {CARGOS.map((c) => (
+                <option key={c} value={c}>
+                  {CARGO_LABEL[c]}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         {form.cargo ? (
           <p class="g-empty">{cupoTexto(form.cargo, lideres)}</p>
+        ) : null}
+        {esCandidato ? (
+          <ParroquiasACargo
+            parroquias={parroquias}
+            seleccion={form.parroquiaCodigos}
+            onChange={(next) => setForm({ ...form, parroquiaCodigos: next })}
+          />
         ) : null}
         {mostrarSelectorParroquia ? (
           <>
@@ -448,13 +513,27 @@ export default function GestionLideres({
               <div>
                 <strong>{l.nombres}</strong>
                 <small>
-                  CI {l.cedula}
-                  {l.telefono ? ` · ${l.telefono}` : ""}
-                  {" · "}
-                  {l.ambito === "general"
-                    ? "Líder general de Latacunga"
-                    : `Líder de ${nombreParroquia(l.parroquiaCodigo)}`}
+                  {[
+                    l.cedula ? `CI ${l.cedula}` : null,
+                    l.telefono || null,
+                    l.ambito === "general"
+                      ? "Líder general de Latacunga"
+                      : l.ambito === "candidato"
+                        ? "Candidato"
+                        : `Líder de ${nombreParroquia(l.parroquiaCodigo)}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </small>
+                {l.ambito === "candidato" ? (
+                  <small>
+                    {l.parroquiaCodigos.length > 0
+                      ? `Parroquias a cargo: ${l.parroquiaCodigos
+                          .map((cod) => nombreParroquia(cod))
+                          .join(", ")}`
+                      : "Sin parroquias asignadas"}
+                  </small>
+                ) : null}
                 {l.cargo ? (
                   <small>
                     Dignidad: {CARGO_LABEL[l.cargo]}
@@ -517,9 +596,13 @@ function LiderEditForm({
   const [nombres, setNombres] = useState(lider.nombres);
   const [telefono, setTelefono] = useState(lider.telefono);
   const [organizacion, setOrganizacion] = useState(lider.organizacion);
+  const [ambito, setAmbito] = useState<AmbitoLider>(lider.ambito);
   const [cargo, setCargo] = useState<Cargo | "">(lider.cargo ?? "");
   const [parroquiaCodigo, setParroquiaCodigo] = useState<number | "">(
     lider.parroquiaCodigo ?? "",
+  );
+  const [parroquiaCodigos, setParroquiaCodigos] = useState<number[]>(
+    lider.parroquiaCodigos,
   );
   const [recintoCodigos, setRecintoCodigos] = useState<number[]>(
     lider.recintoCodigos,
@@ -531,10 +614,13 @@ function LiderEditForm({
     [parroquias],
   );
   const recintosDeParroquia = recintos.filter((r) => r.par === parroquiaCodigo);
-  const mostrarSelectorCantonal = CARGO_CANTONAL.includes(cargo as Cargo);
+  const esCandidato = ambito === "candidato";
+  const mostrarSelectorCantonal =
+    !esCandidato && CARGO_CANTONAL.includes(cargo as Cargo);
   const mostrarSelectorParroquia =
+    !esCandidato &&
     !mostrarSelectorCantonal &&
-    (cargo === "vocal_junta_parroquial" || lider.ambito === "parroquia");
+    (cargo === "vocal_junta_parroquial" || ambito === "parroquia");
 
   const submit = async (e: Event) => {
     e.preventDefault();
@@ -544,8 +630,10 @@ function LiderEditForm({
         nombres,
         telefono,
         organizacion,
-        cargo: cargo || null,
+        ambito,
+        cargo: esCandidato ? null : cargo || null,
         parroquiaCodigo: mostrarSelectorParroquia ? parroquiaCodigo || null : null,
+        parroquiaCodigos: esCandidato ? parroquiaCodigos : [],
         recintoCodigos:
           mostrarSelectorParroquia || mostrarSelectorCantonal
             ? recintoCodigos
@@ -588,27 +676,58 @@ function LiderEditForm({
         />
       </label>
       <label>
-        Cargo (dignidad)
+        Ámbito
         <select
-          value={cargo}
+          value={ambito}
           onChange={(e) => {
             const nuevo = (e.currentTarget as HTMLSelectElement)
-              .value as Cargo | "";
-            setCargo(nuevo);
-            setParroquiaCodigo("");
-            setRecintoCodigos([]);
+              .value as AmbitoLider;
+            setAmbito(nuevo);
+            if (nuevo === "candidato") {
+              setCargo("");
+              setParroquiaCodigo("");
+              setRecintoCodigos([]);
+            } else {
+              setParroquiaCodigos([]);
+            }
           }}
         >
-          <option value="">Ninguno</option>
-          {CARGOS.map((c) => (
-            <option key={c} value={c}>
-              {CARGO_LABEL[c]}
-            </option>
-          ))}
+          <option value="parroquia">Líder de parroquia</option>
+          <option value="general">Líder general de Latacunga</option>
+          <option value="candidato">Candidato</option>
         </select>
       </label>
+      {esCandidato ? null : (
+        <label>
+          Cargo (dignidad)
+          <select
+            value={cargo}
+            onChange={(e) => {
+              const nuevo = (e.currentTarget as HTMLSelectElement)
+                .value as Cargo | "";
+              setCargo(nuevo);
+              setParroquiaCodigo("");
+              setRecintoCodigos([]);
+            }}
+          >
+            <option value="">Ninguno</option>
+            {CARGOS.map((c) => (
+              <option key={c} value={c}>
+                {CARGO_LABEL[c]}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {cargo ? (
         <p class="g-empty">{cupoTexto(cargo, lideres, lider.id)}</p>
+      ) : null}
+      {esCandidato ? (
+        <ParroquiasACargo
+          parroquias={parroquias}
+          seleccion={parroquiaCodigos}
+          onChange={setParroquiaCodigos}
+        />
       ) : null}
       {mostrarSelectorParroquia ? (
         <>

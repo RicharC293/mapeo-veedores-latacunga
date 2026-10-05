@@ -56,17 +56,30 @@ function validarCupoCargo(
 // deriva de si el resultado final necesita una parroquia. Un cargo cantonal
 // (alcalde/concejal) nunca la necesita, aunque el ambito recibido diga
 // "parroquia"; un vocal siempre la necesita, aunque el ambito recibido diga
-// "general".
+// "general". "candidato" es la excepción: solo se respeta si no hay cargo
+// (quien ya ostenta una dignidad deja de ser candidato) y entonces no usa
+// parroquia_codigo ni recintos, sino la lista parroquiaCodigos.
 function resolverAsignacion(input: {
   ambito: AmbitoLider;
   parroquiaCodigo: number | null;
+  parroquiaCodigos: number[];
   recintoCodigos: number[];
   cargo: Cargo | null;
 }): {
   ambito: AmbitoLider;
   parroquiaCodigo: number | null;
+  parroquiaCodigos: number[];
   recintoCodigos: number[];
 } {
+  if (input.cargo == null && input.ambito === "candidato") {
+    return {
+      ambito: "candidato",
+      parroquiaCodigo: null,
+      parroquiaCodigos: [...new Set(input.parroquiaCodigos)],
+      recintoCodigos: [],
+    };
+  }
+
   const cantonal = input.cargo != null && CARGO_CANTONAL.includes(input.cargo);
   const esVocal = input.cargo === "vocal_junta_parroquial";
   const usaParroquia = esVocal || (!cantonal && input.ambito === "parroquia");
@@ -76,7 +89,7 @@ function resolverAsignacion(input: {
     usaParroquia || input.cargo != null ? input.recintoCodigos : [];
   const ambito: AmbitoLider = parroquiaCodigo != null ? "parroquia" : "general";
 
-  return { ambito, parroquiaCodigo, recintoCodigos };
+  return { ambito, parroquiaCodigo, parroquiaCodigos: [], recintoCodigos };
 }
 
 export async function listLideres(): Promise<Lider[]> {
@@ -89,17 +102,21 @@ export async function listLideres(): Promise<Lider[]> {
 }
 
 export async function agregarLider(input: {
-  cedula: string;
+  cedula: string | null;
   nombres: string;
   telefono: string;
   organizacion: string;
   ambito: AmbitoLider;
   parroquiaCodigo: number | null;
+  parroquiaCodigos: number[];
   recintoCodigos: number[];
   cargo: Cargo | null;
 }): Promise<Lider> {
-  const cedula = normalizarCedula(input.cedula);
-  if (!cedulaValida(cedula))
+  // La cédula es opcional (rol organizativo, no electoral): solo se valida
+  // el formato cuando sí se ingresa.
+  const cedulaInput = input.cedula?.trim() || null;
+  const cedula = cedulaInput ? normalizarCedula(cedulaInput) : null;
+  if (cedula && !cedulaValida(cedula))
     throw new Error("Cédula inválida: debe tener 10 dígitos.");
   if (!input.nombres.trim()) throw new Error("El nombre es obligatorio.");
 
@@ -118,6 +135,7 @@ export async function agregarLider(input: {
         organizacion: input.organizacion.trim(),
         ambito: resuelto.ambito,
         parroquia_codigo: resuelto.parroquiaCodigo,
+        parroquia_codigos: resuelto.parroquiaCodigos,
         recinto_codigos: resuelto.recintoCodigos,
         cargo: input.cargo,
       })
@@ -133,7 +151,7 @@ export async function agregarLider(input: {
 
   let creado: Lider | null = null;
   await mutateCollection<Lider>(COLLECTION, (items) => {
-    if (items.some((l) => l.cedula === cedula)) {
+    if (cedula && items.some((l) => l.cedula === cedula)) {
       throw new Error("Esta cédula ya está registrada como líder.");
     }
     validarCupoCargo(items, input.cargo, resuelto.parroquiaCodigo);
@@ -145,6 +163,7 @@ export async function agregarLider(input: {
       organizacion: input.organizacion.trim(),
       ambito: resuelto.ambito,
       parroquiaCodigo: resuelto.parroquiaCodigo,
+      parroquiaCodigos: resuelto.parroquiaCodigos,
       recintoCodigos: resuelto.recintoCodigos,
       cargo: input.cargo,
       foto: null,
@@ -163,6 +182,7 @@ type LiderPatch = Partial<
     | "telefono"
     | "organizacion"
     | "parroquiaCodigo"
+    | "parroquiaCodigos"
     | "recintoCodigos"
     | "ambito"
     | "cargo"
@@ -175,6 +195,7 @@ function tocaAsignacion(patch: LiderPatch): boolean {
   return (
     patch.cargo !== undefined ||
     patch.parroquiaCodigo !== undefined ||
+    patch.parroquiaCodigos !== undefined ||
     patch.recintoCodigos !== undefined ||
     patch.ambito !== undefined
   );
@@ -206,6 +227,7 @@ export async function editarLider(
           patch.parroquiaCodigo !== undefined
             ? patch.parroquiaCodigo
             : base.parroquiaCodigo,
+        parroquiaCodigos: patch.parroquiaCodigos ?? base.parroquiaCodigos,
         recintoCodigos: patch.recintoCodigos ?? base.recintoCodigos,
         cargo,
       });
@@ -214,6 +236,7 @@ export async function editarLider(
       }
       dbPatch.ambito = resuelto.ambito;
       dbPatch.parroquia_codigo = resuelto.parroquiaCodigo;
+      dbPatch.parroquia_codigos = resuelto.parroquiaCodigos;
       dbPatch.recinto_codigos = resuelto.recintoCodigos;
       dbPatch.cargo = cargo;
     }
@@ -237,6 +260,7 @@ export async function editarLider(
       const resuelto = resolverAsignacion({
         ambito: fusionado.ambito,
         parroquiaCodigo: fusionado.parroquiaCodigo,
+        parroquiaCodigos: fusionado.parroquiaCodigos,
         recintoCodigos: fusionado.recintoCodigos,
         cargo: fusionado.cargo,
       });

@@ -34,6 +34,8 @@ const totalCubiertas = cobertura.reduce((a, c) => a + c.juntasCubiertas, 0);
 const pctGlobal =
   totalJuntas > 0 ? Math.round((totalCubiertas / totalJuntas) * 1000) / 10 : 0;
 
+const totalCandidatos = lideres.filter((l) => l.ambito === "candidato").length;
+const totalLideres = lideres.length - totalCandidatos;
 const veedoresTitulares = veedores.filter((v) => v.tipo === "titular").length;
 const coordinadoresTitulares = coordinadores.filter(
   (c) => c.tipo === "titular",
@@ -55,13 +57,24 @@ const coordinadoresTitulares = coordinadores.filter(
     </a>
     {esAdmin ? (
       <a href="/gestion/lideres">
-        <b>{lideres.length}</b>
+        <b>{totalLideres}</b>
         <small>líderes</small>
       </a>
     ) : (
       <div class="g-summary-item">
-        <b>{lideres.length}</b>
+        <b>{totalLideres}</b>
         <small>líderes</small>
+      </div>
+    )}
+    {esAdmin ? (
+      <a href="/gestion/lideres">
+        <b>{totalCandidatos}</b>
+        <small>candidatos</small>
+      </a>
+    ) : (
+      <div class="g-summary-item">
+        <b>{totalCandidatos}</b>
+        <small>candidatos</small>
       </div>
     )}
     <a href="/gestion/lista-negra">

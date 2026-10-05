@@ -20,8 +20,13 @@ export default function DiagramaResponsables({
         .filter((r) => r.par === p.properties.code)
         .map((r) => ({
           recinto: r,
-          responsables: lideres.filter((l) =>
-            l.recintoCodigos.includes(r.cod),
+          // Un candidato no se asigna por recinto sino por parroquia: es
+          // responsable de todos los recintos de las parroquias a su cargo.
+          responsables: lideres.filter(
+            (l) =>
+              l.recintoCodigos.includes(r.cod) ||
+              (l.ambito === "candidato" &&
+                l.parroquiaCodigos.includes(r.par)),
           ),
         }));
       return { parroquia: p, filas };
@@ -57,7 +62,13 @@ export default function DiagramaResponsables({
                   <strong>{title(f.recinto.nombre)}</strong>
                   <small>
                     {f.responsables.length > 0
-                      ? f.responsables.map((l) => l.nombres).join(", ")
+                      ? f.responsables
+                          .map(
+                            (l) =>
+                              l.nombres +
+                              (l.ambito === "candidato" ? " (candidato)" : ""),
+                          )
+                          .join(", ")
                       : "Sin responsable"}
                   </small>
                 </div>

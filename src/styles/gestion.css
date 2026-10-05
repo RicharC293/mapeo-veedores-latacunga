@@ -620,6 +620,7 @@
   display: block;
 }
 .g-org-node small {
+  display: block;
   color: var(--muted);
 }
 .g-org-children {

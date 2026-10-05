@@ -55,7 +55,10 @@ export interface AcreditadoCda {
   creadoEn: string;
 }
 
-export type AmbitoLider = "general" | "parroquia";
+// "candidato": todavía no es líder de una parroquia ni líder general; se
+// guarda sin parroquia y después se le eligen las parroquias a su cargo
+// (parroquiaCodigos). No tiene cargo.
+export type AmbitoLider = "general" | "parroquia" | "candidato";
 
 // Dignidad electa que puede ostentar un líder, además de su rol
 // organizativo (ambito). Un concejal o el alcalde son líderes con cargo.
@@ -82,12 +85,17 @@ export const CARGO_LABEL: Record<Cargo, string> = {
 
 export interface Lider {
   id: string;
-  cedula: string;
+  // Rol puramente organizativo (no entra al proceso electoral ni a la lista
+  // negra): la cédula es opcional, solo sirve para evitar duplicados.
+  cedula: string | null;
   nombres: string;
   telefono: string;
   organizacion: string;
   ambito: AmbitoLider;
   parroquiaCodigo: number | null;
+  // Solo para ambito "candidato": las parroquias de las que es responsable
+  // (una o varias). Vacío en los demás ámbitos.
+  parroquiaCodigos: number[];
   recintoCodigos: number[];
   cargo: Cargo | null;
   foto: string | null;

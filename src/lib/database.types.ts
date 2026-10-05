@@ -245,39 +245,42 @@ export type Database = {
         Row: {
           ambito: string
           cargo: string | null
-          cedula: string
+          cedula: string | null
           creado_en: string
           foto: string | null
           id: string
           nombres: string
           organizacion: string
           parroquia_codigo: number | null
+          parroquia_codigos: number[]
           recinto_codigos: number[]
           telefono: string
         }
         Insert: {
           ambito: string
           cargo?: string | null
-          cedula: string
+          cedula?: string | null
           creado_en?: string
           foto?: string | null
           id?: string
           nombres: string
           organizacion?: string
           parroquia_codigo?: number | null
+          parroquia_codigos?: number[]
           recinto_codigos?: number[]
           telefono?: string
         }
         Update: {
           ambito?: string
           cargo?: string | null
-          cedula?: string
+          cedula?: string | null
           creado_en?: string
           foto?: string | null
           id?: string
           nombres?: string
           organizacion?: string
           parroquia_codigo?: number | null
+          parroquia_codigos?: number[]
           recinto_codigos?: number[]
           telefono?: string
         }

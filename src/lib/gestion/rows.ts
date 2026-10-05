@@ -68,12 +68,13 @@ export function rowToAcreditadoCda(
 export function rowToLider(row: Record<string, unknown>): Lider {
   return {
     id: row.id as string,
-    cedula: row.cedula as string,
+    cedula: (row.cedula as string | null) ?? null,
     nombres: row.nombres as string,
     telefono: row.telefono as string,
     organizacion: (row.organizacion as string | null) ?? "",
     ambito: row.ambito as AmbitoLider,
     parroquiaCodigo: (row.parroquia_codigo as number | null) ?? null,
+    parroquiaCodigos: (row.parroquia_codigos as number[] | null) ?? [],
     recintoCodigos: (row.recinto_codigos as number[] | null) ?? [],
     cargo: (row.cargo as Cargo | null) ?? null,
     foto: (row.foto as string | null) ?? null,

@@ -40,7 +40,7 @@ interface PersonaInfo {
   rol: string;
   label: string;
   nombres: string;
-  cedula: string;
+  cedula: string | null;
   telefono: string;
   organizacion?: string;
   asignado: boolean;
@@ -53,7 +53,9 @@ function lideresDe(lideres: Lider[], recinto: Recinto): Lider[] {
   return especificos.length > 0
     ? especificos
     : lideres.filter(
-        (l) => l.ambito === "parroquia" && l.parroquiaCodigo === recinto.par,
+        (l) =>
+          (l.ambito === "parroquia" && l.parroquiaCodigo === recinto.par) ||
+          (l.ambito === "candidato" && l.parroquiaCodigos.includes(recinto.par)),
       );
 }
 
@@ -72,7 +74,7 @@ function personaDe(
   rol: string,
   entidad: {
     nombres: string;
-    cedula: string;
+    cedula: string | null;
     telefono: string;
     organizacion?: string;
   },
@@ -290,7 +292,9 @@ export default function Panel({
       : null;
     const contactos: PersonaInfo[] = [
       ...(lideresRecinto.length > 0
-        ? lideresRecinto.map((l) => personaDe("Líder", l))
+        ? lideresRecinto.map((l) =>
+            personaDe(l.ambito === "candidato" ? "Candidato" : "Líder", l),
+          )
         : [personaSinAsignar("Líder", "Líder")]),
       coordinadorRecinto
         ? personaDe("Coordinador de recinto", coordinadorRecinto, "Coordinador")
@@ -787,7 +791,7 @@ function PersonaModal({
             <h3 class="modal-nombre">{persona.nombres}</h3>
             <dl class="modal-dl">
               <dt>Cédula</dt>
-              <dd>{persona.cedula}</dd>
+              <dd>{persona.cedula || "No registrada"}</dd>
               <dt>Teléfono</dt>
               <dd>{telefono || "No registrado"}</dd>
               {persona.organizacion ? (

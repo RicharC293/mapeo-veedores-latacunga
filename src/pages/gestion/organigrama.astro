@@ -15,12 +15,19 @@ const lideres = await listLideres();
 const coordinadores = await listCoordinadores();
 
 const lideresGenerales = lideres.filter((l) => l.ambito === "general");
+// Un candidato sin parroquias elegidas todavía no cuelga de ninguna rama;
+// se muestra aparte para que nadie registrado quede invisible.
+const candidatosSinParroquia = lideres.filter(
+  (l) => l.ambito === "candidato" && l.parroquiaCodigos.length === 0,
+);
 const lideresPorParroquia = data.parroquias.features
   .map((f) => ({
     parroquia: f,
     lideres: lideres.filter(
       (l) =>
-        l.ambito === "parroquia" && l.parroquiaCodigo === f.properties.code,
+        (l.ambito === "parroquia" && l.parroquiaCodigo === f.properties.code) ||
+        (l.ambito === "candidato" &&
+          l.parroquiaCodigos.includes(f.properties.code)),
     ),
     recintos: data.recintos.filter((r) => r.par === f.properties.code),
   }))
@@ -46,8 +53,8 @@ function coordinadorTitular(recintoCodigo: number) {
 <GestionLayout title="Organigrama" activo="organigrama">
   <h1>Organigrama</h1>
   <p class="g-sub">
-    Líder general, líderes de parroquia y coordinadores titulares de cada
-    recinto.
+    Líder general, líderes de parroquia (y candidatos a cargo de ella) y
+    coordinadores titulares de cada recinto.
   </p>
 
   <div class="g-org">
@@ -66,7 +73,12 @@ function coordinadorTitular(recintoCodigo: number) {
           <div class="g-org-node">
             <b>{g.parroquia.properties.name}</b>
             {g.lideres.length > 0 ? (
-              g.lideres.map((l) => <small>{l.nombres}</small>)
+              g.lideres.map((l) => (
+                <small>
+                  {l.nombres}
+                  {l.ambito === "candidato" ? " (candidato)" : ""}
+                </small>
+              ))
             ) : (
               <small>Sin líder asignado</small>
             )}
@@ -85,5 +97,12 @@ function coordinadorTitular(recintoCodigo: number) {
         </div>
       ))}
     </div>
+
+    {candidatosSinParroquia.length > 0 ? (
+      <div class="g-org-node">
+        <b>Candidatos sin parroquia asignada</b>
+        {candidatosSinParroquia.map((l) => <small>{l.nombres}</small>)}
+      </div>
+    ) : null}
   </div>
 </GestionLayout>

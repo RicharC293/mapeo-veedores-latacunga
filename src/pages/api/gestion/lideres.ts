@@ -7,7 +7,7 @@ import {
   requireApiRole,
 } from "../../../lib/gestion/apiHelpers";
 import { PAGINAS_GESTION } from "../../../lib/auth/roles";
-import type { Cargo } from "../../../lib/gestion/types";
+import type { AmbitoLider, Cargo } from "../../../lib/gestion/types";
 
 export const GET: APIRoute = async ({ locals }) => {
   const bloqueo = requireApiRole(locals, PAGINAS_GESTION.lideres);
@@ -20,12 +20,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (bloqueo) return bloqueo;
   return handle(async () => {
     const body = (await request.json()) as {
-      cedula: string;
+      cedula: string | null;
       nombres: string;
       telefono: string;
       organizacion: string;
-      ambito: "general" | "parroquia";
+      ambito: AmbitoLider;
       parroquiaCodigo: number | null;
+      parroquiaCodigos?: number[];
       recintoCodigos: number[];
       cargo: Cargo | null;
     };
@@ -41,7 +42,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         );
       }
     }
-    const lider = await agregarLider(body);
+    const lider = await agregarLider({
+      ...body,
+      parroquiaCodigos: body.parroquiaCodigos ?? [],
+    });
     return json(lider, { status: 201 });
   });
 };
