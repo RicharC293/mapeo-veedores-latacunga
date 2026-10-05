@@ -19,7 +19,7 @@ export async function devolverAMilitanciaLocal(persona: {
   tipo: TipoMilitancia;
   juntaId?: string;
 }): Promise<void> {
-  const militante: Omit<Militante, "duplicado" | "incorrecto"> = {
+  const militante: Omit<Militante, "duplicado" | "incorrecto" | "ediciones"> = {
     id: randomUUID(),
     cedula: persona.cedula,
     nombres: persona.nombres,

@@ -14,9 +14,12 @@ import {
   acreditadosCdaPorRecinto,
 } from "./acreditadosCda";
 import { juntaId } from "./juntas";
+import { listLideres } from "./lideres";
 import type {
   AcreditadoCda,
+  CambioMilitante,
   Coordinador,
+  EdicionMilitante,
   Genero,
   Militante,
   TipoMilitancia,
@@ -24,8 +27,13 @@ import type {
 } from "./types";
 
 const COLLECTION = "militantes";
+const COLECCION_HISTORIAL = "militantes_historial";
 
-type MilitanteSinDuplicado = Omit<Militante, "duplicado" | "incorrecto">;
+// Fila tal como se guarda: sin las banderas que se calculan al leer.
+type MilitanteSinDuplicado = Omit<
+  Militante,
+  "duplicado" | "incorrecto" | "ediciones"
+>;
 
 function esFilaIncorrecta(f: MilitanteSinDuplicado): boolean {
   return esIncorrecto(erroresMilitante(f));
@@ -33,20 +41,29 @@ function esFilaIncorrecta(f: MilitanteSinDuplicado): boolean {
 
 // Devuelve la fila con sus banderas calculadas (duplicado, incorrecto).
 function conBanderas(f: MilitanteSinDuplicado): Militante {
-  return { ...f, duplicado: false, incorrecto: esFilaIncorrecta(f) };
+  return {
+    ...f,
+    duplicado: false,
+    incorrecto: esFilaIncorrecta(f),
+    ediciones: 0,
+  };
 }
 
 // Pura para poder probarla aparte: marca como duplicada cualquier fila cuya
 // cédula se repite dentro del propio lote de Militancia (no contra
 // veedores/coordinadores/acreditados_cda: esas tablas ya rechazan una
 // cédula repetida al asignar, con su propio mensaje de error).
-export function marcarDuplicados(filas: MilitanteSinDuplicado[]): Militante[] {
+export function marcarDuplicados(
+  filas: MilitanteSinDuplicado[],
+  ediciones: Map<string, number> = new Map(),
+): Militante[] {
   const cuenta = new Map<string, number>();
   for (const f of filas) cuenta.set(f.cedula, (cuenta.get(f.cedula) ?? 0) + 1);
   return filas.map((f) => ({
     ...f,
     duplicado: (cuenta.get(f.cedula) ?? 0) > 1,
     incorrecto: esFilaIncorrecta(f),
+    ediciones: ediciones.get(f.id) ?? 0,
   }));
 }
 
@@ -59,7 +76,79 @@ export async function listMilitantes(): Promise<Militante[]> {
   } else {
     filas = await readCollection<MilitanteSinDuplicado>(COLLECTION);
   }
-  return marcarDuplicados(filas);
+  return marcarDuplicados(filas, await contarEdiciones());
+}
+
+// Cuántas ediciones tiene registradas cada militante (para mostrar el enlace
+// "Ver historial" solo en las tarjetas que lo tienen).
+async function contarEdiciones(): Promise<Map<string, number>> {
+  const cuenta = new Map<string, number>();
+  let ids: string[];
+  if (supabaseSecret) {
+    const { data, error } = await supabaseSecret
+      .from("militantes_historial")
+      .select("militante_id");
+    if (error) throw new Error(error.message);
+    ids = data.map((r) => r.militante_id);
+  } else {
+    ids = (await readCollection<EdicionMilitante>(COLECCION_HISTORIAL)).map(
+      (e) => e.militanteId,
+    );
+  }
+  for (const id of ids) cuenta.set(id, (cuenta.get(id) ?? 0) + 1);
+  return cuenta;
+}
+
+// Ediciones de una persona, de la más reciente a la más antigua.
+export async function historialDeMilitante(
+  id: string,
+): Promise<EdicionMilitante[]> {
+  if (supabaseSecret) {
+    const { data, error } = await supabaseSecret
+      .from("militantes_historial")
+      .select("*")
+      .eq("militante_id", id)
+      .order("creado_en", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data.map((r) => ({
+      id: r.id,
+      militanteId: r.militante_id,
+      usuario: r.usuario,
+      cambios: r.cambios as unknown as CambioMilitante[],
+      creadoEn: r.creado_en,
+    }));
+  }
+  return (await readCollection<EdicionMilitante>(COLECCION_HISTORIAL))
+    .filter((e) => e.militanteId === id)
+    .sort((a, b) => Date.parse(b.creadoEn) - Date.parse(a.creadoEn));
+}
+
+async function registrarEdicion(
+  militanteId: string,
+  usuario: string,
+  cambios: CambioMilitante[],
+): Promise<void> {
+  if (cambios.length === 0) return;
+  if (supabaseSecret) {
+    const { error } = await supabaseSecret.from("militantes_historial").insert({
+      militante_id: militanteId,
+      usuario,
+      cambios: cambios as unknown as never,
+    });
+    if (error) throw new Error(error.message);
+    return;
+  }
+  const edicion: EdicionMilitante = {
+    id: randomUUID(),
+    militanteId,
+    usuario,
+    cambios,
+    creadoEn: new Date().toISOString(),
+  };
+  await mutateCollection<EdicionMilitante>(COLECCION_HISTORIAL, (items) => [
+    ...items,
+    edicion,
+  ]);
 }
 
 async function obtenerMilitante(
@@ -225,7 +314,15 @@ export async function importarMilitantes(input: {
 }
 
 export type MilitantePatch = Partial<
-  Pick<Militante, "cedula" | "nombres" | "telefono" | "email" | "preferencia">
+  Pick<
+    Militante,
+    | "cedula"
+    | "nombres"
+    | "telefono"
+    | "email"
+    | "preferencia"
+    | "responsableLiderId"
+  >
 >;
 
 // Corrige los datos básicos de una fila de Militancia (cédula mal digitada,
@@ -235,6 +332,7 @@ export type MilitantePatch = Partial<
 export async function editarMilitante(
   id: string,
   patch: MilitantePatch,
+  usuario = "",
 ): Promise<Militante> {
   const cambios: MilitantePatch = {};
   if (patch.cedula !== undefined)
@@ -244,15 +342,57 @@ export async function editarMilitante(
   if (patch.email !== undefined) cambios.email = normalizarEmail(patch.email);
   if (patch.preferencia !== undefined)
     cambios.preferencia = patch.preferencia.trim();
+  // null = sin responsable.
+  if (patch.responsableLiderId !== undefined)
+    cambios.responsableLiderId = patch.responsableLiderId || null;
+
+  // Qué cambia respecto de lo guardado, para el historial.
+  const anterior = await obtenerMilitante(id);
+  if (!anterior) throw new Error("No se encontró el militante.");
+  const lideres = await listLideres();
+  const nombreLider = (lid: string | null) =>
+    lideres.find((l) => l.id === lid)?.nombres ?? "";
+  const diff: CambioMilitante[] = [];
+  const comparar = (campo: string, antes: string, despues: string) => {
+    if (antes !== despues) diff.push({ campo, antes, despues });
+  };
+  if (cambios.cedula !== undefined)
+    comparar("Cédula", anterior.cedula, cambios.cedula);
+  if (cambios.nombres !== undefined)
+    comparar("Nombres", anterior.nombres, cambios.nombres);
+  if (cambios.telefono !== undefined)
+    comparar("Celular", anterior.telefono, cambios.telefono);
+  if (cambios.email !== undefined)
+    comparar("Correo", anterior.email, cambios.email);
+  if (cambios.preferencia !== undefined)
+    comparar("Preferencia", anterior.preferencia, cambios.preferencia);
+  if (cambios.responsableLiderId !== undefined)
+    comparar(
+      "Responsable",
+      nombreLider(anterior.responsableLiderId),
+      nombreLider(cambios.responsableLiderId),
+    );
 
   if (supabaseSecret) {
     const { data, error } = await supabaseSecret
       .from("militantes")
-      .update(cambios)
+      .update({
+        ...(cambios.cedula !== undefined && { cedula: cambios.cedula }),
+        ...(cambios.nombres !== undefined && { nombres: cambios.nombres }),
+        ...(cambios.telefono !== undefined && { telefono: cambios.telefono }),
+        ...(cambios.email !== undefined && { email: cambios.email }),
+        ...(cambios.preferencia !== undefined && {
+          preferencia: cambios.preferencia,
+        }),
+        ...(cambios.responsableLiderId !== undefined && {
+          responsable_lider_id: cambios.responsableLiderId,
+        }),
+      })
       .eq("id", id)
       .select()
       .single();
     if (error) throw new Error(error.message);
+    await registrarEdicion(id, usuario, diff);
     return conBanderas(rowToMilitante(data));
   }
 
@@ -263,6 +403,7 @@ export async function editarMilitante(
     editado = { ...actual, ...cambios };
     return items.map((f) => (f.id === id ? editado! : f));
   });
+  await registrarEdicion(id, usuario, diff);
   return conBanderas(editado!);
 }
 
@@ -317,6 +458,10 @@ export async function eliminarMilitante(id: string): Promise<void> {
   }
   await mutateCollection<MilitanteSinDuplicado>(COLLECTION, (items) =>
     items.filter((f) => f.id !== id),
+  );
+  // Respaldo local de ON DELETE CASCADE: el historial se va con la persona.
+  await mutateCollection<EdicionMilitante>(COLECCION_HISTORIAL, (items) =>
+    items.filter((e) => e.militanteId !== id),
   );
 }
 

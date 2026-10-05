@@ -129,6 +129,8 @@ export interface Militante {
   // desvincularse; solo preselecciona el desplegable de la fila.
   juntaPreasignada: string | null;
   creadoEn: string;
+  // Cuántas veces se ha editado (calculado, de militantes_historial).
+  ediciones: number;
   duplicado: boolean;
   // true si cédula, nombre, teléfono o correo tienen un error de formato
   // (calculado, no viene de la tabla). Ver validacionMilitante.ts.
@@ -240,3 +242,18 @@ export interface CoberturaCanton {
 // A qué "track" (rol) se refiere un gráfico de cobertura: veedores (por
 // junta), coordinadores o acreditados CDA (por recinto).
 export type CoberturaTrack = "veedores" | "coordinadores" | "cda";
+
+// Un cambio puntual dentro de una edición de Militancia.
+export interface CambioMilitante {
+  campo: string;
+  antes: string;
+  despues: string;
+}
+
+export interface EdicionMilitante {
+  id: string;
+  militanteId: string;
+  usuario: string;
+  cambios: CambioMilitante[];
+  creadoEn: string;
+}

@@ -322,6 +322,38 @@ export type Database = {
         }
         Relationships: []
       }
+      militantes_historial: {
+        Row: {
+          cambios: Json
+          creado_en: string
+          id: string
+          militante_id: string
+          usuario: string
+        }
+        Insert: {
+          cambios: Json
+          creado_en?: string
+          id?: string
+          militante_id: string
+          usuario?: string
+        }
+        Update: {
+          cambios?: Json
+          creado_en?: string
+          id?: string
+          militante_id?: string
+          usuario?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "militantes_historial_militante_id_fkey"
+            columns: ["militante_id"]
+            isOneToOne: false
+            referencedRelation: "militantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       militantes: {
         Row: {
           cedula: string

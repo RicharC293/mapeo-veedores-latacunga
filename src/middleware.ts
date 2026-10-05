@@ -10,6 +10,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // de la gestión ya hace con su respaldo JSON local.
   if (!supabaseConfigurado) {
     context.locals.rol = "administrador";
+    context.locals.usuario = "Administrador (modo local)";
     return next();
   }
 
@@ -22,6 +23,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   if (user) {
     context.locals.rol = "administrador";
+    context.locals.usuario = user.email ?? "Administrador";
     return next();
   }
 
@@ -30,11 +32,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
     const acceso = await buscarAccesoPorToken(token);
     if (acceso && acceso.activo) {
       context.locals.rol = acceso.rol;
+      context.locals.usuario = acceso.etiqueta || `Enlace ${acceso.rol}`;
       void marcarUltimoUso(acceso.id);
       return next();
     }
   }
 
   context.locals.rol = "invitado";
+  context.locals.usuario = "";
   return next();
 });

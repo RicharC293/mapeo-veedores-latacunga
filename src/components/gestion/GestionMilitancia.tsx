@@ -1,3 +1,4 @@
+import { Fragment } from "preact";
 import { useMemo, useRef, useState } from "preact/hooks";
 import * as XLSX from "xlsx";
 import PersonaForm from "./PersonaForm";
@@ -17,6 +18,14 @@ interface Props {
 type TipoParroquiaFiltro = "todas" | "urbanas" | "rurales";
 type Vista = "todos" | "incorrectos" | "duplicados" | "sinrecinto";
 type Panel = null | "importar" | "agregar";
+type Orden = "recientes" | "antiguos" | "responsable" | "cedula";
+
+const ORDENES: { clave: Orden; etiqueta: string }[] = [
+  { clave: "recientes", etiqueta: "Subida: más recientes primero" },
+  { clave: "antiguos", etiqueta: "Subida: más antiguos primero" },
+  { clave: "responsable", etiqueta: "Responsable (A–Z)" },
+  { clave: "cedula", etiqueta: "Cédula (repetidas juntas)" },
+];
 type FiltroResponsable = "todos" | "sin" | string;
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
@@ -133,6 +142,7 @@ export default function GestionMilitancia({
   const [militantes, setMilitantes] = useState(militantesIniciales);
   const [vista, setVista] = useState<Vista>("todos");
   const [busqueda, setBusqueda] = useState("");
+  const [orden, setOrden] = useState<Orden>("recientes");
   const [filtroResponsable, setFiltroResponsable] =
     useState<FiltroResponsable>("todos");
   // Con la bandeja vacía lo primero que hace falta es cargar gente.
@@ -224,6 +234,49 @@ export default function GestionMilitancia({
       return true;
     });
   }, [militantes, vista, busqueda, filtroResponsable]);
+
+  const nombreResponsable = useMemo(() => {
+    const m = new Map(lideres.map((l) => [l.id, l.nombres]));
+    return (id: string | null) => (id ? (m.get(id) ?? "") : "");
+  }, [lideres]);
+
+  // Cuántas filas hay en la bandeja con cada cédula (para agrupar repetidas).
+  const filasPorCedula = useMemo(() => {
+    const cuenta = new Map<string, number>();
+    for (const m of militantes)
+      cuenta.set(m.cedula, (cuenta.get(m.cedula) ?? 0) + 1);
+    return cuenta;
+  }, [militantes]);
+
+  const ordenados = useMemo(() => {
+    const t = (m: Militante) => Date.parse(m.creadoEn) || 0;
+    const copia = filtrados.slice();
+    if (orden === "recientes") copia.sort((a, b) => t(b) - t(a));
+    else if (orden === "antiguos") copia.sort((a, b) => t(a) - t(b));
+    else if (orden === "responsable") {
+      copia.sort((a, b) => {
+        const ra = nombreResponsable(a.responsableLiderId);
+        const rb = nombreResponsable(b.responsableLiderId);
+        // Sin responsable al final.
+        if (!ra !== !rb) return ra ? -1 : 1;
+        return (
+          ra.localeCompare(rb, "es") ||
+          a.nombres.localeCompare(b.nombres, "es") ||
+          t(a) - t(b)
+        );
+      });
+    } else {
+      // Primero las cédulas repetidas, agrupadas; luego las únicas.
+      const veces = (m: Militante) => filasPorCedula.get(m.cedula) ?? 1;
+      copia.sort(
+        (a, b) =>
+          Number(veces(b) > 1) - Number(veces(a) > 1) ||
+          a.cedula.localeCompare(b.cedula) ||
+          t(a) - t(b),
+      );
+    }
+    return copia;
+  }, [filtrados, orden, nombreResponsable, filasPorCedula]);
 
   const hayFiltros =
     vista !== "todos" || busqueda !== "" || filtroResponsable !== "todos";
@@ -606,6 +659,21 @@ export default function GestionMilitancia({
             />
           </label>
           <label>
+            Ordenar por
+            <select
+              value={orden}
+              onChange={(e) =>
+                setOrden((e.currentTarget as HTMLSelectElement).value as Orden)
+              }
+            >
+              {ORDENES.map((o) => (
+                <option key={o.clave} value={o.clave}>
+                  {o.etiqueta}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
             Responsable
             <select
               value={filtroResponsable}
@@ -654,45 +722,64 @@ export default function GestionMilitancia({
               : `${militantes.length} en la bandeja`}
           </p>
           <ul class="g-mil-lista">
-            {filtrados.map((m) => (
-              <MilitanteCard
-                key={m.id}
-                militante={m}
-                parroquias={parroquias}
-                recintos={recintos}
-                lideres={lideres}
-                onAsignar={async (destino, confirmarSuplente) => {
-                  const res = await fetch(
-                    `/api/gestion/militancia/${m.id}/asignar`,
-                    {
-                      method: "POST",
-                      headers: { "content-type": "application/json" },
-                      body: JSON.stringify({ ...destino, confirmarSuplente }),
-                    },
-                  );
-                  const cuerpo = await res.json();
-                  // 409 = lugar ocupado: no es un error, es un aviso.
-                  if (!res.ok && res.status !== 409) {
-                    throw new Error(cuerpo.error ?? "Error inesperado.");
-                  }
-                  if (res.ok) await refrescar();
-                  return cuerpo as ResultadoAsignacion;
-                }}
-                onEditar={async (patch) => {
-                  await api(`/api/gestion/militancia/${m.id}`, {
-                    method: "PATCH",
-                    body: JSON.stringify(patch),
-                  });
-                  await refrescar();
-                }}
-                onEliminar={async () => {
-                  await api(`/api/gestion/militancia/${m.id}`, {
-                    method: "DELETE",
-                  });
-                  await refrescar();
-                }}
-              />
-            ))}
+            {ordenados.map((m, i) => {
+              // Con el orden por cédula, un encabezado abre cada grupo de
+              // cédulas repetidas.
+              const veces = filasPorCedula.get(m.cedula) ?? 1;
+              const abreGrupo =
+                orden === "cedula" &&
+                veces > 1 &&
+                ordenados[i - 1]?.cedula !== m.cedula;
+              return (
+                <Fragment key={m.id}>
+                  {abreGrupo ? (
+                    <li class="g-mil-grupo" key={`g-${m.cedula}`}>
+                      Cédula {m.cedula} · {veces} filas repetidas
+                    </li>
+                  ) : null}
+                  <MilitanteCard
+                    key={m.id}
+                    militante={m}
+                    parroquias={parroquias}
+                    recintos={recintos}
+                    lideres={lideres}
+                    onAsignar={async (destino, confirmarSuplente) => {
+                      const res = await fetch(
+                        `/api/gestion/militancia/${m.id}/asignar`,
+                        {
+                          method: "POST",
+                          headers: { "content-type": "application/json" },
+                          body: JSON.stringify({
+                            ...destino,
+                            confirmarSuplente,
+                          }),
+                        },
+                      );
+                      const cuerpo = await res.json();
+                      // 409 = lugar ocupado: no es un error, es un aviso.
+                      if (!res.ok && res.status !== 409) {
+                        throw new Error(cuerpo.error ?? "Error inesperado.");
+                      }
+                      if (res.ok) await refrescar();
+                      return cuerpo as ResultadoAsignacion;
+                    }}
+                    onEditar={async (patch) => {
+                      await api(`/api/gestion/militancia/${m.id}`, {
+                        method: "PATCH",
+                        body: JSON.stringify(patch),
+                      });
+                      await refrescar();
+                    }}
+                    onEliminar={async () => {
+                      await api(`/api/gestion/militancia/${m.id}`, {
+                        method: "DELETE",
+                      });
+                      await refrescar();
+                    }}
+                  />
+                </Fragment>
+              );
+            })}
           </ul>
         </>
       )}

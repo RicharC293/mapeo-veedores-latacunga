@@ -18,13 +18,18 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
     const id = params.id;
     if (!id) throw new Error("Falta el id del militante.");
     const body = (await request.json()) as MilitantePatch;
-    const militante = await editarMilitante(id, {
-      cedula: body.cedula,
-      nombres: body.nombres,
-      telefono: body.telefono,
-      email: body.email,
-      preferencia: body.preferencia,
-    });
+    const militante = await editarMilitante(
+      id,
+      {
+        cedula: body.cedula,
+        nombres: body.nombres,
+        telefono: body.telefono,
+        email: body.email,
+        preferencia: body.preferencia,
+        responsableLiderId: body.responsableLiderId,
+      },
+      locals.usuario,
+    );
     return json(militante);
   });
 };

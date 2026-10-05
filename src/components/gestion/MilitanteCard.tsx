@@ -8,6 +8,7 @@ import type {
   ResultadoAsignacion,
 } from "../../lib/gestion/militancia";
 import DialogoAsignacion, { type AvisoAsignacion } from "./DialogoAsignacion";
+import DialogoHistorial from "./DialogoHistorial";
 import {
   MENSAJE_ERROR,
   erroresMilitante,
@@ -29,6 +30,7 @@ interface Props {
     telefono: string;
     email: string;
     preferencia: string;
+    responsableLiderId: string | null;
   }) => Promise<void>;
   onEliminar: () => Promise<void>;
 }
@@ -39,6 +41,7 @@ type Borrador = {
   telefono: string;
   email: string;
   preferencia: string;
+  responsableLiderId: string;
 };
 
 const ETIQUETA: Record<keyof ErroresMilitante, string> = {
@@ -47,6 +50,22 @@ const ETIQUETA: Record<keyof ErroresMilitante, string> = {
   telefono: "Celular",
   email: "Correo",
 };
+
+// Fecha y hora de subida, siempre en hora de Ecuador para que el servidor y
+// el navegador muestren lo mismo.
+const formatoFecha = new Intl.DateTimeFormat("es-EC", {
+  timeZone: "America/Guayaquil",
+  day: "2-digit",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+function fechaSubida(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "—" : formatoFecha.format(d);
+}
 
 function ordenarPorNombre(parroquias: ParroquiaFeature[]) {
   return parroquias
@@ -78,12 +97,14 @@ export default function MilitanteCard({
   const [editando, setEditando] = useState(false);
   const [confirmandoBorrar, setConfirmandoBorrar] = useState(false);
   const [aviso, setAviso] = useState<AvisoAsignacion | null>(null);
+  const [verHistorial, setVerHistorial] = useState(false);
   const [borrador, setBorrador] = useState<Borrador>({
     cedula: militante.cedula,
     nombres: militante.nombres,
     telefono: militante.telefono,
     email: militante.email,
     preferencia: militante.preferencia,
+    responsableLiderId: militante.responsableLiderId ?? "",
   });
 
   const responsable = lideres.find(
@@ -214,6 +235,7 @@ export default function MilitanteCard({
       telefono: militante.telefono,
       email: militante.email,
       preferencia: militante.preferencia,
+      responsableLiderId: militante.responsableLiderId ?? "",
     });
     setError(null);
     setConfirmandoBorrar(false);
@@ -222,12 +244,16 @@ export default function MilitanteCard({
 
   const guardarEdicion = () =>
     ejecutar(
-      () => onEditar(borrador),
+      () =>
+        onEditar({
+          ...borrador,
+          responsableLiderId: borrador.responsableLiderId || null,
+        }),
       () => setEditando(false),
     );
 
   const campoEdicion = (
-    clave: keyof Borrador,
+    clave: Exclude<keyof Borrador, "responsableLiderId">,
     etiqueta: string,
     extra: Record<string, unknown> = {},
     ancho = false,
@@ -286,6 +312,30 @@ export default function MilitanteCard({
             {campoEdicion("telefono", "Celular", { inputMode: "tel" })}
             {campoEdicion("email", "Correo", { type: "email" }, true)}
             {campoEdicion("preferencia", "Preferencia (recinto)", {}, true)}
+            <label class="g-mil-campo g-mil-campo-ancho">
+              Responsable
+              <select
+                value={borrador.responsableLiderId}
+                disabled={enviando}
+                onChange={(e) =>
+                  setBorrador({
+                    ...borrador,
+                    responsableLiderId: (e.currentTarget as HTMLSelectElement)
+                      .value,
+                  })
+                }
+              >
+                <option value="">Sin responsable</option>
+                {lideres
+                  .slice()
+                  .sort((a, b) => a.nombres.localeCompare(b.nombres, "es"))
+                  .map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.nombres}
+                    </option>
+                  ))}
+              </select>
+            </label>
           </div>
         ) : (
           <>
@@ -316,7 +366,20 @@ export default function MilitanteCard({
                 <dt>Preferencia</dt>
                 <dd>{militante.preferencia || "—"}</dd>
               </div>
+              <div class="g-mil-dato">
+                <dt>Subida</dt>
+                <dd>{fechaSubida(militante.creadoEn)}</dd>
+              </div>
             </dl>
+            {militante.ediciones > 0 ? (
+              <button
+                type="button"
+                class="g-btn-link"
+                onClick={() => setVerHistorial(true)}
+              >
+                Ver historial ({militante.ediciones})
+              </button>
+            ) : null}
           </>
         )}
       </div>
@@ -493,6 +556,14 @@ export default function MilitanteCard({
           </>
         )}
       </div>
+
+      {verHistorial ? (
+        <DialogoHistorial
+          militanteId={militante.id}
+          persona={militante.nombres || militante.cedula}
+          onCerrar={() => setVerHistorial(false)}
+        />
+      ) : null}
 
       {aviso ? (
         <DialogoAsignacion

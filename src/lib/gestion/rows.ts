@@ -87,7 +87,7 @@ export function rowToLider(row: Record<string, unknown>): Lider {
 
 export function rowToMilitante(
   row: Record<string, unknown>,
-): Omit<Militante, "duplicado" | "incorrecto"> {
+): Omit<Militante, "duplicado" | "incorrecto" | "ediciones"> {
   return {
     id: row.id as string,
     cedula: row.cedula as string,
