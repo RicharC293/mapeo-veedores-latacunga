@@ -22,6 +22,9 @@ export default function GestionAccesos({ origin, accesosIniciales }: Props) {
   const [etiqueta, setEtiqueta] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [copiadoId, setCopiadoId] = useState<string | null>(null);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [nombreEdit, setNombreEdit] = useState("");
+  const [errorEdit, setErrorEdit] = useState<string | null>(null);
 
   const refrescar = async () =>
     setAccesos(await api<Acceso[]>("/api/gestion/accesos"));
@@ -46,6 +49,20 @@ export default function GestionAccesos({ origin, accesosIniciales }: Props) {
     await refrescar();
   };
 
+  const guardarNombre = async (id: string) => {
+    setErrorEdit(null);
+    try {
+      await api(`/api/gestion/accesos/${id}/renombrar`, {
+        method: "POST",
+        body: JSON.stringify({ etiqueta: nombreEdit }),
+      });
+      setEditandoId(null);
+      await refrescar();
+    } catch (err) {
+      setErrorEdit(err instanceof Error ? err.message : "Error inesperado.");
+    }
+  };
+
   const copiar = async (acceso: Acceso) => {
     const url = `${origin}/acceso/${acceso.token}`;
     try {
@@ -68,8 +85,7 @@ export default function GestionAccesos({ origin, accesosIniciales }: Props) {
             onChange={(e) =>
               setRol(
                 (e.currentTarget as HTMLSelectElement).value as
-                  | "militante"
-                  | "gestor",
+                  "militante" | "gestor",
               )
             }
           >
@@ -78,29 +94,82 @@ export default function GestionAccesos({ origin, accesosIniciales }: Props) {
           </select>
         </label>
         <label>
-          Etiqueta
+          {rol === "gestor" ? "Nombre del gestor" : "Etiqueta"}
           <input
             value={etiqueta}
             onInput={(e) =>
               setEtiqueta((e.currentTarget as HTMLInputElement).value)
             }
-            placeholder="Para quién es este enlace (opcional)"
+            required={rol === "gestor"}
+            placeholder={
+              rol === "gestor"
+                ? "Se muestra en el historial"
+                : "Para quién es este enlace (opcional)"
+            }
           />
         </label>
+        {rol === "gestor" ? (
+          <p class="g-sub">
+            El gestor puede hacer todo en Militancia (cargar, editar, asignar y
+            eliminar) y gestionar veedores, coordinadores, acreditados CDA y la
+            lista negra. Sus cambios quedan registrados con este nombre.
+          </p>
+        ) : (
+          <p class="g-sub">
+            El militante solo puede consultar cobertura, crecimiento,
+            organigrama y estructura.
+          </p>
+        )}
         {error ? <p class="g-error">{error}</p> : null}
         <div class="g-form-actions">
           <button type="submit">Generar</button>
         </div>
       </form>
 
-      <ul class="g-list">
+      <ul class="g-list g-accesos">
         {accesos.length === 0 ? (
           <li class="g-empty">Todavía no hay enlaces generados.</li>
         ) : (
           accesos.map((a) => (
             <li key={a.id} class="g-persona">
-              <div>
-                <strong>{a.etiqueta || "Sin etiqueta"}</strong>
+              <div class="g-persona-info">
+                {editandoId === a.id ? (
+                  <div class="g-acceso-edicion">
+                    <input
+                      value={nombreEdit}
+                      aria-label="Nombre"
+                      onInput={(e) =>
+                        setNombreEdit(
+                          (e.currentTarget as HTMLInputElement).value,
+                        )
+                      }
+                    />
+                    <button
+                      type="button"
+                      class="g-btn-accion"
+                      onClick={() => guardarNombre(a.id)}
+                    >
+                      Guardar
+                    </button>
+                    <button
+                      type="button"
+                      class="g-btn-ghost"
+                      onClick={() => setEditandoId(null)}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                ) : (
+                  <strong>
+                    {a.etiqueta ||
+                      (a.rol === "gestor"
+                        ? "Gestor sin nombre"
+                        : "Sin etiqueta")}
+                  </strong>
+                )}
+                {editandoId === a.id && errorEdit ? (
+                  <p class="g-error">{errorEdit}</p>
+                ) : null}
                 <small>
                   {a.rol === "militante" ? "Militante" : "Gestor"}
                   {a.activo ? "" : " · Revocado"}
@@ -112,6 +181,16 @@ export default function GestionAccesos({ origin, accesosIniciales }: Props) {
               <div class="g-row-actions">
                 {a.activo ? (
                   <>
+                    <button
+                      class="g-btn-ghost"
+                      onClick={() => {
+                        setNombreEdit(a.etiqueta);
+                        setErrorEdit(null);
+                        setEditandoId(a.id);
+                      }}
+                    >
+                      Renombrar
+                    </button>
                     <button class="g-btn-ghost" onClick={() => copiar(a)}>
                       {copiadoId === a.id ? "¡Copiado!" : "Copiar enlace"}
                     </button>

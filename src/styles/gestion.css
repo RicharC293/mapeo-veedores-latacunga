@@ -1375,3 +1375,28 @@ select.g-campo-error {
 .g-historial-despues {
   font-weight: 700;
 }
+
+/* Accesos: edición del nombre en la propia fila y acciones sin sangría (no
+   hay avatar a la izquierda). */
+.g-acceso-edicion {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.g-acceso-edicion input {
+  flex: 1 1 180px;
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+}
+.g-accesos .g-persona:has(.g-persona-info) .g-row-actions {
+  padding-left: 0;
+  flex-wrap: wrap;
+}

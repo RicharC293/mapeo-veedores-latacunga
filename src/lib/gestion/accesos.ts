@@ -49,10 +49,42 @@ export async function crearAcceso(input: {
   etiqueta: string;
 }): Promise<Acceso> {
   const supabase = requireSupabase();
+  // El nombre del gestor es lo que aparece como autor en el historial de
+  // cambios de Militancia, así que no puede quedar vacío.
+  if (input.rol === "gestor" && !input.etiqueta.trim()) {
+    throw new Error("El nombre del gestor es obligatorio.");
+  }
   const token = randomBytes(16).toString("hex");
   const { data, error } = await supabase
     .from("accesos")
     .insert({ token, rol: input.rol, etiqueta: input.etiqueta.trim() })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return rowToAcceso(data);
+}
+
+// Cambia el nombre de un acceso. Para un gestor no puede quedar vacío (es el
+// autor que se registra en el historial).
+export async function renombrarAcceso(
+  id: string,
+  etiqueta: string,
+): Promise<Acceso> {
+  const supabase = requireSupabase();
+  const nombre = etiqueta.trim();
+  const { data: actual, error: errActual } = await supabase
+    .from("accesos")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (errActual) throw new Error(errActual.message);
+  if (rowToAcceso(actual).rol === "gestor" && !nombre) {
+    throw new Error("El nombre del gestor es obligatorio.");
+  }
+  const { data, error } = await supabase
+    .from("accesos")
+    .update({ etiqueta: nombre })
+    .eq("id", id)
     .select()
     .single();
   if (error) throw new Error(error.message);
