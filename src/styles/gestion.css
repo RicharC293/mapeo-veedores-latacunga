@@ -284,6 +284,51 @@
   gap: 6px;
   flex-shrink: 0;
 }
+/* El bloque de texto ocupa el espacio sobrante entre el avatar y las
+   acciones; sin esto space-between lo deja centrado y flotando. */
+.g-persona-info {
+  flex: 1;
+  min-width: 0;
+}
+
+/* En pantallas angostas las acciones bajan debajo del texto (alineadas con
+   él, pasado el avatar) en vez de comprimirlo en una columna estrecha. */
+@media (max-width: 560px) {
+  .g-persona:has(.g-persona-info) {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .g-persona-info {
+    flex: 1 1 calc(100% - 64px);
+  }
+  .g-persona:has(.g-persona-info) .g-row-actions {
+    flex-basis: 100%;
+    padding-left: 58px;
+  }
+}
+
+/* En pantallas anchas el formulario queda fijo a un lado y la lista ocupa
+   el resto, en vez de apilar un formulario enorme sobre una lista angosta. */
+@media (min-width: 1000px) {
+  .g-panel-split {
+    display: grid;
+    grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+    align-items: start;
+    gap: 24px;
+  }
+  .g-form-lateral {
+    position: sticky;
+    top: 76px;
+    margin-top: 0;
+    max-height: calc(100dvh - 96px);
+    overflow-y: auto;
+  }
+  .g-form-lateral input:not([type="checkbox"]),
+  .g-form-lateral select {
+    min-width: 0;
+    width: 100%;
+  }
+}
 
 .g-suplentes {
   list-style: none;

@@ -420,8 +420,8 @@ export default function GestionLideres({
   };
 
   return (
-    <div class="g-panel">
-      <form class="g-form" onSubmit={agregar}>
+    <div class="g-panel g-panel-split">
+      <form class="g-form g-form-lateral" onSubmit={agregar}>
         <p class="g-form-title">Agregar persona</p>
         <label>
           Nombres y apellidos
@@ -505,7 +505,7 @@ export default function GestionLideres({
           ) : (
             <li key={l.id} class="g-persona">
               <Avatar lider={l} />
-              <div>
+              <div class="g-persona-info">
                 <strong>{l.nombres}</strong>
                 <small>
                   {[l.cedula ? `CI ${l.cedula}` : null, l.telefono || null]
