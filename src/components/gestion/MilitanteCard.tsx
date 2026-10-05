@@ -125,11 +125,18 @@ export default function MilitanteCard({
     tipo === "veedor" && juntaSel === "" ? "junta" : null,
   ].filter(Boolean) as string[];
 
-  const bloqueo = militante.incorrecto
-    ? "Corrige los datos marcados en rojo para poder asignar."
-    : militante.duplicado
-      ? "Esta cédula está repetida: elimina o corrige una de las filas."
-      : null;
+  // Para asignar hacen falta cédula válida, celular de 10 dígitos, correo
+  // válido y que la cédula no esté repetida; se dice exactamente qué falta.
+  const malos = (Object.keys(ETIQUETA) as (keyof ErroresMilitante)[])
+    .filter((k) => k !== "nombres" && erroresMilitante(militante)[k])
+    .map((k) => ETIQUETA[k].toLowerCase());
+  if (erroresMilitante(militante).nombres) malos.unshift("nombre");
+  const bloqueo =
+    malos.length > 0
+      ? `Corrige para poder asignar: ${malos.join(", ")}.`
+      : militante.duplicado
+        ? "Esta cédula está repetida: elimina o corrige una de las filas."
+        : null;
   const puedeAsignar = !bloqueo && faltantes.length === 0;
   const ayuda =
     bloqueo ??

@@ -309,9 +309,19 @@ export async function asignarMilitante(
 ): Promise<ResultadoAsignacion> {
   const militante = await obtenerMilitante(id);
   if (!militante) throw new Error("No se encontró el militante.");
+  // Requisitos para asignar: cédula válida, teléfono de 10 dígitos, correo
+  // válido y cédula no repetida en la bandeja.
   if (esFilaIncorrecta(militante)) {
     throw new Error(
       "Corrige los datos marcados en rojo antes de asignar a esta persona.",
+    );
+  }
+  const hayRepetida = (await listMilitantes()).some(
+    (m) => m.id === id && m.duplicado,
+  );
+  if (hayRepetida) {
+    throw new Error(
+      "Esta cédula está repetida en Militancia: elimina o corrige una de las filas antes de asignar.",
     );
   }
 
