@@ -1418,13 +1418,15 @@ select.g-campo-error {
   font-size: 1.15rem;
 }
 .g-necesidad {
+  display: grid;
+  gap: 18px;
   max-width: 720px;
 }
 .g-necesidad-lista {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 10px 20px;
-  margin: 14px 0 0;
+  margin: 0;
 }
 .g-necesidad-lista dt {
   font-size: 0.78rem;
@@ -1435,6 +1437,44 @@ select.g-campo-error {
   margin: 0;
   font-size: 0.92rem;
   font-variant-numeric: tabular-nums;
+}
+.g-necesidad-lista dd strong {
+  font-size: 1.15rem;
+}
+
+/* Pantallas anchas: pastel a la izquierda y las cifras como lista legible a
+   la derecha, en vez de una columna angosta pegada a un lado. */
+@media (min-width: 900px) {
+  .g-necesidad {
+    max-width: none;
+    grid-template-columns: minmax(0, 1.2fr) minmax(300px, 1fr);
+    gap: 28px;
+    align-items: start;
+  }
+  .g-necesidad-lista {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .g-necesidad-lista > div {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .g-necesidad-lista > div:first-child {
+    padding-top: 4px;
+  }
+  .g-necesidad-lista > div:last-child {
+    border-bottom: 0;
+  }
+  .g-necesidad-lista dt {
+    margin-bottom: 2px;
+  }
+  .g-necesidad-lista dd {
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+  .g-necesidad-lista dd strong {
+    font-size: 1.4rem;
+  }
 }
 
 /* ── Auditoría: contraste, táctil, tablet y paginación ────────────────── */
