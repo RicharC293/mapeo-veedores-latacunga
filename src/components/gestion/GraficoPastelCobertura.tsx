@@ -2,7 +2,10 @@ import { useCallback, useMemo } from "preact/hooks";
 import type { ChartData, ChartOptions } from "chart.js";
 import ChartCanvas, { type TemaColores } from "./ChartCanvas";
 import { totalesDeTrack } from "../../lib/gestion/coverage";
-import { COLOR_PENDIENTE, COLOR_VERIFICADO } from "../../lib/gestion/chartColors";
+import {
+  COLOR_PENDIENTE,
+  COLOR_VERIFICADO,
+} from "../../lib/gestion/chartColors";
 import type { CoberturaCanton, CoberturaTrack } from "../../lib/gestion/types";
 
 interface Props {
@@ -17,14 +20,19 @@ function segmentoColor(ctx: {
 }): string {
   if (ctx.dataIndex === 1) {
     return (
-      getComputedStyle(ctx.chart.canvas).getPropertyValue("--series-1").trim() ||
-      "#2a78d6"
+      getComputedStyle(ctx.chart.canvas)
+        .getPropertyValue("--series-1")
+        .trim() || "#2a78d6"
     );
   }
   return ctx.dataIndex === 0 ? COLOR_VERIFICADO : COLOR_PENDIENTE;
 }
 
-export default function GraficoPastelCobertura({ track, titulo, canton }: Props) {
+export default function GraficoPastelCobertura({
+  track,
+  titulo,
+  canton,
+}: Props) {
   const { total, cubiertos, verificados } = totalesDeTrack(track, canton);
   const sinVerificar = Math.max(0, cubiertos - verificados);
   const sinCubrir = Math.max(0, total - cubiertos);
@@ -74,8 +82,18 @@ export default function GraficoPastelCobertura({ track, titulo, canton }: Props)
   );
 
   if (total === 0) {
-    return <p class="g-empty">No hay datos para {titulo.toLowerCase()} todavía.</p>;
+    return (
+      <p class="g-empty">No hay datos para {titulo.toLowerCase()} todavía.</p>
+    );
   }
 
-  return <ChartCanvas type="doughnut" data={data} buildOptions={buildOptions} height={280} />;
+  return (
+    <ChartCanvas
+      type="doughnut"
+      data={data}
+      buildOptions={buildOptions}
+      height={280}
+      ariaLabel={`Gráfico de pastel: ${titulo}. ${verificados} verificados, ${sinVerificar} sin verificar y ${sinCubrir} sin cubrir de ${total}.`}
+    />
+  );
 }

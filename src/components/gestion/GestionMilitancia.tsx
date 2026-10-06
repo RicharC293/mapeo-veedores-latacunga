@@ -1,15 +1,15 @@
 import { Fragment } from "preact";
-import { useMemo, useRef, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import * as XLSX from "xlsx";
 import PersonaForm from "./PersonaForm";
 import MilitanteCard from "./MilitanteCard";
-import type { ParroquiaFeature, Recinto } from "../../lib/types";
+import type { ParroquiaBasica, Recinto } from "../../lib/types";
 import type { Lider, Militante, TipoMilitancia } from "../../lib/gestion/types";
 import type { ResultadoAsignacion } from "../../lib/gestion/militancia";
 import { normalizar, title } from "../../lib/format";
 
 interface Props {
-  parroquias: ParroquiaFeature[];
+  parroquias: ParroquiaBasica[];
   recintos: Recinto[];
   lideres: Lider[];
   militantesIniciales: Militante[];
@@ -19,6 +19,9 @@ type TipoParroquiaFiltro = "todas" | "urbanas" | "rurales";
 type Vista = "todos" | "incorrectos" | "duplicados" | "sinrecinto";
 type Panel = null | "importar" | "agregar";
 type Orden = "recientes" | "antiguos" | "responsable" | "cedula";
+
+// Tarjetas que se muestran por tanda.
+const TANDA = 30;
 
 const ORDENES: { clave: Orden; etiqueta: string }[] = [
   { clave: "recientes", etiqueta: "Subida: más recientes primero" },
@@ -143,6 +146,15 @@ export default function GestionMilitancia({
   const [vista, setVista] = useState<Vista>("todos");
   const [busqueda, setBusqueda] = useState("");
   const [orden, setOrden] = useState<Orden>("recientes");
+  // Se dibujan por tandas: cada tarjeta lleva varios desplegables y con
+  // cientos de personas el navegador se pone lento.
+  const [visibles, setVisibles] = useState(TANDA);
+  const [grupoConfirmar, setGrupoConfirmar] = useState<{
+    cedula: string;
+    conservar: "reciente" | "antigua";
+  } | null>(null);
+  const [grupoEnCurso, setGrupoEnCurso] = useState(false);
+  const [grupoError, setGrupoError] = useState<string | null>(null);
   const [filtroResponsable, setFiltroResponsable] =
     useState<FiltroResponsable>("todos");
   // Con la bandeja vacía lo primero que hace falta es cargar gente.
@@ -277,6 +289,37 @@ export default function GestionMilitancia({
     }
     return copia;
   }, [filtrados, orden, nombreResponsable, filasPorCedula]);
+
+  // Al cambiar filtros, búsqueda u orden se vuelve a la primera tanda.
+  useEffect(() => {
+    setVisibles(TANDA);
+  }, [vista, busqueda, filtroResponsable, orden]);
+
+  // Borra las filas repetidas de una cédula y deja solo una: la más reciente
+  // o la más antigua.
+  const dejarUna = async (
+    cedula: string,
+    conservar: "reciente" | "antigua",
+  ) => {
+    setGrupoEnCurso(true);
+    setGrupoError(null);
+    try {
+      const filas = militantes
+        .filter((m) => m.cedula === cedula)
+        .sort((a, b) => Date.parse(a.creadoEn) - Date.parse(b.creadoEn));
+      const quedarse = conservar === "reciente" ? filas.length - 1 : 0;
+      for (const [i, f] of filas.entries()) {
+        if (i === quedarse) continue;
+        await api(`/api/gestion/militancia/${f.id}`, { method: "DELETE" });
+      }
+      setGrupoConfirmar(null);
+    } catch (err) {
+      setGrupoError(err instanceof Error ? err.message : "Error inesperado.");
+    } finally {
+      setGrupoEnCurso(false);
+      await refrescar();
+    }
+  };
 
   const hayFiltros =
     vista !== "todos" || busqueda !== "" || filtroResponsable !== "todos";
@@ -717,24 +760,86 @@ export default function GestionMilitancia({
       ) : (
         <>
           <p class="g-mil-contador" aria-live="polite">
-            {hayFiltros
-              ? `Mostrando ${filtrados.length} de ${militantes.length}`
-              : `${militantes.length} en la bandeja`}
+            {`Mostrando ${Math.min(visibles, ordenados.length)} de ${ordenados.length}`}
+            {hayFiltros ? ` · ${militantes.length} en la bandeja` : ""}
           </p>
           <ul class="g-mil-lista">
-            {ordenados.map((m, i) => {
+            {ordenados.slice(0, visibles).map((m, i, lista) => {
               // Con el orden por cédula, un encabezado abre cada grupo de
               // cédulas repetidas.
               const veces = filasPorCedula.get(m.cedula) ?? 1;
               const abreGrupo =
                 orden === "cedula" &&
                 veces > 1 &&
-                ordenados[i - 1]?.cedula !== m.cedula;
+                lista[i - 1]?.cedula !== m.cedula;
               return (
                 <Fragment key={m.id}>
                   {abreGrupo ? (
                     <li class="g-mil-grupo" key={`g-${m.cedula}`}>
-                      Cédula {m.cedula} · {veces} filas repetidas
+                      <span>
+                        Cédula {m.cedula} · {veces} filas repetidas
+                      </span>
+                      {grupoConfirmar?.cedula === m.cedula ? (
+                        <span class="g-mil-grupo-acciones">
+                          <span>
+                            ¿Eliminar {veces - 1} fila(s) y conservar la más{" "}
+                            {grupoConfirmar.conservar === "reciente"
+                              ? "reciente"
+                              : "antigua"}
+                            ?
+                          </span>
+                          <button
+                            type="button"
+                            class="g-btn-danger-ghost"
+                            disabled={grupoEnCurso}
+                            onClick={() =>
+                              dejarUna(m.cedula, grupoConfirmar.conservar)
+                            }
+                          >
+                            {grupoEnCurso ? "Eliminando…" : "Eliminar"}
+                          </button>
+                          <button
+                            type="button"
+                            class="g-btn-ghost"
+                            disabled={grupoEnCurso}
+                            onClick={() => setGrupoConfirmar(null)}
+                          >
+                            No
+                          </button>
+                        </span>
+                      ) : (
+                        <span class="g-mil-grupo-acciones">
+                          <button
+                            type="button"
+                            class="g-btn-ghost"
+                            onClick={() =>
+                              setGrupoConfirmar({
+                                cedula: m.cedula,
+                                conservar: "reciente",
+                              })
+                            }
+                          >
+                            Conservar la más reciente
+                          </button>
+                          <button
+                            type="button"
+                            class="g-btn-ghost"
+                            onClick={() =>
+                              setGrupoConfirmar({
+                                cedula: m.cedula,
+                                conservar: "antigua",
+                              })
+                            }
+                          >
+                            Conservar la más antigua
+                          </button>
+                        </span>
+                      )}
+                      {grupoError && grupoConfirmar?.cedula === m.cedula ? (
+                        <span class="g-error" role="alert">
+                          {grupoError}
+                        </span>
+                      ) : null}
                     </li>
                   ) : null}
                   <MilitanteCard
@@ -781,6 +886,18 @@ export default function GestionMilitancia({
               );
             })}
           </ul>
+          {ordenados.length > visibles ? (
+            <div class="g-mil-mas">
+              <button
+                type="button"
+                class="g-btn-ghost"
+                onClick={() => setVisibles(visibles + TANDA)}
+              >
+                Mostrar {Math.min(TANDA, ordenados.length - visibles)} más (
+                quedan {ordenados.length - visibles})
+              </button>
+            </div>
+          ) : null}
         </>
       )}
     </div>

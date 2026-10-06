@@ -41,29 +41,32 @@ export default function DialogoAsignacion({
       ref={ref}
       class="g-dialogo"
       aria-labelledby="g-dialogo-titulo"
+      aria-describedby="g-dialogo-desc"
       onClose={onCerrar}
     >
       <h3 id="g-dialogo-titulo">
         {confirmar ? "Se asignará como suplente" : "No se puede asignar"}
       </h3>
-      {confirmar ? (
-        <p>
-          {lugar} ya tiene como titular a <strong>{aviso.titular}</strong>.{" "}
-          <strong>{persona}</strong> quedará como suplente.
-        </p>
-      ) : (
-        <>
+      <div id="g-dialogo-desc">
+        {confirmar ? (
           <p>
-            {lugar} ya tiene titular (<strong>{aviso.titular}</strong>) y
-            suplente (<strong>{aviso.suplente}</strong>). No quedan cupos
-            disponibles.
+            {lugar} ya tiene como titular a <strong>{aviso.titular}</strong>.{" "}
+            <strong>{persona}</strong> quedará como suplente.
           </p>
-          <p class="g-sub">
-            Desde Militancia solo se asigna un suplente. Para agregar más, hazlo
-            desde {seccion}.
-          </p>
-        </>
-      )}
+        ) : (
+          <>
+            <p>
+              {lugar} ya tiene titular (<strong>{aviso.titular}</strong>) y
+              suplente (<strong>{aviso.suplente}</strong>). No quedan cupos
+              disponibles.
+            </p>
+            <p class="g-sub">
+              Desde Militancia solo se asigna un suplente. Para agregar más,
+              hazlo desde {seccion}.
+            </p>
+          </>
+        )}
+      </div>
       <div class="g-form-actions">
         {confirmar ? (
           <>

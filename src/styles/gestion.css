@@ -17,6 +17,9 @@
   z-index: 20;
 }
 .g-topbar-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   flex-shrink: 0;
   color: var(--muted);
   text-decoration: none;
@@ -35,10 +38,13 @@
   appearance: none;
   -webkit-appearance: none;
   flex-shrink: 0;
-  width: 26px;
-  height: 18px;
-  margin: 0;
-  padding: 0;
+  /* Área táctil de 44px con el icono de 26x18 centrado dentro. */
+  width: 44px;
+  height: 44px;
+  margin: -13px -9px -13px 0;
+  padding: 13px 9px;
+  background-clip: content-box;
+  background-origin: content-box;
   background-image:
     linear-gradient(var(--ink), var(--ink)),
     linear-gradient(var(--ink), var(--ink)),
@@ -360,8 +366,8 @@
 }
 .g-btn-danger-ghost {
   background: none;
-  border: 1px solid #c94b4b;
-  color: #c94b4b;
+  border: 1px solid var(--error);
+  color: var(--error);
   border-radius: 8px;
   padding: 6px 10px;
   cursor: pointer;
@@ -369,7 +375,7 @@
   flex-shrink: 0;
 }
 .g-btn-danger {
-  background: #c94b4b;
+  background: var(--error-solid);
   color: #fff;
   border: 0;
   border-radius: 8px;
@@ -404,8 +410,8 @@
   border-color: #2f9e57;
 }
 .g-btn-icon-danger {
-  color: #c94b4b;
-  border-color: #c94b4b;
+  color: var(--error);
+  border-color: var(--error);
 }
 .g-sr-only {
   position: absolute;
@@ -459,7 +465,7 @@
   padding: 11px 14px;
 }
 .g-form-danger {
-  border-color: #c94b4b;
+  border-color: var(--error);
 }
 .g-form-title {
   margin: 0;
@@ -480,7 +486,7 @@
   font-weight: 700;
 }
 .g-error {
-  color: #c94b4b;
+  color: var(--error);
   font-size: 0.85rem;
   margin: 0;
 }
@@ -610,7 +616,7 @@ select.g-campo-error {
   min-width: 210px;
 }
 .g-table-row-error {
-  color: #c94b4b;
+  color: var(--error);
   font-size: 0.76rem;
   margin-top: 4px;
   max-width: 160px;
@@ -738,6 +744,8 @@ select.g-campo-error {
   --series-1: #2a78d6;
   --series-2: #eb6834;
   --series-3: #8b5cf6;
+  --necesidad-tenemos: #1d5fb8;
+  --necesidad-faltan: #b8501a;
   --chart-surface: var(--panel);
   --chart-grid: #e1e0d9;
   --chart-axis: #c3c2b7;
@@ -1427,4 +1435,66 @@ select.g-campo-error {
   margin: 0;
   font-size: 0.92rem;
   font-variant-numeric: tabular-nums;
+}
+
+/* ── Auditoría: contraste, táctil, tablet y paginación ────────────────── */
+.g-mil input::placeholder,
+.g-mil textarea::placeholder,
+.g-form input::placeholder,
+.g-form textarea::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+/* Objetivos táctiles de 44px en pantallas táctiles o angostas. */
+@media (pointer: coarse), (max-width: 560px) {
+  .g-btn-accion,
+  .g-chip-filtro,
+  .g-btn-link,
+  .g-sidebar-link,
+  .g-mil .g-btn-ghost,
+  .g-mil .g-btn-danger-ghost,
+  .g-mil-card select,
+  .g-mil-card input,
+  .g-mil-buscar input,
+  .g-mil-buscar select {
+    min-height: 44px;
+  }
+}
+
+/* Tablet: datos y asignación lado a lado, acciones en una fila debajo. */
+@media (min-width: 601px) and (max-width: 960px) {
+  .g-mil-card {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .g-mil-acciones {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .g-mil-acciones > .g-btn-accion {
+    flex: 0 1 180px;
+  }
+}
+
+/* Encabezado de un grupo de cédulas repetidas, con su acción masiva. */
+.g-mil-grupo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+.g-mil-grupo-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-weight: 400;
+}
+.g-mil-mas {
+  display: flex;
+  justify-content: center;
+  padding: 6px 0;
 }

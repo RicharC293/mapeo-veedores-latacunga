@@ -57,6 +57,8 @@ interface Props {
   data: ChartData;
   buildOptions: (colores: TemaColores) => ChartOptions;
   height?: number;
+  // Texto alternativo del gráfico (el lienzo no es legible por sí solo).
+  ariaLabel?: string;
 }
 
 export default function ChartCanvas({
@@ -64,6 +66,7 @@ export default function ChartCanvas({
   data,
   buildOptions,
   height = 300,
+  ariaLabel,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const chartRef = useRef<Chart | null>(null);
@@ -117,7 +120,11 @@ export default function ChartCanvas({
   return (
     <div class="g-chart">
       <div class="g-chart-wrap" style={{ height: `${height}px` }}>
-        <canvas ref={canvasRef} />
+        <canvas
+          ref={canvasRef}
+          role={ariaLabel ? "img" : undefined}
+          aria-label={ariaLabel}
+        />
       </div>
     </div>
   );

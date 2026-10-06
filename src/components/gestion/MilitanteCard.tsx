@@ -1,7 +1,7 @@
 import { useMemo, useState } from "preact/hooks";
 import { listJuntasDeRecinto } from "../../lib/gestion/juntas";
 import { title } from "../../lib/format";
-import type { ParroquiaFeature, Recinto } from "../../lib/types";
+import type { ParroquiaBasica, Recinto } from "../../lib/types";
 import type { Lider, Militante, TipoMilitancia } from "../../lib/gestion/types";
 import type {
   AsignarDestino,
@@ -17,7 +17,7 @@ import {
 
 interface Props {
   militante: Militante;
-  parroquias: ParroquiaFeature[];
+  parroquias: ParroquiaBasica[];
   recintos: Recinto[];
   lideres: Lider[];
   onAsignar: (
@@ -67,7 +67,7 @@ function fechaSubida(iso: string): string {
   return Number.isNaN(d.getTime()) ? "—" : formatoFecha.format(d);
 }
 
-function ordenarPorNombre(parroquias: ParroquiaFeature[]) {
+function ordenarPorNombre(parroquias: ParroquiaBasica[]) {
   return parroquias
     .slice()
     .sort((a, b) => a.properties.name.localeCompare(b.properties.name));

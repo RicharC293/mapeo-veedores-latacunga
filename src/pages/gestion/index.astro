@@ -117,10 +117,8 @@ const cedulasUnicas = new Set(
       Gente que tenemos vs. puestos que necesitamos
     </h2>
     <p class="g-sub">
-      El universo necesario es el total de veedores, coordinadores y acreditados
-      CDA (un titular por junta, por recinto y por recinto CDA). Se compara con
-      la militancia sin repetidos: bandeja y ya asignados, cada persona contada
-      una sola vez por cédula.
+      Puestos necesarios (un titular por junta, recinto y recinto CDA) frente a
+      la militancia sin repetidos, una persona por cédula.
     </p>
     <GraficoNecesidad
       client:load
@@ -137,15 +135,15 @@ const cedulasUnicas = new Set(
 
   <p>
     Usa el menú de la izquierda para gestionar{" "}
-    <a href="/gestion/veedores">veedores</a>,
+    <a href="/gestion/veedores">veedores</a>,{" "}
     <a href="/gestion/coordinadores">coordinadores</a>
     {esAdmin ? (
       <>
         , <a href="/gestion/lideres">líderes</a>
       </>
     ) : null}{" "}
-    y la
-    <a href="/gestion/lista-negra">lista negra</a>, o revisar la
+    y la{" "}
+    <a href="/gestion/lista-negra">lista negra</a>, o revisar la{" "}
     <a href="/gestion/cobertura">cobertura</a>, el{" "}
     <a href="/gestion/crecimiento">crecimiento diario</a> y el{" "}
     <a href="/gestion/organigrama">organigrama</a>.

@@ -24,7 +24,9 @@ const lideres = await listLideres();
   </p>
   <GestionMilitancia
     client:load
-    parroquias={data.parroquias.features}
+    parroquias={data.parroquias.features.map(({ properties }) => ({
+      properties,
+    }))}
     recintos={data.recintos}
     lideres={lideres}
     militantesIniciales={militantes}

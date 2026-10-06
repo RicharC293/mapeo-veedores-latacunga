@@ -15,6 +15,10 @@ export interface ParroquiaFeature {
   };
 }
 
+// Lo mínimo de una parroquia para pantallas que no dibujan mapa: sin la
+// geometría, que pesa cientos de KB y no hace falta en esos componentes.
+export type ParroquiaBasica = Pick<ParroquiaFeature, "properties">;
+
 export interface ParroquiasCollection {
   type: "FeatureCollection";
   features: ParroquiaFeature[];

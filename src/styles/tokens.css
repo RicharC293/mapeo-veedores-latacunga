@@ -15,6 +15,7 @@
   --chip: #e6edf4;
   --focus: #2e75b6;
   --error: #b3261e;
+  --error-solid: #b3261e;
   --font:
     "Atkinson Hyperlegible", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   box-sizing: border-box;
@@ -39,6 +40,7 @@
     --chip: #1c3043;
     --focus: #7db3e6;
   --error: #ff8f86;
+  --error-solid: #b3261e;
   }
 }
 :root[data-theme="dark"] {
@@ -58,6 +60,7 @@
   --chip: #1c3043;
   --focus: #7db3e6;
   --error: #ff8f86;
+  --error-solid: #b3261e;
 }
 *,
 *::before,

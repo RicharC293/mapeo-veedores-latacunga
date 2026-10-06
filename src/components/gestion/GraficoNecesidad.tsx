@@ -18,10 +18,18 @@ interface Props {
   unicas: number;
 }
 
-// Contraste suficiente para la etiqueta blanca dentro de cada porción, y sin
-// el verde/rojo de "cubierto / sin cubrir" del resto de la gestión.
-const COLOR_TENEMOS = "#1d5fb8";
-const COLOR_FALTAN = "#b8501a";
+// Colores definidos como tokens (--necesidad-*) en .g-chart; contraste
+// suficiente para la etiqueta blanca y sin el verde/rojo de "cubierto / sin
+// cubrir" del resto de la gestión.
+function colorDePorcion(ctx: {
+  dataIndex: number;
+  chart: { canvas: HTMLCanvasElement };
+}): string {
+  const cs = getComputedStyle(ctx.chart.canvas);
+  return ctx.dataIndex === 0
+    ? cs.getPropertyValue("--necesidad-tenemos").trim() || "#1d5fb8"
+    : cs.getPropertyValue("--necesidad-faltan").trim() || "#b8501a";
+}
 
 export default function GraficoNecesidad({
   veedores,
@@ -50,7 +58,7 @@ export default function GraficoNecesidad({
       datasets: [
         {
           data: [tenemos, faltan],
-          backgroundColor: [COLOR_TENEMOS, COLOR_FALTAN],
+          backgroundColor: colorDePorcion,
           borderWidth: 2,
           borderColor: "transparent",
         },
@@ -127,6 +135,7 @@ export default function GraficoNecesidad({
         data={data}
         buildOptions={buildOptions}
         height={440}
+        ariaLabel={`Gráfico de pastel: ${unicas} personas distintas en la militancia frente a ${universo} puestos necesarios; ${excedente > 0 ? `sobran ${excedente}` : `faltan ${faltan}`}.`}
       />
       <dl class="g-necesidad-lista">
         <div>

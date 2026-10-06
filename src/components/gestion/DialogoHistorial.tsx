@@ -64,8 +64,16 @@ export default function DialogoHistorial({
       onClose={onCerrar}
     >
       <h3 id="g-historial-titulo">Historial de {persona}</h3>
-      {error ? <p class="g-error">{error}</p> : null}
-      {!error && ediciones === null ? <p class="g-sub">Cargando…</p> : null}
+      {error ? (
+        <p class="g-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {!error && ediciones === null ? (
+        <p class="g-sub" role="status">
+          Cargando…
+        </p>
+      ) : null}
       {ediciones && ediciones.length === 0 ? (
         <p class="g-sub">Esta persona no tiene ediciones registradas.</p>
       ) : null}
