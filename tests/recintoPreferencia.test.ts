@@ -33,6 +33,9 @@ describe("recintoDePreferencia", () => {
     ["Sufraga en las escuela Semillitas de Vida", 6461],
     ["Parroquia Juan Montalvo Luis F Vivero", 2013],
     ["En la Cocha votan", 1605],
+    ["Colegio Juan Abel Echeverría", 6331],
+    ["Sufraga en Juan Abel Echeverria", 6331],
+    ["U.E. 14 de Julio", 7995],
   ])("reconoce %s", (texto, esperado) => {
     expect(cod(texto)).toBe(esperado);
   });

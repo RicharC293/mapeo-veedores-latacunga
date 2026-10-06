@@ -137,6 +137,18 @@ export function recintoDePreferencia(
   if (candidatos.length === 0) return null;
   if (candidatos.length === 1) return candidatos[0];
 
+  // Si el texto coincide por completo con el nombre de un único recinto
+  // ("Juan Abel Echeverría" = "U.E. JUAN ABEL ECHEVERRIA"), ese gana frente a
+  // otros que solo lo contienen ("14 DE JULIO - JUAN ABEL ECHEVERRIA").
+  const exactos = candidatos.filter((r) => {
+    const propias = tokens(r.nombre).filter((t) => !esGenerica(t));
+    return (
+      propias.length === distintivas.length &&
+      distintivas.every((t) => propias.some((p) => parecidas(t, p)))
+    );
+  });
+  if (exactos.length === 1) return exactos[0];
+
   const puntaje = candidatos
     .map((r) => ({ r, racha: rachaMaxima(todas, tokens(r.nombre)) }))
     .sort((a, b) => b.racha - a.racha);

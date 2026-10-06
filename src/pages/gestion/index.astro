@@ -6,6 +6,8 @@ import { listCoordinadores } from "../../lib/gestion/coordinadores";
 import { listLideres } from "../../lib/gestion/lideres";
 import { listListaNegra } from "../../lib/gestion/listaNegra";
 import { listAcreditadosCda } from "../../lib/gestion/acreditadosCda";
+import { listMilitantes } from "../../lib/gestion/militancia";
+import GraficoNecesidad from "../../components/gestion/GraficoNecesidad";
 import { calcularCobertura } from "../../lib/gestion/coverage";
 import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
 
@@ -15,14 +17,21 @@ if (!PAGINAS_GESTION.index.includes(Astro.locals.rol)) {
 const esAdmin = Astro.locals.rol === "administrador";
 
 const data = await getMapData();
-const [veedores, coordinadores, lideres, listaNegra, acreditadosCda] =
-  await Promise.all([
-    listVeedores(),
-    listCoordinadores(),
-    listLideres(),
-    listListaNegra(),
-    listAcreditadosCda(),
-  ]);
+const [
+  veedores,
+  coordinadores,
+  lideres,
+  listaNegra,
+  acreditadosCda,
+  militantes,
+] = await Promise.all([
+  listVeedores(),
+  listCoordinadores(),
+  listLideres(),
+  listListaNegra(),
+  listAcreditadosCda(),
+  listMilitantes(),
+]);
 const cobertura = calcularCobertura(
   data.recintos,
   veedores,
@@ -40,6 +49,22 @@ const veedoresTitulares = veedores.filter((v) => v.tipo === "titular").length;
 const coordinadoresTitulares = coordinadores.filter(
   (c) => c.tipo === "titular",
 ).length;
+const cdaTitulares = acreditadosCda.filter((a) => a.tipo === "titular").length;
+// Puestos que se necesitan: una junta = un veedor titular, un recinto = un
+// coordinador titular y cada recinto CDA = un acreditado titular.
+const recintosCda = data.recintos.filter((r) => r.cda).length;
+// Militancia sin repetidos: cada persona cuenta una sola vez por cédula,
+// aunque esté duplicada en la bandeja o a la vez en la bandeja y asignada.
+const registros =
+  militantes.length +
+  veedores.length +
+  coordinadores.length +
+  acreditadosCda.length;
+const cedulasUnicas = new Set(
+  [...militantes, ...veedores, ...coordinadores, ...acreditadosCda]
+    .map((p) => p.cedula.trim())
+    .filter(Boolean),
+);
 ---
 
 <GestionLayout title="Gestión" activo="index">
@@ -87,6 +112,29 @@ const coordinadoresTitulares = coordinadores.filter(
     </a>
   </div>
 
+  <section class="g-resumen-grafico" aria-labelledby="g-necesidad-titulo">
+    <h2 id="g-necesidad-titulo">
+      Gente que tenemos vs. puestos que necesitamos
+    </h2>
+    <p class="g-sub">
+      El universo necesario es el total de veedores, coordinadores y acreditados
+      CDA (un titular por junta, por recinto y por recinto CDA). Se compara con
+      la militancia sin repetidos: bandeja y ya asignados, cada persona contada
+      una sola vez por cédula.
+    </p>
+    <GraficoNecesidad
+      client:load
+      registros={registros}
+      unicas={cedulasUnicas.size}
+      veedores={{ necesarios: totalJuntas, cubiertos: veedoresTitulares }}
+      coordinadores={{
+        necesarios: data.recintos.length,
+        cubiertos: coordinadoresTitulares,
+      }}
+      cda={{ necesarios: recintosCda, cubiertos: cdaTitulares }}
+    />
+  </section>
+
   <p>
     Usa el menú de la izquierda para gestionar{" "}
     <a href="/gestion/veedores">veedores</a>,
@@ -95,7 +143,8 @@ const coordinadoresTitulares = coordinadores.filter(
       <>
         , <a href="/gestion/lideres">líderes</a>
       </>
-    ) : null} y la
+    ) : null}{" "}
+    y la
     <a href="/gestion/lista-negra">lista negra</a>, o revisar la
     <a href="/gestion/cobertura">cobertura</a>, el{" "}
     <a href="/gestion/crecimiento">crecimiento diario</a> y el{" "}

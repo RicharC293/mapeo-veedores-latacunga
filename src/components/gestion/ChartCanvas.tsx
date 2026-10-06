@@ -3,6 +3,7 @@ import {
   Chart,
   BarController,
   DoughnutController,
+  PieController,
   CategoryScale,
   LinearScale,
   BarElement,
@@ -17,6 +18,7 @@ import ChartDataLabels from "chartjs-plugin-datalabels";
 Chart.register(
   BarController,
   DoughnutController,
+  PieController,
   CategoryScale,
   LinearScale,
   BarElement,
@@ -51,7 +53,7 @@ export function leerColoresTema(el: HTMLElement): TemaColores {
 }
 
 interface Props {
-  type: "bar" | "doughnut";
+  type: "bar" | "doughnut" | "pie";
   data: ChartData;
   buildOptions: (colores: TemaColores) => ChartOptions;
   height?: number;
