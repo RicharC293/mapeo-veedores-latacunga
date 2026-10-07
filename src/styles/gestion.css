@@ -1538,3 +1538,43 @@ select.g-campo-error {
   justify-content: center;
   padding: 6px 0;
 }
+
+/* Resumen: cuenta regresiva a las elecciones y ritmo necesario. */
+.g-cuenta {
+  display: grid;
+  gap: 14px 32px;
+  margin: 0 0 20px;
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+.g-cuenta h2,
+.g-cuenta h3 {
+  margin: 0 0 4px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+.g-cuenta-cifra {
+  margin: 0;
+  font-size: clamp(1.35rem, 5vw, 1.9rem);
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.g-cuenta-fecha {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+@media (min-width: 720px) {
+  .g-cuenta {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    align-items: start;
+  }
+  .g-cuenta-ritmo {
+    padding-left: 32px;
+    border-left: 1px solid var(--line);
+  }
+}

@@ -8,6 +8,7 @@ import { listListaNegra } from "../../lib/gestion/listaNegra";
 import { listAcreditadosCda } from "../../lib/gestion/acreditadosCda";
 import { listMilitantes } from "../../lib/gestion/militancia";
 import GraficoNecesidad from "../../components/gestion/GraficoNecesidad";
+import CuentaRegresivaElecciones from "../../components/gestion/CuentaRegresivaElecciones";
 import { calcularCobertura } from "../../lib/gestion/coverage";
 import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
 
@@ -65,11 +66,21 @@ const cedulasUnicas = new Set(
     .map((p) => p.cedula.trim())
     .filter(Boolean),
 );
+// Personas que aún faltan para cubrir todos los puestos (mismo cálculo del
+// pastel): universo necesario menos la militancia sin repetidos.
+const universoPuestos = totalJuntas + data.recintos.length + recintosCda;
+const faltanPersonas = Math.max(0, universoPuestos - cedulasUnicas.size);
 ---
 
 <GestionLayout title="Gestión" activo="index">
   <h1>Gestión de veedores y coordinadores</h1>
   <p class="g-sub">Panel de organización de la veeduría electoral.</p>
+
+  <CuentaRegresivaElecciones
+    client:load
+    faltan={faltanPersonas}
+    ahoraInicial={Date.now()}
+  />
 
   <div class="g-summary">
     <a href="/gestion/veedores">
@@ -142,8 +153,7 @@ const cedulasUnicas = new Set(
         , <a href="/gestion/lideres">líderes</a>
       </>
     ) : null}{" "}
-    y la{" "}
-    <a href="/gestion/lista-negra">lista negra</a>, o revisar la{" "}
+    y la <a href="/gestion/lista-negra">lista negra</a>, o revisar la{" "}
     <a href="/gestion/cobertura">cobertura</a>, el{" "}
     <a href="/gestion/crecimiento">crecimiento diario</a> y el{" "}
     <a href="/gestion/organigrama">organigrama</a>.
