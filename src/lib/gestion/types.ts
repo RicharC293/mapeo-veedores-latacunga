@@ -196,16 +196,9 @@ export interface CoberturaRecinto {
   juntasCubiertasVerificado: number;
   tieneCoordinadorVerificado: boolean;
   pctVerificado: number;
-  // Progreso informativo, independiente entre sí (a diferencia de "pct" arriba,
-  // que exige veedor Y coordinador para contar una junta como cubierta).
-  // pct* = % con titular asignado; pct*Verificado = % (sobre el mismo total)
-  // cuyo titular ya fue contactado.
-  // juntasConVeedor: juntas del recinto con veedor titular, sin mirar el
-  // coordinador (es el numerador de pctVeedores).
-  juntasConVeedor: number;
-  juntasConVeedorVerificado: number;
-  pctVeedores: number;
-  pctVeedoresVerificado: number;
+  // Progreso por rol de coordinador y CDA, independiente entre sí. Para los
+  // veedores la medida es "pct": una junta cuenta como cubierta solo con
+  // veedor titular Y coordinador titular en su recinto.
   pctCoordinador: number;
   pctCoordinadorVerificado: number;
   // Acreditación CDA: solo aplica cuando el recinto es un Centro de
@@ -221,10 +214,12 @@ export interface CoberturaRecinto {
 export interface CoberturaParroquia {
   parroquiaCodigo: number;
   totalJuntas: number;
-  juntasConVeedor: number;
-  juntasConVeedorVerificado: number;
-  pctVeedores: number;
-  pctVeedoresVerificado: number;
+  // Juntas cubiertas: con veedor titular en un recinto que tiene coordinador
+  // titular (y, "Verificada", con ambos ya contactados).
+  juntasCubiertas: number;
+  juntasCubiertasVerificado: number;
+  pctCobertura: number;
+  pctCoberturaVerificada: number;
   totalRecintos: number;
   recintosConCoordinador: number;
   recintosConCoordinadorVerificado: number;
@@ -243,10 +238,12 @@ export interface CoberturaParroquia {
 // parroquiaCodigo).
 export interface CoberturaCanton {
   totalJuntas: number;
-  juntasConVeedor: number;
-  juntasConVeedorVerificado: number;
-  pctVeedores: number;
-  pctVeedoresVerificado: number;
+  // Juntas cubiertas: con veedor titular en un recinto que tiene coordinador
+  // titular (y, "Verificada", con ambos ya contactados).
+  juntasCubiertas: number;
+  juntasCubiertasVerificado: number;
+  pctCobertura: number;
+  pctCoberturaVerificada: number;
   totalRecintos: number;
   recintosConCoordinador: number;
   recintosConCoordinadorVerificado: number;

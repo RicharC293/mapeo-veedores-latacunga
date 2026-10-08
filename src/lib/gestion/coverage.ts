@@ -66,10 +66,6 @@ export function calcularCobertura(
       juntasCubiertasVerificado,
       tieneCoordinadorVerificado,
       pctVerificado: pct(juntasCubiertasVerificado, juntas.length),
-      juntasConVeedor: juntasConVeedorAqui,
-      juntasConVeedorVerificado: juntasConVeedorVerificadoAqui,
-      pctVeedores: pct(juntasConVeedorAqui, juntas.length),
-      pctVeedoresVerificado: pct(juntasConVeedorVerificadoAqui, juntas.length),
       pctCoordinador: tieneCoordinadorTitular ? 100 : 0,
       pctCoordinadorVerificado: tieneCoordinadorVerificado ? 100 : 0,
       cdaAplica: recinto.cda,
@@ -81,13 +77,14 @@ export function calcularCobertura(
   });
 }
 
-// Progreso informativo por parroquia para el mapa público: cuántas juntas
-// tienen veedor titular asignado y cuántos recintos tienen coordinador
-// titular asignado, cada uno independiente del otro (a diferencia de
-// calcularCobertura(), que exige ambos para contar una junta como cubierta).
-// Los campos "*Verificado" son, sobre el mismo total, cuántos de esos
-// titulares ya fueron contactados. Los campos "*Cda" solo cuentan sobre los
-// recintos CDA de la parroquia (totalRecintosCda puede ser 0).
+// Progreso por parroquia para el mapa público y las gráficas. La cobertura de
+// veedores es la completa: una junta cuenta como cubierta si tiene veedor
+// titular Y su recinto tiene coordinador titular (igual que calcularCobertura()).
+// Los recintos con coordinador y los recintos CDA con acreditado se cuentan
+// aparte, cada uno sobre su propio total. Los campos "*Verificado" son, sobre
+// el mismo total, cuántos de esos titulares ya fueron contactados; los
+// "*Cda" solo cuentan sobre los recintos CDA de la parroquia
+// (totalRecintosCda puede ser 0).
 export function calcularCoberturaPorParroquia(
   parroquias: ParroquiaFeature[],
   recintos: Recinto[],
@@ -122,10 +119,10 @@ export function calcularCoberturaPorParroquia(
     resultado[f.properties.code] = {
       parroquiaCodigo: f.properties.code,
       totalJuntas: 0,
-      juntasConVeedor: 0,
-      juntasConVeedorVerificado: 0,
-      pctVeedores: 0,
-      pctVeedoresVerificado: 0,
+      juntasCubiertas: 0,
+      juntasCubiertasVerificado: 0,
+      pctCobertura: 0,
+      pctCoberturaVerificada: 0,
       totalRecintos: 0,
       recintosConCoordinador: 0,
       recintosConCoordinadorVerificado: 0,
@@ -144,10 +141,18 @@ export function calcularCoberturaPorParroquia(
     if (!entry) continue;
     const juntas = listJuntasDeRecinto(recinto);
     entry.totalJuntas += juntas.length;
-    entry.juntasConVeedor += juntas.filter((j) => juntasConTitular.has(j.id)).length;
-    entry.juntasConVeedorVerificado += juntas.filter((j) =>
-      juntasConTitularVerificado.has(j.id),
-    ).length;
+    // Una junta solo cuenta como cubierta si su recinto tiene coordinador
+    // titular (y, "Verificado", si ambos ya fueron contactados).
+    if (recintosConCoordinadorTitular.has(recinto.cod)) {
+      entry.juntasCubiertas += juntas.filter((j) =>
+        juntasConTitular.has(j.id),
+      ).length;
+    }
+    if (recintosConCoordinadorVerificado.has(recinto.cod)) {
+      entry.juntasCubiertasVerificado += juntas.filter((j) =>
+        juntasConTitularVerificado.has(j.id),
+      ).length;
+    }
     entry.totalRecintos += 1;
     if (recintosConCoordinadorTitular.has(recinto.cod)) entry.recintosConCoordinador += 1;
     if (recintosConCoordinadorVerificado.has(recinto.cod))
@@ -161,9 +166,9 @@ export function calcularCoberturaPorParroquia(
   }
 
   for (const entry of Object.values(resultado)) {
-    entry.pctVeedores = pct(entry.juntasConVeedor, entry.totalJuntas);
-    entry.pctVeedoresVerificado = pct(
-      entry.juntasConVeedorVerificado,
+    entry.pctCobertura = pct(entry.juntasCubiertas, entry.totalJuntas);
+    entry.pctCoberturaVerificada = pct(
+      entry.juntasCubiertasVerificado,
       entry.totalJuntas,
     );
     entry.pctCoordinador = pct(entry.recintosConCoordinador, entry.totalRecintos);
@@ -192,8 +197,8 @@ export function calcularCoberturaCanton(
     valores.reduce((acc, p) => acc + f(p), 0);
 
   const totalJuntas = sumar((p) => p.totalJuntas);
-  const juntasConVeedor = sumar((p) => p.juntasConVeedor);
-  const juntasConVeedorVerificado = sumar((p) => p.juntasConVeedorVerificado);
+  const juntasCubiertas = sumar((p) => p.juntasCubiertas);
+  const juntasCubiertasVerificado = sumar((p) => p.juntasCubiertasVerificado);
   const totalRecintos = sumar((p) => p.totalRecintos);
   const recintosConCoordinador = sumar((p) => p.recintosConCoordinador);
   const recintosConCoordinadorVerificado = sumar(
@@ -205,10 +210,10 @@ export function calcularCoberturaCanton(
 
   return {
     totalJuntas,
-    juntasConVeedor,
-    juntasConVeedorVerificado,
-    pctVeedores: pct(juntasConVeedor, totalJuntas),
-    pctVeedoresVerificado: pct(juntasConVeedorVerificado, totalJuntas),
+    juntasCubiertas,
+    juntasCubiertasVerificado,
+    pctCobertura: pct(juntasCubiertas, totalJuntas),
+    pctCoberturaVerificada: pct(juntasCubiertasVerificado, totalJuntas),
     totalRecintos,
     recintosConCoordinador,
     recintosConCoordinadorVerificado,
@@ -233,7 +238,7 @@ export function extraerPct(
   c: CoberturaCanton | CoberturaParroquia,
 ): { pct: number; pctVerificado: number } {
   if (track === "veedores") {
-    return { pct: c.pctVeedores, pctVerificado: c.pctVeedoresVerificado };
+    return { pct: c.pctCobertura, pctVerificado: c.pctCoberturaVerificada };
   }
   if (track === "coordinadores") {
     return { pct: c.pctCoordinador, pctVerificado: c.pctCoordinadorVerificado };
@@ -249,7 +254,7 @@ export function extraerPctRecinto(
   r: CoberturaRecinto,
 ): { pct: number; pctVerificado: number } | null {
   if (track === "veedores") {
-    return { pct: r.pctVeedores, pctVerificado: r.pctVeedoresVerificado };
+    return { pct: r.pct, pctVerificado: r.pctVerificado };
   }
   if (track === "coordinadores") {
     return { pct: r.pctCoordinador, pctVerificado: r.pctCoordinadorVerificado };
@@ -268,8 +273,8 @@ export function totalesDeTrack(
   if (track === "veedores") {
     return {
       total: c.totalJuntas,
-      cubiertos: c.juntasConVeedor,
-      verificados: c.juntasConVeedorVerificado,
+      cubiertos: c.juntasCubiertas,
+      verificados: c.juntasCubiertasVerificado,
     };
   }
   if (track === "coordinadores") {

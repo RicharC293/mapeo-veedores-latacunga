@@ -55,8 +55,6 @@ const filas = cobertura.map((c) => ({
   tieneCoordinadorTitular: c.tieneCoordinadorTitular,
   juntasCubiertas: c.juntasCubiertas,
   juntasCubiertasVerificado: c.juntasCubiertasVerificado,
-  juntasConVeedor: c.juntasConVeedor,
-  pctVeedores: c.pctVeedores,
   totalJuntas: c.totalJuntas,
   pct: c.pct,
   pctVerificado: c.pctVerificado,
@@ -72,22 +70,21 @@ const parroquiasOpciones = data.parroquias.features.map((f) => ({
 <GestionLayout title="Cobertura" activo="cobertura">
   <h1>Cobertura de veedores y coordinadores</h1>
   <p class="g-sub">
-    Las gráficas miden cada rol por separado: juntas con veedor titular,
-    recintos con coordinador titular y recintos CDA con acreditado titular. La
-    tabla del final suma además la cobertura completa: una junta cuenta como
-    completa si tiene veedor titular y su recinto tiene coordinador titular, y
-    como completa y verificada si, además, ambos ya fueron contactados. Para ver
-    la evolución día a día, revisa{" "}
+    Una junta cuenta como cubierta si tiene veedor titular y su recinto tiene
+    coordinador titular. Cuenta como cubierta y verificada si, además, ambos ya
+    fueron contactados. Esa es la cobertura que miden la gráfica de juntas, el
+    mapa, el resumen y la tabla del final; los coordinadores y los acreditados
+    CDA se cuentan además por recinto. Para ver la evolución día a día, revisa{" "}
     <a href="/gestion/crecimiento">Crecimiento</a>.
   </p>
 
   <div class="g-cobertura-track">
-    <h2>Veedores</h2>
+    <h2>Cobertura de juntas</h2>
     <div class="g-cobertura-barras">
       <GraficoCobertura
         client:load
         track="veedores"
-        titulo="Veedores"
+        titulo="Cobertura de juntas"
         canton={canton}
         porParroquia={porParroquia}
         porRecinto={cobertura}
@@ -99,7 +96,7 @@ const parroquiasOpciones = data.parroquias.features.map((f) => ({
       <GraficoPastelCobertura
         client:load
         track="veedores"
-        titulo="Veedores"
+        titulo="Cobertura de juntas"
         canton={canton}
       />
       <GraficoResponsables

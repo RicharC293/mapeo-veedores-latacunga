@@ -496,8 +496,8 @@ function ResumenCompacto({
 }: {
   cobertura: CoberturaParroquia | undefined;
 }) {
-  const pctVeedores = cobertura?.pctVeedores ?? 0;
-  const pctVeedoresVerificado = cobertura?.pctVeedoresVerificado ?? 0;
+  const pctVeedores = cobertura?.pctCobertura ?? 0;
+  const pctVeedoresVerificado = cobertura?.pctCoberturaVerificada ?? 0;
   const pctCoordinador = cobertura?.pctCoordinador ?? 0;
   const pctCoordinadorVerificado = cobertura?.pctCoordinadorVerificado ?? 0;
   const mostrarCda = (cobertura?.totalRecintosCda ?? 0) > 0;
@@ -508,7 +508,7 @@ function ResumenCompacto({
           class="resumen-dot"
           style={{ background: colorForPct(pctVeedores) }}
         />
-        Veedores {pctVeedores}% - {pctVeedoresVerificado}%
+        Cobertura {pctVeedores}% - {pctVeedoresVerificado}%
       </span>
       <span class="resumen-item">
         <span
@@ -568,10 +568,10 @@ function GroupSummary({
   const coberturaGrupo: CoberturaParroquia = {
     parroquiaCodigo: 0,
     totalJuntas: 0,
-    juntasConVeedor: 0,
-    juntasConVeedorVerificado: 0,
-    pctVeedores: avg("pctVeedores"),
-    pctVeedoresVerificado: avg("pctVeedoresVerificado"),
+    juntasCubiertas: 0,
+    juntasCubiertasVerificado: 0,
+    pctCobertura: avg("pctCobertura"),
+    pctCoberturaVerificada: avg("pctCoberturaVerificada"),
     totalRecintos: 0,
     recintosConCoordinador: 0,
     recintosConCoordinadorVerificado: 0,
@@ -615,9 +615,9 @@ function CoberturaBarsAgregado({
   return (
     <div class="progress-group">
       <ProgressBar
-        label="Veedores"
-        pct={cobertura?.pctVeedores ?? 0}
-        pctVerificado={cobertura?.pctVeedoresVerificado ?? 0}
+        label="Cobertura"
+        pct={cobertura?.pctCobertura ?? 0}
+        pctVerificado={cobertura?.pctCoberturaVerificada ?? 0}
       />
       <ProgressBar
         label="Coordinador"
@@ -651,9 +651,9 @@ function EstadoRecinto({
   return (
     <div class={compact ? "progress-group compact" : "progress-group"}>
       <ProgressBar
-        label="Veedores"
-        pct={cobertura?.pctVeedores ?? 0}
-        pctVerificado={cobertura?.pctVeedoresVerificado ?? 0}
+        label="Cobertura"
+        pct={cobertura?.pct ?? 0}
+        pctVerificado={cobertura?.pctVerificado ?? 0}
       />
       <div class="chip-row">
         <EstadoChip
