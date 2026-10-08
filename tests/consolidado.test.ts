@@ -92,4 +92,48 @@ describe("consolidarRecinto", () => {
     );
     expect(f.coordinador.suplentes.map((s) => s.orden)).toEqual([1, 2]);
   });
+
+  it("sin más veedores que juntas no hay excedente", () => {
+    const f = consolidarRecinto(
+      recinto(false),
+      [],
+      [],
+      [vee("10-F1", "titular"), vee("10-F2", "titular")],
+    );
+    expect(f.veedoresTotal).toBe(2);
+    expect(f.excedente).toBe(0);
+  });
+
+  it("con más veedores que juntas se cuenta el excedente (titulares y suplentes)", () => {
+    // 3 juntas (F1, F2, M1): 3 titulares y 1 suplente = 4 para 3 puestos.
+    const f = consolidarRecinto(
+      recinto(false),
+      [],
+      [],
+      [
+        vee("10-F1", "titular"),
+        vee("10-F2", "titular"),
+        vee("10-M1", "titular"),
+        vee("10-F1", "suplente"),
+      ],
+    );
+    expect(f.veedoresTotal).toBe(4);
+    expect(f.excedente).toBe(1);
+  });
+
+  it("el excedente no depende de que todas las juntas tengan titular", () => {
+    const f = consolidarRecinto(
+      recinto(false),
+      [],
+      [],
+      [
+        vee("10-F1", "titular"),
+        vee("10-F1", "suplente", 1),
+        vee("10-F1", "suplente", 2),
+        vee("10-F2", "suplente"),
+      ],
+    );
+    expect(f.juntasConTitular).toBe(1);
+    expect(f.excedente).toBe(1);
+  });
 });

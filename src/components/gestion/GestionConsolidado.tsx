@@ -56,7 +56,7 @@ interface Props {
   acreditados: AcreditadoCda[];
 }
 
-type Estado = "todos" | "completos" | "pendientes";
+type Estado = "todos" | "completos" | "pendientes" | "excedente";
 
 // Con pocos recintos a la vista, su detalle se muestra abierto.
 const ABRIR_SI_HAY_HASTA = 2;
@@ -250,12 +250,15 @@ export default function GestionConsolidado({
   }, [filas, ubicacion, busqueda]);
 
   const completos = base.filter((f) => f.completo).length;
+  const conExcedente = base.filter((f) => f.excedente > 0).length;
   const visibles = base.filter((f) =>
     estado === "completos"
       ? f.completo
       : estado === "pendientes"
         ? !f.completo
-        : true,
+        : estado === "excedente"
+          ? f.excedente > 0
+          : true,
   );
   const grupos = useMemo(
     () => agruparPorParroquia(visibles, parroquias),
@@ -387,6 +390,11 @@ export default function GestionConsolidado({
             n: base.length - completos,
             alerta: true,
           },
+          {
+            clave: "excedente",
+            etiqueta: "Con excedente",
+            n: conExcedente,
+          },
         ]}
         estado={estado}
         onEstado={setEstado}
@@ -452,8 +460,23 @@ export default function GestionConsolidado({
                           ) : null}
                           <span
                             class={`chip-estado ${f.juntasConTitular === f.juntas.length ? "chip-estado-ok" : "chip-estado-pendiente"}`}
+                            title={
+                              f.excedente > 0
+                                ? `${f.veedoresTotal} veedores para ${f.juntas.length} juntas: ${f.excedente} de más`
+                                : undefined
+                            }
                           >
-                            Juntas {f.juntasConTitular}/{f.juntas.length}
+                            Juntas{" "}
+                            {f.excedente > 0
+                              ? f.veedoresTotal
+                              : f.juntasConTitular}
+                            /{f.juntas.length}
+                            {f.excedente > 0 ? (
+                              <span class="g-sr-only">
+                                {" "}
+                                ({f.excedente} de más)
+                              </span>
+                            ) : null}
                           </span>
                         </span>
                       </summary>

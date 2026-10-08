@@ -2152,3 +2152,50 @@ select.g-campo-error {
     height: 44px;
   }
 }
+
+/* Cabeceras fijas apiladas: la barra superior, debajo la banda de la parroquia
+   y, debajo, el nombre del recinto abierto. Así, aunque un recinto tenga
+   muchas juntas, siempre se ve en cuál y en qué parroquia se está. Para
+   apilarlas, la banda mide siempre lo mismo (--g-banda-h). */
+.g-grupo {
+  --g-barra: 73px;
+  --g-banda-h: 56px;
+}
+@media (min-width: 561px) {
+  .g-grupo > summary {
+    box-sizing: border-box;
+    height: var(--g-banda-h);
+    flex-wrap: nowrap;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .g-grupo > summary .g-grupo-nombre {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .g-grupo > summary .chip-estado,
+  .g-grupo > summary .g-grupo-cuenta {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}
+.g-recinto > summary {
+  position: sticky;
+  top: calc(var(--g-barra) + var(--g-banda-h));
+  z-index: 3;
+  border-radius: 12px 12px 0 0;
+  background: var(--panel);
+}
+.g-recinto:not([open]) > summary {
+  border-radius: 12px;
+}
+/* En el teléfono la banda no es fija, así que el recinto queda justo bajo la
+   barra superior. */
+@media (max-width: 560px) {
+  .g-recinto > summary {
+    top: var(--g-barra);
+  }
+}

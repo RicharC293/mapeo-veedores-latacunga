@@ -25,6 +25,11 @@ export interface FilaConsolidada {
   cda: Puesto<AcreditadoCda> | null;
   juntas: JuntaConsolidada[];
   juntasConTitular: number;
+  // Veedores del recinto contando titulares y suplentes, y cuántos pasan de
+  // los que se necesitan (uno por junta). Con 15 veedores para 14 juntas:
+  // veedoresTotal = 15 y excedente = 1.
+  veedoresTotal: number;
+  excedente: number;
   // Puestos titulares que faltan por cubrir, para el resumen del recinto.
   faltantes: number;
   completo: boolean;
@@ -71,12 +76,15 @@ export function consolidarRecinto(
     (coordinador.titular ? 0 : 1) +
     (cda && !cda.titular ? 1 : 0) +
     (juntas.length - juntasConTitular);
+  const veedoresTotal = veedores.length;
   return {
     recinto,
     coordinador,
     cda,
     juntas,
     juntasConTitular,
+    veedoresTotal,
+    excedente: Math.max(0, veedoresTotal - juntas.length),
     faltantes,
     completo: faltantes === 0,
   };
