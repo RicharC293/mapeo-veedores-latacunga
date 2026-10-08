@@ -1504,7 +1504,6 @@ select.g-campo-error {
   .g-sidebar-link,
   .g-mil .g-btn-ghost,
   .g-mil .g-btn-danger-ghost,
-  .g-consol-acciones button,
   .g-dialogo-mover button,
   .g-dialogo-mover select,
   .g-mil-card select,
@@ -1878,25 +1877,11 @@ select.g-campo-error {
 .g-persona-texto strong {
   overflow-wrap: anywhere;
 }
-.g-persona-asig .g-btn-danger-ghost {
-  flex-shrink: 0;
-}
 .g-suplentes li {
   padding: 2px 0;
 }
 .g-persona-texto .g-check-verificado input {
   margin-left: 0;
-}
-@media (max-width: 480px) {
-  .g-persona-asig {
-    flex-wrap: wrap;
-  }
-  .g-persona-texto {
-    flex: 1 1 calc(100% - 48px);
-  }
-  .g-persona-asig .g-btn-danger-ghost {
-    margin-left: 48px;
-  }
 }
 
 /* Consolidado: cada puesto es una sección con su línea divisoria. */
@@ -2001,15 +1986,11 @@ select.g-campo-error {
   flex-shrink: 0;
   gap: 6px;
 }
+/* En pantallas angostas los dos iconos se apilan a la derecha del nombre:
+   ocupan menos ancho que en fila y la persona no baja de línea. */
 @media (max-width: 600px) {
-  .g-consol-persona {
-    flex-wrap: wrap;
-  }
-  .g-consol-persona-texto {
-    flex: 1 1 calc(100% - 48px);
-  }
   .g-consol-acciones {
-    margin-left: 48px;
+    flex-direction: column;
   }
 }
 
@@ -2104,5 +2085,54 @@ select.g-campo-error {
 @media (pointer: coarse), (max-width: 560px) {
   .g-dialogo-mover select {
     min-height: 44px;
+  }
+}
+
+/* Botón cuadrado con solo un icono (mover, desvincular). */
+.g-btn-icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+.g-btn-icono svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.g-btn-icono:hover {
+  background: var(--chip);
+}
+.g-btn-icono-peligro {
+  border-color: var(--error);
+  color: var(--error);
+}
+.g-btn-icono-peligro:hover {
+  background: color-mix(in srgb, var(--error) 14%, transparent);
+}
+.g-btn-icono:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.g-btn-icono:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@media (pointer: coarse), (max-width: 560px) {
+  .g-btn-icono {
+    width: 44px;
+    height: 44px;
   }
 }

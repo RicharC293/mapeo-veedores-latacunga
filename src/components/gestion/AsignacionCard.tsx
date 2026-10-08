@@ -1,5 +1,6 @@
 import { useState } from "preact/hooks";
 import PersonaForm from "./PersonaForm";
+import BotonIcono from "./BotonIcono";
 import DesvincularForm from "./DesvincularForm";
 import Iniciales from "./Iniciales";
 import type { Lider } from "../../lib/gestion/types";
@@ -195,9 +196,12 @@ function PersonaRow({
           Verificado
         </label>
       </div>
-      <button class="g-btn-danger-ghost" onClick={onDesvincular}>
-        Desvincular
-      </button>
+      <BotonIcono
+        icono="basura"
+        peligro
+        etiqueta={`Desvincular a ${persona.nombres}`}
+        onClick={onDesvincular}
+      />
     </div>
   );
 }

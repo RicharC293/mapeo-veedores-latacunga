@@ -3,6 +3,7 @@ import FiltrosRecintos, {
   ResumenAvance,
   VacioFiltros,
 } from "./FiltrosRecintos";
+import BotonIcono from "./BotonIcono";
 import DialogoDesvincular from "./DialogoDesvincular";
 import DialogoMover from "./DialogoMover";
 import GrupoParroquia from "./GrupoParroquia";
@@ -124,22 +125,17 @@ function Linea({
         ) : null}
       </div>
       <div class="g-consol-acciones">
-        <button
-          type="button"
-          class="g-btn-ghost"
-          aria-label={`Mover a ${p.nombres}`}
+        <BotonIcono
+          icono="mover"
+          etiqueta={`Mover a ${p.nombres}`}
           onClick={() => acciones.onMover(clase, p)}
-        >
-          Mover
-        </button>
-        <button
-          type="button"
-          class="g-btn-danger-ghost"
-          aria-label={`Desvincular a ${p.nombres}`}
+        />
+        <BotonIcono
+          icono="basura"
+          peligro
+          etiqueta={`Desvincular a ${p.nombres}`}
           onClick={() => acciones.onDesvincular(clase, p)}
-        >
-          Desvincular
-        </button>
+        />
       </div>
     </div>
   );
