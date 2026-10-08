@@ -16,6 +16,7 @@ export const PAGINAS_GESTION: Record<string, Rol[]> = {
   // Ver y eliminar; el alta/edición manual se filtra aparte (solo admin).
   "lista-negra": ["gestor", "administrador"],
   cobertura: ["militante", "gestor", "administrador"],
+  informe: ["militante", "gestor", "administrador"],
   crecimiento: ["militante", "gestor", "administrador"],
   organigrama: ["militante", "gestor", "administrador"],
   estructura: ["militante", "gestor", "administrador"],

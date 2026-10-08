@@ -2203,3 +2203,228 @@ select.g-campo-error {
     top: var(--g-barra);
   }
 }
+
+/* Informe de cobertura: una sola columna de lectura, tablas numéricas y listo
+   para imprimir o guardar en PDF. */
+.g-informe {
+  max-width: 920px;
+}
+.g-informe-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+.g-informe-corte {
+  margin: 0;
+  color: var(--muted);
+}
+.g-informe-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.g-informe section {
+  margin-top: 36px;
+}
+.g-informe h2 {
+  margin: 0 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.15rem;
+}
+.g-informe-lead {
+  max-width: 70ch;
+  margin: 0 0 16px;
+  line-height: 1.55;
+}
+.g-informe-pie {
+  max-width: 70ch;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.g-informe-tabla .g-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+/* Las tablas del informe no fuerzan un ancho mínimo: en el teléfono las
+   columnas se aprietan y solo la más ancha (por parroquia) hace scroll. */
+.g-informe .g-table {
+  min-width: 0;
+}
+@media (max-width: 560px) {
+  .g-informe .g-table th,
+  .g-informe .g-table td {
+    padding: 8px 3px;
+  }
+  .g-informe .g-table th {
+    font-size: 0.56rem;
+    letter-spacing: 0;
+  }
+  .g-informe .g-table {
+    font-size: 0.78rem;
+  }
+  /* Nombres de parroquia y de recinto: una columna con ancho razonable para
+     que no se partan en cuatro líneas; la tabla hace scroll a la derecha. */
+  .g-informe .g-table td:first-child {
+    min-width: 108px;
+  }
+}
+.g-informe-tabla .g-num {
+  white-space: nowrap;
+}
+.g-informe-destacada td {
+  font-weight: 700;
+  background: color-mix(in srgb, var(--sel) 8%, transparent);
+}
+.g-informe-tabla .g-informe-grupo th {
+  padding-top: 14px;
+  background: var(--chip);
+  color: var(--ink);
+  font-size: 0.82rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.g-informe-tabla .g-informe-subtotal td {
+  font-weight: 700;
+  border-top: 1px solid var(--muted);
+}
+.g-informe-barra {
+  display: flex;
+  height: 14px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: var(--chip);
+}
+.g-informe-barra-ok {
+  background: #2f9e57;
+}
+.g-informe-barra-espera {
+  background: #e0a800;
+}
+.g-informe-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 24px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+}
+.g-informe-punto {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 8px;
+  border-radius: 50%;
+}
+.g-informe-punto-ok {
+  background: #2f9e57;
+}
+.g-informe-punto-espera {
+  background: #e0a800;
+}
+.g-informe-datos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0 32px;
+  margin: 0;
+}
+.g-informe-datos > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+.g-informe-datos dt {
+  color: var(--muted);
+}
+.g-informe-datos dd {
+  margin: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.g-informe-notas {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 70ch;
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.5;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+  /* El informe se imprime siempre en claro, aunque el sistema esté en oscuro. */
+  :root:root:root {
+    --bg: #fff;
+    --panel: #fff;
+    --ink: #14283d;
+    --muted: #4a5a6a;
+    --line: #c9d3dd;
+    --chip: #eef2f6;
+    --sel: #1f4e78;
+    --aviso: #8a5d00;
+    --error: #b3261e;
+  }
+  html,
+  body,
+  .site-body {
+    background: #fff !important;
+    color: #14283d;
+  }
+  .g-topbar,
+  .g-sidebar,
+  .g-nav-backdrop,
+  .g-informe-acciones {
+    display: none !important;
+  }
+  .g-shell {
+    max-width: none;
+    margin: 0;
+  }
+  .g-main {
+    padding: 0;
+  }
+  .g-informe {
+    max-width: none;
+  }
+  .g-informe section {
+    margin-top: 22px;
+  }
+  .g-informe h2 {
+    break-after: avoid;
+  }
+  .g-informe tr,
+  .g-informe-datos > div {
+    break-inside: avoid;
+  }
+  .g-table-scroll {
+    overflow: visible;
+  }
+  .g-informe .g-table {
+    min-width: 0;
+    font-size: 0.78rem;
+  }
+  .g-informe-barra,
+  .g-informe-barra span,
+  .g-informe-punto,
+  .g-informe-destacada td,
+  .g-informe-grupo th {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}

@@ -1,0 +1,455 @@
+---
+import GestionLayout from "../../layouts/GestionLayout.astro";
+import InformeAcciones from "../../components/gestion/InformeAcciones";
+import { getMapData } from "../../lib/data";
+import { listVeedores } from "../../lib/gestion/veedores";
+import { listCoordinadores } from "../../lib/gestion/coordinadores";
+import { listAcreditadosCda } from "../../lib/gestion/acreditadosCda";
+import { listMilitantes } from "../../lib/gestion/militancia";
+import { armarInforme } from "../../lib/gestion/informe";
+import type { FilaParroquia, Subtotal } from "../../lib/gestion/informe";
+import { fmt, title } from "../../lib/format";
+import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
+
+if (!PAGINAS_GESTION.informe.includes(Astro.locals.rol)) {
+  return Astro.redirect(rutaPorDefecto(Astro.locals.rol));
+}
+// Las cifras de Militancia (personas pendientes de asignar) son de trabajo
+// interno: el militante ve el informe sin esa parte.
+const veOperacion = Astro.locals.rol !== "militante";
+
+const [data, veedores, coordinadores, acreditados, militantes] =
+  await Promise.all([
+    getMapData(),
+    listVeedores(),
+    listCoordinadores(),
+    listAcreditadosCda(),
+    veOperacion ? listMilitantes() : Promise.resolve([]),
+  ]);
+
+const informe = armarInforme({
+  recintos: data.recintos,
+  parroquias: data.parroquias.features.map(({ properties }) => ({
+    properties,
+  })),
+  veedores,
+  coordinadores,
+  acreditados,
+  militantes,
+  ahora: Date.now(),
+});
+
+const pctTxt = (n: number) =>
+  `${n.toLocaleString("es-EC", { maximumFractionDigits: 1 })} %`;
+const corte = new Intl.DateTimeFormat("es-EC", {
+  dateStyle: "long",
+  timeStyle: "short",
+  timeZone: "America/Guayaquil",
+}).format(new Date(informe.corte));
+const fechaArchivo = new Date(informe.corte).toISOString().slice(0, 10);
+
+const { cobertura, cascada, roles, calidad, ritmo, acciones } = informe;
+const pctDe = (parte: number, total: number) =>
+  total > 0 ? (parte / total) * 100 : 0;
+const pctCubiertos = pctDe(cascada.cubiertos, cascada.registrados);
+const pctEsperando = pctDe(cascada.esperandoCoordinador, cascada.registrados);
+
+const primeras = acciones.slice(0, 5);
+const desbloqueanPrimeras = primeras.reduce((a, x) => a + x.desbloquea, 0);
+const pctConPrimeras =
+  primeras.length > 0 ? primeras[primeras.length - 1].pctAcumulado : null;
+const filasAcciones = acciones.slice(0, 10);
+
+const rolVeedores = roles.find((r) => r.clave === "veedores")!;
+const rolCda = roles.find((r) => r.clave === "cda")!;
+const rolCoord = roles.find((r) => r.clave === "coordinadores")!;
+
+const csvEncabezados = [
+  "Parroquia",
+  "Tipo de parroquia",
+  "Recinto",
+  "Juntas",
+  "Juntas con veedor titular",
+  "Veedores (titulares y suplentes)",
+  "Coordinador titular",
+  "Juntas cubiertas (veedor y coordinador)",
+  "% cobertura",
+  "Recinto CDA",
+  "Acreditado CDA titular",
+];
+const csvFilas = informe.detalle.map((d) => [
+  d.parroquia,
+  d.urbana ? "Urbana" : "Rural",
+  title(d.recinto),
+  d.juntas,
+  d.juntasConVeedor,
+  d.veedoresTotal,
+  d.coordinador ? "Sí" : "No",
+  d.cubiertas,
+  d.pct,
+  d.esCda ? "Sí" : "No",
+  d.esCda ? (d.cdaTitular ? "Sí" : "No") : "",
+]);
+
+const grupos: { nombre: string; filas: FilaParroquia[]; sub: Subtotal }[] = [
+  {
+    nombre: "Parroquias urbanas",
+    filas: informe.urbanas,
+    sub: informe.subtotalUrbanas,
+  },
+  {
+    nombre: "Parroquias rurales",
+    filas: informe.rurales,
+    sub: informe.subtotalRurales,
+  },
+];
+---
+
+<GestionLayout title="Informe de cobertura" activo="informe">
+  <article class="g-informe">
+    <header class="g-informe-cabecera">
+      <div>
+        <h1>Informe de cobertura</h1>
+        <p class="g-informe-corte">
+          Cantón Latacunga · datos al {corte} (hora de Ecuador)
+        </p>
+      </div>
+      <InformeAcciones
+        client:load
+        encabezados={csvEncabezados}
+        filas={csvFilas}
+        nombreArchivo={`cobertura-latacunga-${fechaArchivo}.csv`}
+      />
+    </header>
+
+    <section aria-labelledby="inf-resumen">
+      <h2 id="inf-resumen">Resumen</h2>
+      <p class="g-informe-lead">
+        Hoy{" "}
+        <strong>
+          {fmt(cobertura.cubiertas)} de {fmt(informe.totales.juntas)} juntas (
+          {pctTxt(cobertura.pct)})
+        </strong>{" "}
+        tienen cobertura completa: cuentan con veedor titular y su recinto tiene
+        coordinador titular.{" "}
+        {cobertura.cubiertasVerificadas > 0
+          ? `De ellas, ${fmt(cobertura.cubiertasVerificadas)} (${pctTxt(cobertura.pctVerificadas)} del total) ya están verificadas.`
+          : "Ninguna está verificada todavía."}
+      </p>
+      <div class="g-table-scroll">
+        <table class="g-table g-informe-tabla">
+          <caption class="g-sr-only">Avance por rol</caption>
+          <thead>
+            <tr>
+              <th>Rol</th>
+              <th class="g-num">Necesarios</th>
+              <th class="g-num">Registrados</th>
+              <th class="g-num">Avance</th>
+              <th class="g-num">Verificados</th>
+            </tr>
+          </thead>
+          <tbody>
+            {roles.map((r) => (
+              <tr
+                class={
+                  r.clave === "completa" ? "g-informe-destacada" : undefined
+                }
+              >
+                <td>{r.etiqueta}</td>
+                <td class="g-num">{fmt(r.necesarios)}</td>
+                <td class="g-num">{fmt(r.registrados)}</td>
+                <td class="g-num">{pctTxt(r.pct)}</td>
+                <td class="g-num">{fmt(r.verificados)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="g-informe-pie">
+        Necesarios: una junta, un recinto y un recinto CDA tienen cada uno un
+        puesto de titular. Los suplentes no cuentan como cobertura.
+      </p>
+    </section>
+
+    <section aria-labelledby="inf-cascada">
+      <h2 id="inf-cascada">
+        De los veedores registrados a las juntas cubiertas
+      </h2>
+      <p class="g-informe-lead">
+        Hay <strong>{fmt(cascada.registrados)} veedores titulares</strong>{" "}
+        registrados, pero solo <strong>{fmt(cascada.cubiertos)}</strong> cuentan
+        como cobertura. Los otros{" "}
+        <strong>{fmt(cascada.esperandoCoordinador)}</strong> están en{" "}
+        {fmt(cascada.recintosEsperando)}{" "}
+        {cascada.recintosEsperando === 1
+          ? "recinto que todavía no tiene"
+          : "recintos que todavía no tienen"}{" "}
+        coordinador titular: con coordinador pasarían a contar.
+      </p>
+      <div
+        class="g-informe-barra"
+        role="img"
+        aria-label={`De ${cascada.registrados} veedores titulares, ${cascada.cubiertos} cubiertos y ${cascada.esperandoCoordinador} esperando coordinador.`}
+      >
+        <span
+          class="g-informe-barra-ok"
+          style={`width:${pctCubiertos}%`}
+        ></span>
+        <span
+          class="g-informe-barra-espera"
+          style={`width:${pctEsperando}%`}
+        ></span>
+      </div>
+      <ul class="g-informe-leyenda">
+        <li>
+          <i class="g-informe-punto g-informe-punto-ok" aria-hidden="true"></i>
+          Cubiertos: {fmt(cascada.cubiertos)} ({pctTxt(pctCubiertos)})
+        </li>
+        <li>
+          <i
+            class="g-informe-punto g-informe-punto-espera"
+            aria-hidden="true"
+          ></i>
+          Esperando coordinador: {fmt(cascada.esperandoCoordinador)} (
+          {pctTxt(pctEsperando)})
+        </li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="inf-parroquias">
+      <h2 id="inf-parroquias">Avance por parroquia</h2>
+      <div class="g-table-scroll">
+        <table class="g-table g-informe-tabla">
+          <caption class="g-sr-only">Cobertura por parroquia</caption>
+          <thead>
+            <tr>
+              <th>Parroquia</th>
+              <th class="g-num">Juntas</th>
+              <th class="g-num">Con veedor</th>
+              <th class="g-num">Cubiertas</th>
+              <th class="g-num">Cobertura</th>
+              <th class="g-num">Recintos con coordinador</th>
+            </tr>
+          </thead>
+          {grupos.map((g) => (
+            <tbody>
+              <tr class="g-informe-grupo">
+                <th scope="colgroup" colspan="6">
+                  {g.nombre}
+                </th>
+              </tr>
+              {g.filas.map((p) => (
+                <tr>
+                  <td>{p.nombre}</td>
+                  <td class="g-num">{fmt(p.juntas)}</td>
+                  <td class="g-num">{fmt(p.conVeedor)}</td>
+                  <td class="g-num">{fmt(p.cubiertas)}</td>
+                  <td class="g-num">{pctTxt(pctDe(p.cubiertas, p.juntas))}</td>
+                  <td class="g-num">
+                    {p.conCoordinador} de {p.recintos}
+                  </td>
+                </tr>
+              ))}
+              <tr class="g-informe-subtotal">
+                <td>Subtotal</td>
+                <td class="g-num">{fmt(g.sub.juntas)}</td>
+                <td class="g-num">{fmt(g.sub.conVeedor)}</td>
+                <td class="g-num">{fmt(g.sub.cubiertas)}</td>
+                <td class="g-num">{pctTxt(g.sub.pct)}</td>
+                <td class="g-num">
+                  {g.sub.conCoordinador} de {g.sub.recintos}
+                </td>
+              </tr>
+            </tbody>
+          ))}
+          <tfoot>
+            <tr class="g-informe-subtotal">
+              <td>Cantón</td>
+              <td class="g-num">{fmt(informe.total.juntas)}</td>
+              <td class="g-num">{fmt(informe.total.conVeedor)}</td>
+              <td class="g-num">{fmt(informe.total.cubiertas)}</td>
+              <td class="g-num">{pctTxt(informe.total.pct)}</td>
+              <td class="g-num">
+                {informe.total.conCoordinador} de {informe.total.recintos}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p class="g-informe-pie">
+        Con veedor: juntas con veedor titular, sin mirar el coordinador.
+        Cubiertas: además el recinto tiene coordinador titular.
+      </p>
+    </section>
+
+    <section aria-labelledby="inf-acciones">
+      <h2 id="inf-acciones">Dónde actuar primero</h2>
+      {acciones.length === 0 ? (
+        <p class="g-informe-lead">
+          Todos los recintos con veedores ya tienen coordinador titular.
+        </p>
+      ) : (
+        <>
+          <p class="g-informe-lead">
+            Asignar coordinador a los primeros{" "}
+            <strong>{primeras.length}</strong>{" "}
+            {primeras.length === 1 ? "recinto" : "recintos"} de esta lista
+            sumaría <strong>{fmt(desbloqueanPrimeras)} juntas</strong> y
+            llevaría la cobertura completa de {pctTxt(cobertura.pct)} a{" "}
+            <strong>{pctTxt(pctConPrimeras ?? cobertura.pct)}</strong>.
+          </p>
+          <div class="g-table-scroll">
+            <table class="g-table g-informe-tabla">
+              <caption class="g-sr-only">
+                Recintos con veedores y sin coordinador, ordenados por las
+                juntas que se sumarían
+              </caption>
+              <thead>
+                <tr>
+                  <th class="g-num">N.º</th>
+                  <th>Recinto</th>
+                  <th>Parroquia</th>
+                  <th class="g-num">Juntas con veedor</th>
+                  <th class="g-num">Se suman</th>
+                  <th class="g-num">Cobertura acumulada</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filasAcciones.map((a, i) => (
+                  <tr>
+                    <td class="g-num">{i + 1}</td>
+                    <td>{title(a.recinto)}</td>
+                    <td>{a.parroquia}</td>
+                    <td class="g-num">
+                      {a.desbloquea} de {a.totalJuntas}
+                    </td>
+                    <td class="g-num">+{a.desbloquea}</td>
+                    <td class="g-num">{pctTxt(a.pctAcumulado)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p class="g-informe-pie">
+            {acciones.length > filasAcciones.length
+              ? `Se muestran los ${filasAcciones.length} primeros de ${acciones.length} recintos; la lista completa está en el CSV. `
+              : ""}
+            {rolCda.necesarios - rolCda.registrados > 0
+              ? `Además, ${rolCda.necesarios - rolCda.registrados} de los ${rolCda.necesarios} recintos CDA no tienen acreditado titular.`
+              : ""}
+          </p>
+        </>
+      )}
+    </section>
+
+    <section aria-labelledby="inf-calidad">
+      <h2 id="inf-calidad">Calidad del dato</h2>
+      <dl class="g-informe-datos">
+        <div>
+          <dt>Veedores titulares verificados</dt>
+          <dd>
+            {fmt(rolVeedores.verificados)} de {fmt(rolVeedores.registrados)}
+          </dd>
+        </div>
+        <div>
+          <dt>Coordinadores titulares verificados</dt>
+          <dd>
+            {fmt(rolCoord.verificados)} de {fmt(rolCoord.registrados)}
+          </dd>
+        </div>
+        <div>
+          <dt>Recintos completos</dt>
+          <dd>
+            {fmt(calidad.recintosCompletos)} de {fmt(informe.totales.recintos)}
+          </dd>
+        </div>
+        <div>
+          <dt>Recintos casi completos (falta 1 veedor)</dt>
+          <dd>{fmt(calidad.recintosCasiCompletos)}</dd>
+        </div>
+        <div>
+          <dt>Veedores suplentes registrados</dt>
+          <dd>{fmt(calidad.veedoresSuplentes)}</dd>
+        </div>
+        <div>
+          <dt>Recintos con más veedores que juntas</dt>
+          <dd>{fmt(calidad.recintosConExcedente)}</dd>
+        </div>
+        {veOperacion ? (
+          <>
+            <div>
+              <dt>Personas en Militancia sin asignar</dt>
+              <dd>{fmt(calidad.militancia.total)}</dd>
+            </div>
+            <div>
+              <dt>… con datos por corregir (incorrectos)</dt>
+              <dd>{fmt(calidad.militancia.incorrectos)}</dd>
+            </div>
+            <div>
+              <dt>… repetidas o ya asignadas</dt>
+              <dd>
+                {fmt(
+                  calidad.militancia.duplicados +
+                    calidad.militancia.repetidosAsignados,
+                )}
+              </dd>
+            </div>
+          </>
+        ) : null}
+      </dl>
+    </section>
+
+    {veOperacion ? (
+      <section aria-labelledby="inf-ritmo">
+        <h2 id="inf-ritmo">Tiempo y ritmo</h2>
+        {ritmo.cuenta.iniciada ? (
+          <p class="g-informe-lead">Las elecciones ya iniciaron.</p>
+        ) : (
+          <p class="g-informe-lead">
+            Para cubrir los {fmt(ritmo.puestosNecesarios)} puestos (juntas,
+            recintos y recintos CDA) hay {fmt(ritmo.personasUnicas)} personas
+            distintas registradas, en Militancia o ya asignadas. Faltan{" "}
+            <strong>{fmt(ritmo.faltan)}</strong>. Quedan{" "}
+            <strong>
+              {ritmo.cuenta.dias} {ritmo.cuenta.dias === 1 ? "día" : "días"}
+            </strong>{" "}
+            para las elecciones (29 de noviembre de 2026
+            {ritmo.faltan > 0
+              ? ritmo.cuenta.esHoy
+                ? `): hay que conseguirlas hoy.`
+                : `): el ritmo necesario es de ${fmt(ritmo.cuenta.ritmoPorDia)} ${ritmo.cuenta.ritmoPorDia === 1 ? "persona" : "personas"} por día.`
+              : "): todos los puestos tienen quién los cubra."}
+          </p>
+        )}
+      </section>
+    ) : null}
+
+    <section aria-labelledby="inf-notas">
+      <h2 id="inf-notas">Notas metodológicas</h2>
+      <ul class="g-informe-notas">
+        <li>
+          <strong>Cobertura completa.</strong> Una junta cuenta como cubierta si
+          tiene veedor titular y su recinto tiene coordinador titular. Es la
+          misma medida de la pantalla Cobertura, del mapa y del resumen.
+        </li>
+        <li>
+          <strong>Verificado.</strong> Una junta está cubierta y verificada si,
+          además, el veedor y el coordinador titulares ya fueron contactados.
+        </li>
+        <li>
+          <strong>Titulares y suplentes.</strong> Solo los titulares cuentan
+          para la cobertura; los suplentes se muestran como respaldo.
+        </li>
+        <li>
+          <strong>Fuente y corte.</strong> Registros de veedores, coordinadores
+          y acreditados CDA de la base de gestión, tomados en la fecha y hora
+          indicadas arriba. El informe se recalcula cada vez que se abre.
+        </li>
+        <li>
+          <strong>CSV.</strong> El archivo trae una fila por recinto, con
+          separador «;» y coma decimal, listo para abrir en Excel.
+        </li>
+      </ul>
+    </section>
+  </article>
+</GestionLayout>
