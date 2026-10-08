@@ -1,5 +1,4 @@
 import { useMemo, useState } from "preact/hooks";
-import { listJuntasDeRecinto } from "../../lib/gestion/juntas";
 import { title } from "../../lib/format";
 import type { ParroquiaBasica, Recinto } from "../../lib/types";
 import type { Lider, Militante, TipoMilitancia } from "../../lib/gestion/types";
@@ -91,7 +90,13 @@ export default function MilitanteCard({
   const [tipo, setTipo] = useState<TipoMilitancia | "">(
     militante.tipoPreasignado ?? "",
   );
-  const [juntaSel, setJuntaSel] = useState(militante.juntaPreasignada ?? "");
+  // De la junta no se elige el número sino el género: el sistema asigna la
+  // siguiente libre. Si la persona regresa de un puesto de veedor, se conserva
+  // su mesa de origen.
+  const mesaOrigen = /-([FM])(\d+)$/.exec(militante.juntaPreasignada ?? "");
+  const [generoSel, setGeneroSel] = useState<"F" | "M" | "">(
+    (mesaOrigen?.[1] as "F" | "M" | undefined) ?? "",
+  );
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editando, setEditando] = useState(false);
@@ -130,10 +135,6 @@ export default function MilitanteCard({
   );
 
   const recinto = recintos.find((r) => r.cod === recintoCod) ?? null;
-  const juntas = useMemo(
-    () => (recinto && tipo === "veedor" ? listJuntasDeRecinto(recinto) : []),
-    [recinto, tipo],
-  );
 
   // Mientras se edita, el rojo sigue lo que se está escribiendo; fuera de la
   // edición, lo que está guardado.
@@ -143,7 +144,7 @@ export default function MilitanteCard({
     parroquiaCod === "" ? "parroquia" : null,
     tipo === "" ? "tipo" : null,
     recintoCod === "" ? "recinto" : null,
-    tipo === "veedor" && juntaSel === "" ? "junta" : null,
+    tipo === "veedor" && generoSel === "" ? "género de la junta" : null,
   ].filter(Boolean) as string[];
 
   // Para asignar hacen falta cédula válida, celular de 10 dígitos, correo
@@ -179,12 +180,20 @@ export default function MilitanteCard({
     }
   };
 
+  // Número de mesa que se conserva: solo si coincide con el género elegido.
+  const numeroOrigen =
+    mesaOrigen && mesaOrigen[1] === generoSel
+      ? Number(mesaOrigen[2])
+      : undefined;
+
   // Descripción del lugar elegido, para el aviso de cupos.
   const descripcionLugar = () => {
     const nombre = recinto ? title(recinto.nombre) : "";
     if (tipo === "veedor") {
-      const j = juntas.find((x) => x.id === juntaSel);
-      return `La junta ${j ? `${j.genero}${j.numero}` : ""} de ${nombre}`;
+      if (numeroOrigen === undefined) {
+        return `Todas las juntas ${generoSel === "F" ? "femeninas" : "masculinas"} de ${nombre}`;
+      }
+      return `La junta ${generoSel}${numeroOrigen} de ${nombre}`;
     }
     return tipo === "cda"
       ? `El CDA de ${nombre}`
@@ -196,14 +205,14 @@ export default function MilitanteCard({
     return ejecutar(async () => {
       let destino: AsignarDestino;
       if (tipo === "veedor") {
-        const junta = juntas.find((j) => j.id === juntaSel);
-        if (!junta) throw new Error("Elige una junta.");
+        if (generoSel === "") throw new Error("Elige el género de la junta.");
         destino = {
           tipo: "veedor",
           recintoCodigo: recintoCod as number,
           parroquiaCodigo: parroquiaCod as number,
-          genero: junta.genero,
-          numero: junta.numero,
+          genero: generoSel,
+          // Sin número, el servidor elige la siguiente junta libre.
+          numero: numeroOrigen,
         };
       } else {
         destino = {
@@ -215,12 +224,18 @@ export default function MilitanteCard({
       const resultado = await onAsignar(destino, confirmarSuplente);
       // Lugar ocupado: se avisa en un diálogo en vez de asignar en silencio.
       if (resultado.estado === "confirmar") {
-        setAviso({ tipo: "confirmar", titular: resultado.titular });
+        setAviso({
+          tipo: "confirmar",
+          titular: resultado.titular,
+          automatico: resultado.automatico,
+          junta: resultado.junta?.split("-")[1],
+        });
       } else if (resultado.estado === "lleno") {
         setAviso({
           tipo: "lleno",
           titular: resultado.titular,
           suplente: resultado.suplente,
+          automatico: resultado.automatico,
         });
       } else {
         setAviso(null);
@@ -395,7 +410,7 @@ export default function MilitanteCard({
                 Number((e.currentTarget as HTMLSelectElement).value) || "",
               );
               setRecintoCod("");
-              setJuntaSel("");
+              setGeneroSel("");
             }}
           >
             <option value="">Selecciona…</option>
@@ -427,7 +442,7 @@ export default function MilitanteCard({
               // Se conserva el recinto ya elegido o autocompletado; solo se
               // descarta si el nuevo tipo (CDA) no lo admite.
               if (nuevo === "cda" && !recinto?.cda) setRecintoCod("");
-              setJuntaSel("");
+              setGeneroSel("");
             }}
           >
             <option value="">Selecciona…</option>
@@ -445,7 +460,7 @@ export default function MilitanteCard({
               setRecintoCod(
                 Number((e.currentTarget as HTMLSelectElement).value) || "",
               );
-              setJuntaSel("");
+              setGeneroSel("");
             }}
           >
             <option value="">
@@ -461,23 +476,33 @@ export default function MilitanteCard({
           </select>
         </label>
         {tipo === "veedor" ? (
-          <label class="g-mil-campo">
-            Junta
+          <label class="g-mil-campo g-mil-campo-ancho">
+            Género de la junta
             <select
-              value={juntaSel}
+              value={generoSel}
               disabled={enviando || !recinto}
               onChange={(e) =>
-                setJuntaSel((e.currentTarget as HTMLSelectElement).value)
+                setGeneroSel(
+                  (e.currentTarget as HTMLSelectElement).value as
+                    "F" | "M" | "",
+                )
               }
             >
               <option value="">Selecciona…</option>
-              {juntas.map((j) => (
-                <option key={j.id} value={j.id}>
-                  {j.genero}
-                  {j.numero}
-                </option>
-              ))}
+              {recinto && recinto.jf > 0 ? (
+                <option value="F">Femenina</option>
+              ) : null}
+              {recinto && recinto.jm > 0 ? (
+                <option value="M">Masculina</option>
+              ) : null}
             </select>
+            {generoSel ? (
+              <span class="g-mil-pista">
+                {numeroOrigen !== undefined
+                  ? `Conserva su mesa de origen (${generoSel}${numeroOrigen}).`
+                  : "Se asigna la siguiente junta libre; con todas ocupadas, como suplente."}
+              </span>
+            ) : null}
           </label>
         ) : null}
       </div>

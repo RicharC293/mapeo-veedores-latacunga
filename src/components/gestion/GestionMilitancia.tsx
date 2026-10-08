@@ -31,6 +31,24 @@ const ORDENES: { clave: Orden; etiqueta: string }[] = [
 ];
 type FiltroResponsable = "todos" | "sin" | string;
 
+// Frase con el puesto exacto que quedó asignado, p. ej. "Ana quedó como
+// titular de la junta F9 en U.E. Particular San José la Salle".
+function describirAsignacion(
+  r: ResultadoAsignacion,
+  recintos: Recinto[],
+): string {
+  if (r.estado !== "asignado") return "";
+  const p = r.persona;
+  const recinto = title(
+    recintos.find((x) => x.cod === p.recintoCodigo)?.nombre ?? "",
+  );
+  const lugar =
+    "juntaId" in p
+      ? `de la junta ${p.juntaId.split("-")[1]} en ${recinto}`
+      : `en ${recinto}`;
+  return `${p.nombres} quedó como ${r.rol} ${lugar}.`;
+}
+
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...init,
@@ -163,6 +181,9 @@ export default function GestionMilitancia({
   );
   const [formKey, setFormKey] = useState(0);
   const [autoMensaje, setAutoMensaje] = useState<string | null>(null);
+  // Última asignación hecha, para saber a qué puesto quedó (la junta de un
+  // veedor se elige sola).
+  const [ultimaAsignacion, setUltimaAsignacion] = useState<string | null>(null);
   const [autoEnCurso, setAutoEnCurso] = useState(false);
 
   // Importación masiva
@@ -461,6 +482,11 @@ export default function GestionMilitancia({
             </button>
           ) : null}
         </div>
+        {ultimaAsignacion ? (
+          <p class="g-mil-resultado" role="status">
+            {ultimaAsignacion}
+          </p>
+        ) : null}
         {autoMensaje ? (
           <p class="g-mil-resultado" role="status">
             {autoMensaje}
@@ -865,7 +891,12 @@ export default function GestionMilitancia({
                       if (!res.ok && res.status !== 409) {
                         throw new Error(cuerpo.error ?? "Error inesperado.");
                       }
-                      if (res.ok) await refrescar();
+                      if (res.ok) {
+                        setUltimaAsignacion(
+                          describirAsignacion(cuerpo, recintos),
+                        );
+                        await refrescar();
+                      }
                       return cuerpo as ResultadoAsignacion;
                     }}
                     onEditar={async (patch) => {

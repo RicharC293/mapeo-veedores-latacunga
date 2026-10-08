@@ -1,12 +1,24 @@
 import { useEffect, useRef } from "preact/hooks";
 
 export type AvisoAsignacion =
-  | { tipo: "confirmar"; titular: string }
-  | { tipo: "lleno"; titular: string; suplente: string };
+  | {
+      tipo: "confirmar";
+      titular: string;
+      // Junta elegida automáticamente donde quedaría como suplente.
+      automatico?: boolean;
+      junta?: string;
+    }
+  | {
+      tipo: "lleno";
+      titular: string;
+      suplente: string;
+      automatico?: boolean;
+    };
 
 interface Props {
   aviso: AvisoAsignacion;
-  // Descripción del lugar, con mayúscula inicial: "La junta F1 de …".
+  // Descripción del lugar, con mayúscula inicial: "La junta F1 de …" o, con
+  // la junta automática, "Todas las juntas femeninas de …".
   lugar: string;
   persona: string;
   // Sección donde sí se pueden agregar más suplentes a mano.
@@ -49,10 +61,28 @@ export default function DialogoAsignacion({
       </h3>
       <div id="g-dialogo-desc">
         {confirmar ? (
-          <p>
-            {lugar} ya tiene como titular a <strong>{aviso.titular}</strong>.{" "}
-            <strong>{persona}</strong> quedará como suplente.
-          </p>
+          aviso.automatico ? (
+            <p>
+              {lugar} ya tienen veedor titular. <strong>{persona}</strong>{" "}
+              quedará como suplente de la junta <strong>{aviso.junta}</strong>,
+              cuyo titular es <strong>{aviso.titular}</strong>.
+            </p>
+          ) : (
+            <p>
+              {lugar} ya tiene como titular a <strong>{aviso.titular}</strong>.{" "}
+              <strong>{persona}</strong> quedará como suplente.
+            </p>
+          )
+        ) : aviso.automatico ? (
+          <>
+            <p>
+              {lugar} ya tienen titular y suplente. No quedan cupos disponibles.
+            </p>
+            <p class="g-sub">
+              Desde Militancia solo se asigna un suplente por junta. Para
+              agregar más, hazlo desde {seccion}.
+            </p>
+          </>
         ) : (
           <>
             <p>

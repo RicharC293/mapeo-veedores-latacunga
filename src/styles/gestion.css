@@ -1578,3 +1578,11 @@ select.g-campo-error {
     border-left: 1px solid var(--line);
   }
 }
+
+/* Texto de ayuda dentro de un campo de la tarjeta. */
+.g-mil-pista {
+  font-size: 0.76rem;
+  font-weight: 400;
+  line-height: 1.35;
+  color: var(--muted);
+}

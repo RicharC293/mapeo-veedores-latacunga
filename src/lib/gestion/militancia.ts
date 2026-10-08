@@ -7,13 +7,14 @@ import { erroresMilitante, esIncorrecto } from "./validacionMilitante";
 import { recintoDePreferencia } from "./recintoPreferencia";
 import type { ParroquiaFeature, Recinto } from "../types";
 import { rowToMilitante } from "./rows";
-import { agregarVeedor, veedoresPorJunta } from "./veedores";
+import { agregarVeedor, listVeedores, veedoresPorJunta } from "./veedores";
 import { agregarCoordinador, coordinadoresPorRecinto } from "./coordinadores";
 import {
   agregarAcreditadoCda,
   acreditadosCdaPorRecinto,
 } from "./acreditadosCda";
 import { juntaId } from "./juntas";
+import { elegirJuntaAutomatica } from "./juntaAutomatica";
 import { listLideres } from "./lideres";
 import type {
   AcreditadoCda,
@@ -471,7 +472,10 @@ export type AsignarDestino =
       recintoCodigo: number;
       parroquiaCodigo: number;
       genero: Genero;
-      numero: number;
+      // Sin número, la junta se elige sola entre las del género indicado
+      // (ver juntaAutomatica.ts); la ruta API pasa sus ids en juntaIds.
+      numero?: number;
+      juntaIds?: string[];
     }
   | { tipo: "coordinador"; recintoCodigo: number; parroquiaCodigo: number }
   | { tipo: "cda"; recintoCodigo: number; parroquiaCodigo: number };
@@ -486,8 +490,20 @@ export type ResultadoAsignacion =
       rol: "titular" | "suplente";
       persona: Veedor | Coordinador | AcreditadoCda;
     }
-  | { estado: "confirmar"; titular: string }
-  | { estado: "lleno"; titular: string; suplente: string };
+  | {
+      estado: "confirmar";
+      titular: string;
+      // Elección automática: la junta donde quedaría como suplente.
+      automatico?: boolean;
+      junta?: string;
+    }
+  | {
+      estado: "lleno";
+      titular: string;
+      suplente: string;
+      // Elección automática: ninguna junta del género tiene cupo.
+      automatico?: boolean;
+    };
 
 export async function asignarMilitante(
   id: string,
@@ -512,31 +528,59 @@ export async function asignarMilitante(
     );
   }
 
-  // Quién ocupa hoy el lugar de destino.
-  const junta =
-    destino.tipo === "veedor"
-      ? juntaId(destino.recintoCodigo, destino.genero, destino.numero)
-      : "";
-  const ocupantes =
-    destino.tipo === "veedor"
-      ? await veedoresPorJunta(junta)
-      : destino.tipo === "coordinador"
-        ? await coordinadoresPorRecinto(destino.recintoCodigo)
-        : await acreditadosCdaPorRecinto(destino.recintoCodigo);
-
   let rol: "titular" | "suplente" = "titular";
-  if (ocupantes.titular) {
-    if (ocupantes.suplentes.length > 0) {
-      return {
-        estado: "lleno",
-        titular: ocupantes.titular.nombres,
-        suplente: ocupantes.suplentes[0].nombres,
-      };
+  let junta: string;
+
+  if (destino.tipo === "veedor" && destino.numero == null) {
+    // Junta automática: titulares primero y, completos, suplentes.
+    const eleccion = elegirJuntaAutomatica(
+      destino.juntaIds ?? [],
+      await listVeedores(),
+    );
+    if (eleccion.estado === "sin_juntas") {
+      throw new Error("Este recinto no tiene juntas de ese género.");
     }
-    if (!confirmarSuplente) {
-      return { estado: "confirmar", titular: ocupantes.titular.nombres };
+    if (eleccion.estado === "lleno") {
+      return { estado: "lleno", titular: "", suplente: "", automatico: true };
     }
-    rol = "suplente";
+    junta = eleccion.juntaId;
+    if (eleccion.estado === "suplente") {
+      if (!confirmarSuplente) {
+        return {
+          estado: "confirmar",
+          titular: eleccion.titular,
+          automatico: true,
+          junta,
+        };
+      }
+      rol = "suplente";
+    }
+  } else {
+    // Quién ocupa hoy el lugar de destino.
+    junta =
+      destino.tipo === "veedor"
+        ? juntaId(destino.recintoCodigo, destino.genero, destino.numero!)
+        : "";
+    const ocupantes =
+      destino.tipo === "veedor"
+        ? await veedoresPorJunta(junta)
+        : destino.tipo === "coordinador"
+          ? await coordinadoresPorRecinto(destino.recintoCodigo)
+          : await acreditadosCdaPorRecinto(destino.recintoCodigo);
+
+    if (ocupantes.titular) {
+      if (ocupantes.suplentes.length > 0) {
+        return {
+          estado: "lleno",
+          titular: ocupantes.titular.nombres,
+          suplente: ocupantes.suplentes[0].nombres,
+        };
+      }
+      if (!confirmarSuplente) {
+        return { estado: "confirmar", titular: ocupantes.titular.nombres };
+      }
+      rol = "suplente";
+    }
   }
 
   const base = {

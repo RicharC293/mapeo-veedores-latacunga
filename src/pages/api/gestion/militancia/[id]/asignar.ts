@@ -9,6 +9,8 @@ import {
   requireApiRole,
 } from "../../../../../lib/gestion/apiHelpers";
 import { PAGINAS_GESTION } from "../../../../../lib/auth/roles";
+import { getMapData } from "../../../../../lib/data";
+import { listJuntasDeRecinto } from "../../../../../lib/gestion/juntas";
 
 export const POST: APIRoute = async ({ params, request, locals }) => {
   const bloqueo = requireApiRole(locals, PAGINAS_GESTION.militancia);
@@ -20,11 +22,19 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
       (await request.json()) as AsignarDestino & {
         confirmarSuplente?: boolean;
       };
-    const resultado = await asignarMilitante(
-      id,
-      destino as AsignarDestino,
-      confirmarSuplente === true,
-    );
+    const d = destino as AsignarDestino;
+    // Veedor sin número de junta: la junta se elige sola entre las del
+    // género indicado, así que se le pasan sus ids en orden.
+    if (d.tipo === "veedor" && d.numero == null) {
+      const data = await getMapData();
+      const recinto = data.recintos.find((r) => r.cod === d.recintoCodigo);
+      if (!recinto) throw new Error("Recinto no encontrado.");
+      d.juntaIds = listJuntasDeRecinto(recinto)
+        .filter((j) => j.genero === d.genero)
+        .sort((a, b) => a.numero - b.numero)
+        .map((j) => j.id);
+    }
+    const resultado = await asignarMilitante(id, d, confirmarSuplente === true);
     // 409: el destino ya está ocupado; el cliente muestra el aviso o pide
     // confirmar que la persona quedará como suplente.
     return json(resultado, {
