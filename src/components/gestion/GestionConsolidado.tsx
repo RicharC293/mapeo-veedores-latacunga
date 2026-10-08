@@ -56,7 +56,7 @@ interface Props {
   acreditados: AcreditadoCda[];
 }
 
-type Estado = "todos" | "completos" | "pendientes" | "excedente";
+type Estado = "todos" | "completos" | "casi" | "pendientes" | "excedente";
 
 // Con pocos recintos a la vista, su detalle se muestra abierto.
 const ABRIR_SI_HAY_HASTA = 2;
@@ -251,14 +251,17 @@ export default function GestionConsolidado({
 
   const completos = base.filter((f) => f.completo).length;
   const conExcedente = base.filter((f) => f.excedente > 0).length;
+  const casiCompletos = base.filter((f) => f.casiCompleto).length;
   const visibles = base.filter((f) =>
     estado === "completos"
       ? f.completo
-      : estado === "pendientes"
-        ? !f.completo
-        : estado === "excedente"
-          ? f.excedente > 0
-          : true,
+      : estado === "casi"
+        ? f.casiCompleto
+        : estado === "pendientes"
+          ? !f.completo
+          : estado === "excedente"
+            ? f.excedente > 0
+            : true,
   );
   const grupos = useMemo(
     () => agruparPorParroquia(visibles, parroquias),
@@ -385,6 +388,12 @@ export default function GestionConsolidado({
           { clave: "todos", etiqueta: "Todos", n: base.length },
           { clave: "completos", etiqueta: "Completos", n: completos },
           {
+            clave: "casi",
+            etiqueta: "Casi completos",
+            n: casiCompletos,
+            aviso: true,
+          },
+          {
             clave: "pendientes",
             etiqueta: "Con pendientes",
             n: base.length - completos,
@@ -459,11 +468,24 @@ export default function GestionConsolidado({
                             </span>
                           ) : null}
                           <span
-                            class={`chip-estado ${f.juntasConTitular === f.juntas.length ? "chip-estado-ok" : "chip-estado-pendiente"}`}
+                            class={`chip-estado ${
+                              f.juntasConTitular === f.juntas.length
+                                ? "chip-estado-ok"
+                                : f.casiCompleto
+                                  ? "chip-estado-casi"
+                                  : "chip-estado-pendiente"
+                            }`}
                             title={
-                              f.excedente > 0
-                                ? `${f.veedoresTotal} veedores para ${f.juntas.length} juntas: ${f.excedente} de más`
-                                : undefined
+                              [
+                                f.casiCompleto
+                                  ? "Casi completo: falta 1 veedor titular"
+                                  : null,
+                                f.excedente > 0
+                                  ? `${f.veedoresTotal} veedores para ${f.juntas.length} juntas: ${f.excedente} de más`
+                                  : null,
+                              ]
+                                .filter(Boolean)
+                                .join(". ") || undefined
                             }
                           >
                             Juntas{" "}
@@ -471,6 +493,9 @@ export default function GestionConsolidado({
                               ? f.veedoresTotal
                               : f.juntasConTitular}
                             /{f.juntas.length}
+                            {f.casiCompleto ? (
+                              <span class="g-sr-only"> (falta 1 veedor)</span>
+                            ) : null}
                             {f.excedente > 0 ? (
                               <span class="g-sr-only">
                                 {" "}

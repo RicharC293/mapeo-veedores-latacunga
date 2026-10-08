@@ -136,4 +136,57 @@ describe("consolidarRecinto", () => {
     expect(f.juntasConTitular).toBe(1);
     expect(f.excedente).toBe(1);
   });
+
+  describe("casi completo: coordinador y solo un veedor por cubrir", () => {
+    const titulares = [vee("10-F1", "titular"), vee("10-F2", "titular")];
+
+    it("con coordinador y una junta sin veedor titular", () => {
+      const f = consolidarRecinto(
+        recinto(false),
+        [coord("titular")],
+        [],
+        titulares,
+      );
+      expect(f.juntasSinTitular).toBe(1);
+      expect(f.casiCompleto).toBe(true);
+    });
+
+    it("sin coordinador no es casi completo, aunque falte un solo veedor", () => {
+      const f = consolidarRecinto(recinto(false), [], [], titulares);
+      expect(f.casiCompleto).toBe(false);
+    });
+
+    it("si faltan dos veedores deja de ser casi completo", () => {
+      const f = consolidarRecinto(
+        recinto(false),
+        [coord("titular")],
+        [],
+        [vee("10-F1", "titular")],
+      );
+      expect(f.juntasSinTitular).toBe(2);
+      expect(f.casiCompleto).toBe(false);
+    });
+
+    it("un recinto completo no es casi completo", () => {
+      const f = consolidarRecinto(
+        recinto(false),
+        [coord("titular")],
+        [],
+        [...titulares, vee("10-M1", "titular")],
+      );
+      expect(f.completo).toBe(true);
+      expect(f.casiCompleto).toBe(false);
+    });
+
+    it("el acreditado CDA no cambia el estado de juntas y coordinador", () => {
+      const f = consolidarRecinto(
+        recinto(true),
+        [coord("titular")],
+        [],
+        titulares,
+      );
+      expect(f.cda).not.toBeNull();
+      expect(f.casiCompleto).toBe(true);
+    });
+  });
 });

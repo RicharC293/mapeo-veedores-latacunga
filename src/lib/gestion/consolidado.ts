@@ -30,6 +30,11 @@ export interface FilaConsolidada {
   // veedoresTotal = 15 y excedente = 1.
   veedoresTotal: number;
   excedente: number;
+  // Juntas aún sin veedor titular.
+  juntasSinTitular: number;
+  // Casi completo: el recinto ya tiene coordinador titular y le falta un solo
+  // veedor titular. La CDA no cuenta: es un puesto aparte.
+  casiCompleto: boolean;
   // Puestos titulares que faltan por cubrir, para el resumen del recinto.
   faltantes: number;
   completo: boolean;
@@ -85,6 +90,9 @@ export function consolidarRecinto(
     juntasConTitular,
     veedoresTotal,
     excedente: Math.max(0, veedoresTotal - juntas.length),
+    juntasSinTitular: juntas.length - juntasConTitular,
+    casiCompleto:
+      coordinador.titular !== null && juntas.length - juntasConTitular === 1,
     faltantes,
     completo: faltantes === 0,
   };

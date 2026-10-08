@@ -1116,6 +1116,10 @@ select.g-campo-error {
   background: color-mix(in srgb, var(--error) 18%, transparent);
   color: var(--error);
 }
+.g-chip-filtro[data-aviso="true"]:not([aria-pressed="true"]) .g-chip-filtro-n {
+  background: color-mix(in srgb, #e0a800 22%, transparent);
+  color: var(--aviso);
+}
 .g-mil-buscar {
   display: flex;
   flex-wrap: wrap;

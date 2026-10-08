@@ -16,6 +16,7 @@
   --focus: #2e75b6;
   --error: #b3261e;
   --error-solid: #b3261e;
+  --aviso: #8a5d00;
   --font:
     "Atkinson Hyperlegible", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   box-sizing: border-box;
@@ -41,6 +42,7 @@
     --focus: #7db3e6;
   --error: #ff8f86;
   --error-solid: #b3261e;
+  --aviso: #f2c14e;
   }
 }
 :root[data-theme="dark"] {
@@ -61,6 +63,7 @@
   --focus: #7db3e6;
   --error: #ff8f86;
   --error-solid: #b3261e;
+  --aviso: #f2c14e;
 }
 *,
 *::before,
@@ -557,6 +560,11 @@ h3 {
 .chip-estado-ok {
   background: color-mix(in srgb, #2f9e57 18%, transparent);
   color: #2f9e57;
+}
+/* Casi completo: falta poco para cubrir (amarillo, entre el verde y el rojo). */
+.chip-estado-casi {
+  background: color-mix(in srgb, #e0a800 22%, transparent);
+  color: var(--aviso);
 }
 .resumen-compacto {
   display: flex;

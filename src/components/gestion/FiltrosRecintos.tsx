@@ -8,6 +8,8 @@ export interface OpcionEstado<E extends string> {
   n: number;
   // Resalta el conteo cuando hay pendientes (p. ej. "Sin coordinador").
   alerta?: boolean;
+  // Igual que alerta, pero en amarillo (falta poco).
+  aviso?: boolean;
 }
 
 interface Props<E extends string> {
@@ -115,6 +117,7 @@ export default function FiltrosRecintos<E extends string>({
               class="g-chip-filtro"
               aria-pressed={estado === c.clave}
               data-alerta={c.alerta && c.n > 0 ? "true" : undefined}
+              data-aviso={c.aviso && c.n > 0 ? "true" : undefined}
               onClick={() => onEstado(c.clave)}
             >
               {c.etiqueta}
