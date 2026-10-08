@@ -1,8 +1,14 @@
 import { useCallback, useMemo, useState } from "preact/hooks";
 import type { ChartData, ChartOptions } from "chart.js";
 import ChartCanvas, { type TemaColores } from "./ChartCanvas";
+import { etiquetaAjustada } from "./etiquetaEje";
 import { extraerPct, extraerPctRecinto } from "../../lib/gestion/coverage";
 import { title } from "../../lib/format";
+import {
+  ESPACIO_ROTULO_DERECHO,
+  abreviarRecinto,
+  anchoEtiquetas,
+} from "../../lib/gestion/chartLayout";
 import { COLOR_VERIFICADO } from "../../lib/gestion/chartColors";
 import type {
   CoberturaCanton,
@@ -32,10 +38,6 @@ function colorSerie1(ctx: { chart: { canvas: HTMLCanvasElement } }): string {
   );
 }
 
-function truncar(nombre: string, max = 26): string {
-  return nombre.length > max ? `${nombre.slice(0, max - 1).trimEnd()}…` : nombre;
-}
-
 export default function GraficoCobertura({
   track,
   titulo,
@@ -63,7 +65,9 @@ export default function GraficoCobertura({
     () =>
       parroquias
         .filter((p) =>
-          ambito === "todas" ? true : p.properties.urbana === (ambito === "urbanas"),
+          ambito === "todas"
+            ? true
+            : p.properties.urbana === (ambito === "urbanas"),
         )
         .sort((a, b) => a.properties.name.localeCompare(b.properties.name)),
     [parroquias, ambito],
@@ -72,12 +76,18 @@ export default function GraficoCobertura({
   const { labels, cobertura, verificado } = useMemo(() => {
     if (nivel === "canton") {
       const { pct, pctVerificado } = extraerPct(track, canton);
-      return { labels: ["Cantón"], cobertura: [pct], verificado: [pctVerificado] };
+      return {
+        labels: ["Cantón"],
+        cobertura: [pct],
+        verificado: [pctVerificado],
+      };
     }
     if (nivel === "parroquia") {
       const filas = parroquias
         .filter((p) =>
-          ambito === "todas" ? true : p.properties.urbana === (ambito === "urbanas"),
+          ambito === "todas"
+            ? true
+            : p.properties.urbana === (ambito === "urbanas"),
         )
         .map((p) => {
           const c = porParroquia[p.properties.code];
@@ -85,7 +95,10 @@ export default function GraficoCobertura({
           const { pct, pctVerificado } = extraerPct(track, c);
           return { nombre: p.properties.name, pct, pctVerificado };
         })
-        .filter((f): f is { nombre: string; pct: number; pctVerificado: number } => f !== null)
+        .filter(
+          (f): f is { nombre: string; pct: number; pctVerificado: number } =>
+            f !== null,
+        )
         .sort((a, b) => b.pct - a.pct);
       return {
         labels: filas.map((f) => f.nombre),
@@ -99,7 +112,8 @@ export default function GraficoCobertura({
           return false;
         }
         if (ambito !== "todas") {
-          const urbana = parByCode.get(r.parroquiaCodigo)?.properties.urbana ?? false;
+          const urbana =
+            parByCode.get(r.parroquiaCodigo)?.properties.urbana ?? false;
           if (urbana !== (ambito === "urbanas")) return false;
         }
         return true;
@@ -161,6 +175,7 @@ export default function GraficoCobertura({
       indexAxis: "y" as const,
       responsive: true,
       maintainAspectRatio: false,
+      layout: { padding: { right: ESPACIO_ROTULO_DERECHO } },
       scales: {
         x: {
           min: 0,
@@ -170,12 +185,17 @@ export default function GraficoCobertura({
         },
         y: {
           afterFit: (scale) => {
-            scale.width = 170;
+            scale.width = anchoEtiquetas(scale.chart.width);
           },
           ticks: {
             color: colores.muted,
             autoSkip: false,
-            callback: (value) => truncar(labels[value as number] ?? ""),
+            callback: function (value) {
+              return etiquetaAjustada(
+                this,
+                abreviarRecinto(labels[value as number] ?? ""),
+              );
+            },
           },
           grid: { display: false },
         },
@@ -207,7 +227,9 @@ export default function GraficoCobertura({
 
   const alturaPorFila = nivel === "parroquia" ? 42 : 30;
   const altura =
-    nivel === "canton" ? 140 : Math.max(220, labels.length * alturaPorFila + 60);
+    nivel === "canton"
+      ? 140
+      : Math.max(220, labels.length * alturaPorFila + 60);
 
   return (
     <div class="g-panel">
@@ -265,9 +287,16 @@ export default function GraficoCobertura({
         ) : null}
       </div>
       {labels.length === 0 ? (
-        <p class="g-empty">No hay datos para {titulo.toLowerCase()} en este nivel.</p>
+        <p class="g-empty">
+          No hay datos para {titulo.toLowerCase()} en este nivel.
+        </p>
       ) : (
-        <ChartCanvas type="bar" data={data} buildOptions={buildOptions} height={altura} />
+        <ChartCanvas
+          type="bar"
+          data={data}
+          buildOptions={buildOptions}
+          height={altura}
+        />
       )}
     </div>
   );

@@ -1,7 +1,12 @@
 import { useCallback, useMemo } from "preact/hooks";
 import type { ChartData, ChartOptions } from "chart.js";
 import ChartCanvas, { type TemaColores } from "./ChartCanvas";
+import { etiquetaAjustada } from "./etiquetaEje";
 import { COLOR_VERIFICADO } from "../../lib/gestion/chartColors";
+import {
+  ESPACIO_ROTULO_DERECHO,
+  anchoEtiquetas,
+} from "../../lib/gestion/chartLayout";
 import type { Lider } from "../../lib/gestion/types";
 
 interface Persona {
@@ -22,9 +27,16 @@ function colorSerie1(ctx: { chart: { canvas: HTMLCanvasElement } }): string {
   );
 }
 
-export default function GraficoResponsables({ titulo, lideres, personas }: Props) {
+export default function GraficoResponsables({
+  titulo,
+  lideres,
+  personas,
+}: Props) {
   const filas = useMemo(() => {
-    const porLider = new Map<string | null, { total: number; verificados: number }>();
+    const porLider = new Map<
+      string | null,
+      { total: number; verificados: number }
+    >();
     for (const p of personas) {
       const actual = porLider.get(p.responsableLiderId) ?? {
         total: 0,
@@ -71,6 +83,7 @@ export default function GraficoResponsables({ titulo, lideres, personas }: Props
       indexAxis: "y" as const,
       responsive: true,
       maintainAspectRatio: false,
+      layout: { padding: { right: ESPACIO_ROTULO_DERECHO } },
       scales: {
         x: {
           beginAtZero: true,
@@ -78,7 +91,21 @@ export default function GraficoResponsables({ titulo, lideres, personas }: Props
           grid: { color: colores.chartGrid },
         },
         y: {
-          ticks: { color: colores.muted },
+          // Los nombres de líderes pueden ser largos: se acortan al ancho
+          // disponible y el nombre completo sale en la sugerencia.
+          afterFit: (scale) => {
+            scale.width = anchoEtiquetas(scale.chart.width);
+          },
+          ticks: {
+            color: colores.muted,
+            autoSkip: false,
+            callback: function (value) {
+              return etiquetaAjustada(
+                this,
+                this.getLabelForValue(value as number),
+              );
+            },
+          },
           grid: { display: false },
         },
       },
@@ -90,6 +117,9 @@ export default function GraficoResponsables({ titulo, lideres, personas }: Props
           bodyColor: colores.ink,
           borderColor: colores.line,
           borderWidth: 1,
+          callbacks: {
+            title: (items) => items[0]?.label ?? "",
+          },
         },
         datalabels: {
           color: colores.ink,
@@ -103,7 +133,11 @@ export default function GraficoResponsables({ titulo, lideres, personas }: Props
   );
 
   if (filas.length === 0) {
-    return <p class="g-empty">Todavía no hay {titulo.toLowerCase()} con responsable asignado.</p>;
+    return (
+      <p class="g-empty">
+        Todavía no hay {titulo.toLowerCase()} con responsable asignado.
+      </p>
+    );
   }
 
   return (

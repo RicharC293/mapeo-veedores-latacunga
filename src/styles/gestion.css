@@ -837,13 +837,29 @@ select.g-campo-error {
   flex-wrap: wrap;
   gap: 16px;
 }
-.g-cobertura-lateral > * {
+/* Cada gráfico va dentro de un <astro-island> (display: contents), así que
+   el que cuenta como elemento flexible es el gráfico mismo. Sin esto no
+   crecían y quedaban angostos y pegados a la izquierda. */
+.g-cobertura-lateral > *,
+.g-cobertura-lateral > astro-island > * {
   flex: 1 1 320px;
   min-width: 0;
 }
+.g-cobertura-lateral > astro-island:nth-child(2) > * {
+  flex-grow: 1.6;
+}
 @media (max-width: 780px) {
+  /* nowrap: con "wrap" el ancho de la columna lo fija el contenido (el lienzo
+     de 300 px) y no el contenedor, y en pantallas muy angostas se desbordaba. */
   .g-cobertura-lateral {
     flex-direction: column;
+    flex-wrap: nowrap;
+  }
+  /* En columna, el "320px" de arriba pasaría a ser un alto mínimo: tarjetas
+     altas y medio vacías. Cada gráfico mide lo que necesita. */
+  .g-cobertura-lateral > *,
+  .g-cobertura-lateral > astro-island > * {
+    flex: 0 0 auto;
   }
 }
 
