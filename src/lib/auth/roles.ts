@@ -17,6 +17,8 @@ export const PAGINAS_GESTION: Record<string, Rol[]> = {
   "lista-negra": ["gestor", "administrador"],
   cobertura: ["militante", "gestor", "administrador"],
   informe: ["militante", "gestor", "administrador"],
+  // Traen cédulas y celulares: solo quien gestiona.
+  descargas: ["gestor", "administrador"],
   crecimiento: ["militante", "gestor", "administrador"],
   organigrama: ["militante", "gestor", "administrador"],
   estructura: ["militante", "gestor", "administrador"],

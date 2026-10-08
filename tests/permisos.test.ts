@@ -60,4 +60,19 @@ describe("permisos por rol", () => {
     expect(tienePermiso("gestor", PAGINAS_GESTION.consolidado)).toBe(true);
     expect(tienePermiso("militante", PAGINAS_GESTION.consolidado)).toBe(false);
   });
+
+  // Las descargas traen cédulas y celulares: solo gestor y administrador.
+  it("la descarga de la matriz valida el permiso y es solo de quien gestiona", () => {
+    const codigo = readFileSync(
+      "src/pages/api/gestion/descargas/matriz.ts",
+      "utf8",
+    );
+    expect(codigo).toContain(
+      "requireApiRole(locals, PAGINAS_GESTION.descargas)",
+    );
+    expect(tienePermiso("gestor", PAGINAS_GESTION.descargas)).toBe(true);
+    expect(tienePermiso("administrador", PAGINAS_GESTION.descargas)).toBe(true);
+    expect(tienePermiso("militante", PAGINAS_GESTION.descargas)).toBe(false);
+    expect(tienePermiso("invitado", PAGINAS_GESTION.descargas)).toBe(false);
+  });
 });

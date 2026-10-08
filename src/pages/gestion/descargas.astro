@@ -1,0 +1,93 @@
+---
+import GestionLayout from "../../layouts/GestionLayout.astro";
+import { getMapData } from "../../lib/data";
+import { listVeedores } from "../../lib/gestion/veedores";
+import { listCoordinadores } from "../../lib/gestion/coordinadores";
+import { listAcreditadosCda } from "../../lib/gestion/acreditadosCda";
+import { OPCIONES_DESCARGA } from "../../lib/gestion/descargas";
+import { fmt } from "../../lib/format";
+import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
+
+if (!PAGINAS_GESTION.descargas.includes(Astro.locals.rol)) {
+  return Astro.redirect(rutaPorDefecto(Astro.locals.rol));
+}
+
+const [mapa, veedores, coordinadores, acreditados] = await Promise.all([
+  getMapData(),
+  listVeedores(),
+  listCoordinadores(),
+  listAcreditadosCda(),
+]);
+const titulares = (l: { tipo: string }[]) =>
+  l.filter((p) => p.tipo === "titular").length;
+const suplentes = (l: { tipo: string }[]) =>
+  l.filter((p) => p.tipo === "suplente").length;
+const juntas = mapa.recintos.reduce((a, r) => a + r.jt, 0);
+const recintosCda = mapa.recintos.filter((r) => r.cda).length;
+
+// Qué lleva cada archivo, con las cifras de hoy.
+const contenido: Record<string, string[]> = {
+  todo: [
+    `${fmt(titulares(veedores))} de ${fmt(juntas)} veedores titulares`,
+    `${fmt(titulares(coordinadores))} de ${fmt(mapa.recintos.length)} coordinadores titulares`,
+  ],
+  veedores: [
+    `${fmt(titulares(veedores))} de ${fmt(juntas)} veedores titulares`,
+  ],
+  coordinadores: [
+    `${fmt(titulares(coordinadores))} de ${fmt(mapa.recintos.length)} coordinadores titulares`,
+  ],
+  cda: [
+    `${fmt(titulares(acreditados))} de ${fmt(recintosCda)} acreditados titulares`,
+  ],
+};
+const sup = {
+  todo: suplentes(veedores) + suplentes(coordinadores),
+  veedores: suplentes(veedores),
+  coordinadores: suplentes(coordinadores),
+  cda: suplentes(acreditados),
+};
+---
+
+<GestionLayout title="Descargas" activo="descargas">
+  <h1>Descargas</h1>
+  <p class="g-sub">
+    Los datos de hoy en la plantilla Matriz Veedores 2027 JRV CNE, lista para
+    abrir en Excel o Google Sheets. Cada descarga se arma al momento con lo que
+    hay registrado.
+  </p>
+
+  <ul class="g-descargas">
+    {OPCIONES_DESCARGA.map((o) => (
+      <li class="g-descarga">
+        <h2>{o.titulo}</h2>
+        <p>{o.descripcion}</p>
+        <ul class="g-descarga-datos">
+          {contenido[o.tipo].map((c) => (
+            <li>{c}</li>
+          ))}
+          {sup[o.tipo] > 0 ? (
+            <li>
+              {fmt(sup[o.tipo])} {sup[o.tipo] === 1 ? "suplente" : "suplentes"}{" "}
+              en Observaciones
+            </li>
+          ) : null}
+        </ul>
+        <a
+          class="g-btn-accion"
+          href={`/api/gestion/descargas/matriz?tipo=${o.tipo}`}
+          download
+        >
+          Descargar .xlsx
+        </a>
+      </li>
+    ))}
+  </ul>
+
+  <p class="g-descargas-nota">
+    Solo se llenan los titulares en las casillas de nombre, cédula y teléfono;
+    los suplentes se anotan en la columna Observaciones. Las cédulas repetidas
+    se marcan solas, como ya hace la plantilla. Los archivos incluyen cédulas y
+    celulares: compártelos solo con quien deba verlos.
+  </p>
+</GestionLayout>

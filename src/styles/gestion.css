@@ -2428,3 +2428,56 @@ select.g-campo-error {
     text-decoration: none;
   }
 }
+
+/* Descargas: una tarjeta por archivo. */
+.g-descargas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+.g-descarga {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+.g-descarga h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+.g-descarga p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.g-descarga-datos {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.g-descarga .g-btn-accion {
+  margin-top: auto;
+}
+a.g-btn-accion {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 16px;
+  text-decoration: none;
+}
+.g-descargas-nota {
+  max-width: 70ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
