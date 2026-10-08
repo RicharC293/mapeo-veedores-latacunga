@@ -18,12 +18,15 @@ const lideres = await listLideres();
 <GestionLayout title="Veedores" activo="veedores">
   <h1>Veedores</h1>
   <p class="g-sub">
-    Un veedor titular y sus suplentes por cada junta receptora del voto. Al
-    desvincular al titular, el primer suplente ocupa su lugar automáticamente.
+    Un veedor titular y sus suplentes por cada junta receptora del voto, con
+    todos los recintos agrupados por parroquia. Al desvincular al titular, el
+    primer suplente ocupa su lugar automáticamente.
   </p>
   <GestionVeedores
     client:load
-    parroquias={data.parroquias.features}
+    parroquias={data.parroquias.features.map(({ properties }) => ({
+      properties,
+    }))}
     recintos={data.recintos}
     lideres={lideres}
     veedoresIniciales={veedores}

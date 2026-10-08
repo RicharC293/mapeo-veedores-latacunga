@@ -1592,27 +1592,34 @@ select.g-campo-error {
   color: var(--ink);
 }
 
-/* Coordinadores: todos los recintos, agrupados por parroquia. */
-.g-coor-resumen p {
+/* Recintos agrupados por parroquia (Coordinadores, Veedores, CDA). */
+.g-avance p {
   margin: 0 0 6px;
 }
-.g-coor-barra {
+.g-avance-barra {
   height: 8px;
   border-radius: 99px;
   background: var(--chip);
   overflow: hidden;
 }
-.g-coor-barra-lleno {
+.g-avance-lleno {
   height: 100%;
   background: var(--sel);
   border-radius: 99px;
 }
-.g-coor-grupo {
+/* El contenido de un <details> hereda content-box del contenedor interno del
+   navegador, y de ahí todos sus descendientes: campos y botones al 100% se
+   salían de su caja. */
+.g-grupo > :not(summary),
+.g-recinto > :not(summary) {
+  box-sizing: border-box;
+}
+.g-grupo {
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--panel);
 }
-.g-coor-grupo > summary {
+.g-grupo > summary {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1621,10 +1628,10 @@ select.g-campo-error {
   cursor: pointer;
   list-style: none;
 }
-.g-coor-grupo > summary::-webkit-details-marker {
+.g-grupo > summary::-webkit-details-marker {
   display: none;
 }
-.g-coor-grupo > summary::before {
+.g-grupo > summary::before {
   content: "";
   width: 8px;
   height: 8px;
@@ -1633,29 +1640,90 @@ select.g-campo-error {
   transform: rotate(-45deg);
   transition: transform 0.15s ease-out;
 }
-.g-coor-grupo[open] > summary::before {
+.g-grupo[open] > summary::before {
   transform: rotate(45deg);
 }
-.g-coor-grupo > summary:focus-visible {
+.g-grupo > summary:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
   border-radius: 12px;
 }
-.g-coor-grupo-nombre {
+.g-grupo-nombre {
   font-weight: 700;
   font-size: 1.02rem;
 }
-.g-coor-grupo-cuenta {
+.g-grupo-cuenta {
   margin-left: auto;
   color: var(--muted);
   font-size: 0.85rem;
   font-variant-numeric: tabular-nums;
 }
-.g-coor-grupo > .g-cards {
+.g-grupo > .g-cards,
+.g-grupo-cuerpo {
   padding: 4px 16px 16px;
 }
+/* Recinto plegable dentro de una parroquia (Veedores). */
+.g-grupo-cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.g-recinto {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+}
+.g-recinto > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+.g-recinto > summary::-webkit-details-marker {
+  display: none;
+}
+.g-recinto > summary::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease-out;
+}
+.g-recinto[open] > summary::before {
+  transform: rotate(45deg);
+}
+.g-recinto > summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+.g-recinto > .g-cards {
+  padding: 4px 14px 14px;
+}
 @media (prefers-reduced-motion: reduce) {
-  .g-coor-grupo > summary::before {
+  .g-grupo > summary::before,
+  .g-recinto > summary::before {
     transition: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .g-grupo > summary {
+    padding: 10px 12px;
+  }
+  .g-grupo > .g-cards,
+  .g-grupo-cuerpo {
+    padding: 4px 8px 12px;
+  }
+  .g-recinto > summary {
+    padding: 10px 12px;
+  }
+  .g-recinto > .g-cards {
+    padding: 4px 8px 12px;
   }
 }

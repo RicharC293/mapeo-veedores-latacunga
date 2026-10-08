@@ -1,11 +1,21 @@
 import { useMemo, useState } from "preact/hooks";
 import AsignacionCard from "./AsignacionCard";
-import { title } from "../../lib/format";
-import type { ParroquiaFeature, Recinto } from "../../lib/types";
+import FiltrosRecintos, {
+  ResumenAvance,
+  VacioFiltros,
+} from "./FiltrosRecintos";
+import GrupoParroquia from "./GrupoParroquia";
+import { normalizar, title } from "../../lib/format";
+import {
+  agruparPorParroquia,
+  coincideUbicacion,
+  type Ubicacion,
+} from "../../lib/gestion/ubicacion";
+import type { ParroquiaBasica, Recinto } from "../../lib/types";
 import type { AcreditadoCda, Lider } from "../../lib/gestion/types";
 
 interface Props {
-  parroquias: ParroquiaFeature[];
+  parroquias: ParroquiaBasica[];
   recintosCda: Recinto[];
   lideres: Lider[];
   acreditadosIniciales: AcreditadoCda[];
@@ -21,6 +31,8 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+type Estado = "todos" | "con" | "sin";
+
 export default function GestionAcreditadosCda({
   parroquias,
   recintosCda,
@@ -28,129 +40,184 @@ export default function GestionAcreditadosCda({
   acreditadosIniciales,
 }: Props) {
   const [acreditados, setAcreditados] = useState(acreditadosIniciales);
-  const [parroquiaCod, setParroquiaCod] = useState<number | "">("");
-  const [recintoCod, setRecintoCod] = useState<number | "">("");
-
-  const parroquiasConCda = useMemo(() => {
-    const codigos = new Set(recintosCda.map((r) => r.par));
-    return parroquias
-      .filter((p) => codigos.has(p.properties.code))
-      .sort((a, b) => a.properties.name.localeCompare(b.properties.name));
-  }, [parroquias, recintosCda]);
-
-  const recintosDeParroquia = useMemo(
-    () =>
-      recintosCda
-        .filter((r) => r.par === parroquiaCod)
-        .sort((a, b) => a.nombre.localeCompare(b.nombre)),
-    [recintosCda, parroquiaCod],
-  );
-  const recinto = recintosCda.find((r) => r.cod === recintoCod) ?? null;
+  const [ubicacion, setUbicacion] = useState<Ubicacion>("todas");
+  const [estado, setEstado] = useState<Estado>("todos");
+  const [busqueda, setBusqueda] = useState("");
 
   const refrescar = async () => {
     setAcreditados(await api<AcreditadoCda[]>("/api/gestion/acreditados-cda"));
   };
 
-  const delRecinto = recinto
-    ? acreditados.filter((a) => a.recintoCodigo === recinto.cod)
-    : [];
-  const titular = delRecinto.find((a) => a.tipo === "titular") ?? null;
-  const suplentes = delRecinto
-    .filter((a) => a.tipo === "suplente")
-    .sort((a, b) => a.orden - b.orden);
+  // El selector solo ofrece parroquias que tienen algún recinto CDA.
+  const parroquiasConCda = useMemo(() => {
+    const codigos = new Set(recintosCda.map((r) => r.par));
+    return parroquias.filter((p) => codigos.has(p.properties.code));
+  }, [parroquias, recintosCda]);
+
+  // Un registro por recinto CDA, con su acreditado titular y sus suplentes.
+  const filas = useMemo(() => {
+    const porRecinto = new Map<number, AcreditadoCda[]>();
+    for (const a of acreditados) {
+      porRecinto.set(a.recintoCodigo, [
+        ...(porRecinto.get(a.recintoCodigo) ?? []),
+        a,
+      ]);
+    }
+    return recintosCda.map((recinto) => {
+      const delRecinto = porRecinto.get(recinto.cod) ?? [];
+      return {
+        recinto,
+        parroquia: parroquias.find((p) => p.properties.code === recinto.par),
+        titular: delRecinto.find((a) => a.tipo === "titular") ?? null,
+        suplentes: delRecinto
+          .filter((a) => a.tipo === "suplente")
+          .sort((a, b) => a.orden - b.orden),
+      };
+    });
+  }, [acreditados, recintosCda, parroquias]);
+
+  const base = useMemo(() => {
+    const q = normalizar(busqueda);
+    return filas.filter((f) => {
+      if (!coincideUbicacion(ubicacion, f.parroquia)) return false;
+      if (!q) return true;
+      return normalizar(
+        [
+          f.recinto.nombre,
+          f.parroquia?.properties.name ?? "",
+          f.titular?.nombres,
+          f.titular?.cedula,
+          ...f.suplentes.map((s) => `${s.nombres} ${s.cedula}`),
+        ].join(" "),
+      ).includes(q);
+    });
+  }, [filas, ubicacion, busqueda]);
+
+  const conTitular = base.filter((f) => f.titular).length;
+  const visibles = base.filter((f) =>
+    estado === "con" ? f.titular : estado === "sin" ? !f.titular : true,
+  );
+  const grupos = useMemo(
+    () => agruparPorParroquia(visibles, parroquias),
+    [visibles, parroquias],
+  );
+
+  const hayFiltros =
+    ubicacion !== "todas" || estado !== "todos" || busqueda !== "";
+  const quitarFiltros = () => {
+    setUbicacion("todas");
+    setEstado("todos");
+    setBusqueda("");
+  };
 
   return (
     <div class="g-panel">
-      <div class="g-selects">
-        <label>
-          Parroquia
-          <select
-            value={parroquiaCod}
-            onChange={(e) => {
-              setParroquiaCod(
-                Number((e.currentTarget as HTMLSelectElement).value) || "",
-              );
-              setRecintoCod("");
-            }}
-          >
-            <option value="">Selecciona…</option>
-            {parroquiasConCda.map((p) => (
-              <option key={p.properties.code} value={p.properties.code}>
-                {p.properties.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Recinto CDA
-          <select
-            value={recintoCod}
-            disabled={!parroquiaCod}
-            onChange={(e) =>
-              setRecintoCod(
-                Number((e.currentTarget as HTMLSelectElement).value) || "",
-              )
-            }
-          >
-            <option value="">Selecciona…</option>
-            {recintosDeParroquia.map((r) => (
-              <option key={r.cod} value={r.cod}>
-                {title(r.nombre)}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      <ResumenAvance
+        parte={conTitular}
+        total={base.length}
+        texto={
+          <>
+            <strong>{conTitular}</strong> de <strong>{base.length}</strong>{" "}
+            recintos CDA tienen acreditado titular
+          </>
+        }
+        etiquetaBarra="Recintos CDA con acreditado titular"
+      />
 
-      {parroquiaCod && recintosDeParroquia.length === 0 ? (
-        <p class="g-empty">Esta parroquia no tiene recintos CDA.</p>
-      ) : !recinto ? (
-        <p class="g-empty">Elige una parroquia y un recinto CDA.</p>
+      <FiltrosRecintos
+        parroquias={parroquiasConCda}
+        ubicacion={ubicacion}
+        onUbicacion={setUbicacion}
+        estados={[
+          { clave: "todos", etiqueta: "Todos", n: base.length },
+          { clave: "con", etiqueta: "Con acreditado", n: conTitular },
+          {
+            clave: "sin",
+            etiqueta: "Sin acreditado",
+            n: base.length - conTitular,
+            alerta: true,
+          },
+        ]}
+        estado={estado}
+        onEstado={setEstado}
+        busqueda={busqueda}
+        onBusqueda={setBusqueda}
+        placeholder="Recinto, acreditado o cédula…"
+        contador={`Mostrando ${visibles.length} de ${filas.length} recintos CDA`}
+        hayFiltros={hayFiltros}
+        onQuitar={quitarFiltros}
+      />
+
+      {grupos.length === 0 ? (
+        <VacioFiltros
+          mensaje="Ningún recinto CDA coincide con estos filtros."
+          onQuitar={quitarFiltros}
+        />
       ) : (
-        <div class="g-cards">
-          <AsignacionCard
-            titulo={`Acreditado CDA de ${title(recinto.nombre)}`}
-            titular={titular}
-            suplentes={suplentes}
-            lideres={lideres}
-            onAgregarTitular={async (input) => {
-              await api("/api/gestion/acreditados-cda", {
-                method: "POST",
-                body: JSON.stringify({
-                  ...input,
-                  recintoCodigo: recinto.cod,
-                  tipo: "titular",
-                }),
-              });
-              await refrescar();
-            }}
-            onAgregarSuplente={async (input) => {
-              await api("/api/gestion/acreditados-cda", {
-                method: "POST",
-                body: JSON.stringify({
-                  ...input,
-                  recintoCodigo: recinto.cod,
-                  tipo: "suplente",
-                }),
-              });
-              await refrescar();
-            }}
-            onDesvincular={async (id, motivo, listaNegra) => {
-              await api(`/api/gestion/acreditados-cda/${id}/desvincular`, {
-                method: "POST",
-                body: JSON.stringify({ motivo, listaNegra }),
-              });
-              await refrescar();
-            }}
-            onVerificar={async (id, verificado) => {
-              await api(`/api/gestion/acreditados-cda/${id}/verificar`, {
-                method: "POST",
-                body: JSON.stringify({ verificado }),
-              });
-              await refrescar();
-            }}
-          />
-        </div>
+        grupos.map((g) => {
+          const con = g.items.filter((f) => f.titular).length;
+          return (
+            <GrupoParroquia
+              key={g.parroquia?.properties.code ?? "sin-parroquia"}
+              parroquia={g.parroquia}
+              cuenta={`${con} de ${g.items.length} con acreditado`}
+            >
+              <div class="g-cards">
+                {g.items.map((f) => (
+                  <AsignacionCard
+                    key={f.recinto.cod}
+                    titulo={`Acreditado CDA de ${title(f.recinto.nombre)}`}
+                    titular={f.titular}
+                    suplentes={f.suplentes}
+                    lideres={lideres}
+                    onAgregarTitular={async (input) => {
+                      await api("/api/gestion/acreditados-cda", {
+                        method: "POST",
+                        body: JSON.stringify({
+                          ...input,
+                          recintoCodigo: f.recinto.cod,
+                          tipo: "titular",
+                        }),
+                      });
+                      await refrescar();
+                    }}
+                    onAgregarSuplente={async (input) => {
+                      await api("/api/gestion/acreditados-cda", {
+                        method: "POST",
+                        body: JSON.stringify({
+                          ...input,
+                          recintoCodigo: f.recinto.cod,
+                          tipo: "suplente",
+                        }),
+                      });
+                      await refrescar();
+                    }}
+                    onDesvincular={async (id, motivo, listaNegra) => {
+                      await api(
+                        `/api/gestion/acreditados-cda/${id}/desvincular`,
+                        {
+                          method: "POST",
+                          body: JSON.stringify({ motivo, listaNegra }),
+                        },
+                      );
+                      await refrescar();
+                    }}
+                    onVerificar={async (id, verificado) => {
+                      await api(
+                        `/api/gestion/acreditados-cda/${id}/verificar`,
+                        {
+                          method: "POST",
+                          body: JSON.stringify({ verificado }),
+                        },
+                      );
+                      await refrescar();
+                    }}
+                  />
+                ))}
+              </div>
+            </GrupoParroquia>
+          );
+        })
       )}
     </div>
   );

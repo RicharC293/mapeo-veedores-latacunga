@@ -25,7 +25,9 @@ const recintosCda = data.recintos.filter((r) => r.cda);
   </p>
   <GestionAcreditadosCda
     client:load
-    parroquias={data.parroquias.features}
+    parroquias={data.parroquias.features.map(({ properties }) => ({
+      properties,
+    }))}
     recintosCda={recintosCda}
     lideres={lideres}
     acreditadosIniciales={acreditados}
