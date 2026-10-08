@@ -230,6 +230,21 @@ export function calcularCoberturaCanton(
   };
 }
 
+// Cobertura de un grupo de parroquias (por ejemplo "las urbanas"): suma los
+// conteos reales de cada una y saca la proporción sobre el total del grupo.
+// Nunca se promedian los porcentajes de cada parroquia: una con 1 junta al
+// 100 % pesaría lo mismo que una con 60 juntas al 5 %.
+export function calcularCoberturaGrupo(
+  porParroquia: Record<number, CoberturaParroquia>,
+  codigos: number[],
+): CoberturaCanton {
+  const subconjunto: Record<number, CoberturaParroquia> = {};
+  for (const codigo of codigos) {
+    if (porParroquia[codigo]) subconjunto[codigo] = porParroquia[codigo];
+  }
+  return calcularCoberturaCanton(subconjunto);
+}
+
 // Extrae el par (pct, pctVerificado) correspondiente a un track, tanto para
 // el agregado de cantón como para una fila de CoberturaParroquia (misma
 // forma de campos en ambos tipos).

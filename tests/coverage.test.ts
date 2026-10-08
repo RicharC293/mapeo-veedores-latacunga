@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   calcularCobertura,
   calcularCoberturaCanton,
+  calcularCoberturaGrupo,
   calcularCoberturaPorParroquia,
   extraerPct,
   extraerPctRecinto,
@@ -134,5 +135,67 @@ describe("cobertura completa: una sola medida en todas partes", () => {
       [],
     ).find((x) => x.recintoCodigo === 2)!;
     expect(f.juntasCubiertas).toBe(0);
+  });
+});
+
+describe("cobertura de un grupo de parroquias", () => {
+  // Parroquia 1: 1 junta, cubierta (100 %). Parroquia 2: 9 juntas, ninguna
+  // cubierta (0 %). Promediar los porcentajes daría 50 %; la realidad es 10 %.
+  const rec = (cod: number, par: number, juntas: number) =>
+    ({
+      cod,
+      par,
+      nombre: `R${cod}`,
+      cda: false,
+      jf: juntas,
+      jm: 0,
+      fi: 1,
+      ff: juntas,
+      mi: 0,
+      mf: 0,
+    }) as Recinto;
+  const rs = [rec(1, 1, 1), rec(2, 2, 9)];
+  const ps = [
+    { properties: { code: 1, name: "A", urbana: true, lx: 0, ly: 0 } },
+    { properties: { code: 2, name: "B", urbana: true, lx: 0, ly: 0 } },
+  ] as ParroquiaFeature[];
+  const porParroquia = calcularCoberturaPorParroquia(
+    ps,
+    rs,
+    [vee("1-F1", true)],
+    [coord(1, true)],
+    [],
+  );
+
+  it("pesa cada parroquia por sus juntas, no por igual", () => {
+    const grupo = calcularCoberturaGrupo(porParroquia, [1, 2]);
+    expect(grupo.totalJuntas).toBe(10);
+    expect(grupo.juntasCubiertas).toBe(1);
+    expect(grupo.pctCobertura).toBe(10);
+    expect(grupo.pctCoberturaVerificada).toBe(10);
+    // El promedio de porcentajes (el error que había) daría 50.
+    const promedio =
+      (porParroquia[1].pctCobertura + porParroquia[2].pctCobertura) / 2;
+    expect(promedio).toBe(50);
+    expect(grupo.pctCobertura).not.toBe(promedio);
+  });
+
+  it("el coordinador también se pesa por recintos, y sus verificados", () => {
+    const grupo = calcularCoberturaGrupo(porParroquia, [1, 2]);
+    expect(grupo.totalRecintos).toBe(2);
+    expect(grupo.recintosConCoordinador).toBe(1);
+    expect(grupo.pctCoordinador).toBe(50);
+    expect(grupo.pctCoordinadorVerificado).toBe(50);
+  });
+
+  it("un grupo de una sola parroquia coincide con esa parroquia", () => {
+    const g = calcularCoberturaGrupo(porParroquia, [2]);
+    expect(g.pctCobertura).toBe(porParroquia[2].pctCobertura);
+    expect(g.totalJuntas).toBe(9);
+  });
+
+  it("ignora códigos sin datos y un grupo vacío da 0 sin romper", () => {
+    expect(calcularCoberturaGrupo(porParroquia, [99]).pctCobertura).toBe(0);
+    expect(calcularCoberturaGrupo(porParroquia, []).totalJuntas).toBe(0);
   });
 });

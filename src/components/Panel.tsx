@@ -8,6 +8,7 @@ import {
 } from "../lib/stats";
 import {
   calcularCobertura,
+  calcularCoberturaGrupo,
   calcularCoberturaPorParroquia,
 } from "../lib/gestion/coverage";
 import { responsablesDeRecinto } from "../lib/gestion/responsables";
@@ -477,10 +478,6 @@ function RecintoRow({
   );
 }
 
-function pctOf(parte: number, total: number): number {
-  return total > 0 ? Math.round((parte / total) * 1000) / 10 : 0;
-}
-
 function colorForPct(pctValue: number): string {
   const hue = Math.round((pctValue / 100) * 120);
   return `hsl(${hue}, 65%, 45%)`;
@@ -548,40 +545,14 @@ function GroupSummary({
     (a, f) => a + stats[f.properties.code].jt,
     0,
   );
-  const avg = (key: keyof CoberturaParroquia) =>
-    Math.round(
-      features.reduce(
-        (a, f) => a + ((cobertura[f.properties.code]?.[key] as number) ?? 0),
-        0,
-      ) / features.length,
-    );
-  // El CDA solo aplica a un puñado de recintos: promediar el % por
-  // parroquia diluiría el resultado con las que no tienen ninguno. En vez
-  // de eso, sumamos los conteos reales de todo el grupo y sacamos la
-  // proporción sobre ese total.
-  const sum = (key: keyof CoberturaParroquia) =>
-    features.reduce(
-      (a, f) => a + ((cobertura[f.properties.code]?.[key] as number) ?? 0),
-      0,
-    );
-  const totalRecintosCda = sum("totalRecintosCda");
+  // Los porcentajes del grupo salen de los conteos reales de todas sus
+  // parroquias, no del promedio de sus porcentajes.
   const coberturaGrupo: CoberturaParroquia = {
     parroquiaCodigo: 0,
-    totalJuntas: 0,
-    juntasCubiertas: 0,
-    juntasCubiertasVerificado: 0,
-    pctCobertura: avg("pctCobertura"),
-    pctCoberturaVerificada: avg("pctCoberturaVerificada"),
-    totalRecintos: 0,
-    recintosConCoordinador: 0,
-    recintosConCoordinadorVerificado: 0,
-    pctCoordinador: avg("pctCoordinador"),
-    pctCoordinadorVerificado: avg("pctCoordinadorVerificado"),
-    totalRecintosCda,
-    recintosConCda: sum("recintosConCda"),
-    recintosConCdaVerificado: sum("recintosConCdaVerificado"),
-    pctCda: pctOf(sum("recintosConCda"), totalRecintosCda),
-    pctCdaVerificado: pctOf(sum("recintosConCdaVerificado"), totalRecintosCda),
+    ...calcularCoberturaGrupo(
+      cobertura,
+      features.map((f) => f.properties.code),
+    ),
   };
   return (
     <div class="group-summary">
