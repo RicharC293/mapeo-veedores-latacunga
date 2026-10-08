@@ -46,4 +46,18 @@ describe("permisos por rol", () => {
       expect(validaciones?.length ?? 0, ruta).toBe(handlers?.length);
     }
   });
+
+  // Mover a una persona toca las tres tablas de asignados: solo quien ve el
+  // Consolidado (gestor y administrador) puede hacerlo.
+  it("la ruta API de mover valida el permiso de Consolidado", () => {
+    const codigo = readFileSync(
+      "src/pages/api/gestion/consolidado/mover.ts",
+      "utf8",
+    );
+    expect(codigo).toContain(
+      "requireApiRole(locals, PAGINAS_GESTION.consolidado)",
+    );
+    expect(tienePermiso("gestor", PAGINAS_GESTION.consolidado)).toBe(true);
+    expect(tienePermiso("militante", PAGINAS_GESTION.consolidado)).toBe(false);
+  });
 });

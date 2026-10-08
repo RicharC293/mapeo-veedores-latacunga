@@ -552,6 +552,23 @@ export async function autocompletarRecintos(
   return { actualizados: destino.size };
 }
 
+// Ids de las filas de Militancia con esa cédula (puede haber más de una).
+export async function idsMilitantesPorCedula(
+  cedula: string,
+): Promise<string[]> {
+  const c = normalizarCedula(cedula);
+  if (supabaseSecret) {
+    const { data, error } = await supabaseSecret
+      .from("militantes")
+      .select("id")
+      .eq("cedula", c);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((f) => f.id);
+  }
+  const filas = await readCollection<MilitanteSinDuplicado>(COLLECTION);
+  return filas.filter((f) => f.cedula.trim() === c).map((f) => f.id);
+}
+
 export async function eliminarMilitante(id: string): Promise<void> {
   if (supabaseSecret) {
     const { error } = await supabaseSecret

@@ -3,6 +3,8 @@ import FiltrosRecintos, {
   ResumenAvance,
   VacioFiltros,
 } from "./FiltrosRecintos";
+import DialogoDesvincular from "./DialogoDesvincular";
+import DialogoMover from "./DialogoMover";
 import GrupoParroquia from "./GrupoParroquia";
 import Iniciales from "./Iniciales";
 import { useRecintosAbiertos } from "./useRecintosAbiertos";
@@ -12,6 +14,12 @@ import {
   consolidarRecinto,
   type Puesto,
 } from "../../lib/gestion/consolidado";
+import {
+  PUESTO_CLASE,
+  etiquetaJunta,
+  type Clase,
+  type DestinoSolicitado,
+} from "../../lib/gestion/movimiento";
 import {
   agruparPorParroquia,
   coincideUbicacion,
@@ -25,6 +33,10 @@ import type {
 } from "../../lib/gestion/types";
 
 interface PersonaVista {
+  id: string;
+  recintoCodigo: number;
+  // Solo los veedores tienen junta.
+  juntaId?: string;
   cedula: string;
   nombres: string;
   telefono: string;
@@ -50,14 +62,45 @@ const ABRIR_SI_HAY_HASTA = 2;
 
 type Persona = PersonaVista & { tipo: "titular" | "suplente"; orden: number };
 
+interface Acciones {
+  onMover: (clase: Clase, p: Persona) => void;
+  onDesvincular: (clase: Clase, p: Persona) => void;
+}
+
+// Lo que el diálogo activo necesita saber de la persona.
+type Dialogo =
+  | { tipo: "mover"; clase: Clase; p: Persona }
+  | { tipo: "desvincular"; clase: Clase; p: Persona }
+  | null;
+
+const RUTA_API: Record<Clase, string> = {
+  veedor: "/api/gestion/veedores",
+  coordinador: "/api/gestion/coordinadores",
+  cda: "/api/gestion/acreditados-cda",
+};
+
+async function api<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, {
+    ...init,
+    headers: { "content-type": "application/json" },
+  });
+  const body = await res.json();
+  if (!res.ok) throw new Error(body.error ?? "Error inesperado.");
+  return body as T;
+}
+
 function Linea({
   p,
   rol,
+  clase,
   nombreLider,
+  acciones,
 }: {
-  p: PersonaVista;
+  p: Persona;
   rol: "titular" | "suplente";
+  clase: Clase;
   nombreLider: Map<string, string>;
+  acciones: Acciones;
 }) {
   const responsable = p.responsableLiderId
     ? nombreLider.get(p.responsableLiderId)
@@ -80,6 +123,24 @@ function Linea({
           <span class="chip-estado chip-estado-ok">Verificado</span>
         ) : null}
       </div>
+      <div class="g-consol-acciones">
+        <button
+          type="button"
+          class="g-btn-ghost"
+          aria-label={`Mover a ${p.nombres}`}
+          onClick={() => acciones.onMover(clase, p)}
+        >
+          Mover
+        </button>
+        <button
+          type="button"
+          class="g-btn-danger-ghost"
+          aria-label={`Desvincular a ${p.nombres}`}
+          onClick={() => acciones.onDesvincular(clase, p)}
+        >
+          Desvincular
+        </button>
+      </div>
     </div>
   );
 }
@@ -88,23 +149,39 @@ function Linea({
 function PuestoLineas({
   puesto,
   falta,
+  clase,
   nombreLider,
+  acciones,
 }: {
   puesto: Puesto<Persona>;
   falta: string;
+  clase: Clase;
   nombreLider: Map<string, string>;
+  acciones: Acciones;
 }) {
   return (
     <>
       {puesto.titular ? (
-        <Linea p={puesto.titular} rol="titular" nombreLider={nombreLider} />
+        <Linea
+          p={puesto.titular}
+          rol="titular"
+          clase={clase}
+          nombreLider={nombreLider}
+          acciones={acciones}
+        />
       ) : (
         <p class="g-consol-falta">{falta}</p>
       )}
       {puesto.suplentes.map((s, i) => (
         <div class="g-consol-suplente" key={i}>
           <span class="g-consol-rol">Suplente</span>
-          <Linea p={s} rol="suplente" nombreLider={nombreLider} />
+          <Linea
+            p={s}
+            rol="suplente"
+            clase={clase}
+            nombreLider={nombreLider}
+            acciones={acciones}
+          />
         </div>
       ))}
     </>
@@ -115,10 +192,15 @@ export default function GestionConsolidado({
   parroquias,
   recintos,
   lideres,
-  veedores,
-  coordinadores,
-  acreditados,
+  veedores: veedoresIniciales,
+  coordinadores: coordinadoresIniciales,
+  acreditados: acreditadosIniciales,
 }: Props) {
+  const [veedores, setVeedores] = useState(veedoresIniciales);
+  const [coordinadores, setCoordinadores] = useState(coordinadoresIniciales);
+  const [acreditados, setAcreditados] = useState(acreditadosIniciales);
+  const [dialogo, setDialogo] = useState<Dialogo>(null);
+  const [resultado, setResultado] = useState<string | null>(null);
   const [ubicacion, setUbicacion] = useState<Ubicacion>("todas");
   const [estado, setEstado] = useState<Estado>("todos");
   const [busqueda, setBusqueda] = useState("");
@@ -201,6 +283,63 @@ export default function GestionConsolidado({
     visibles.length <= ABRIR_SI_HAY_HASTA,
   );
 
+  const refrescar = async () => {
+    const [v, c, a] = await Promise.all([
+      api<Veedor[]>(RUTA_API.veedor),
+      api<Coordinador[]>(RUTA_API.coordinador),
+      api<AcreditadoCda[]>(RUTA_API.cda),
+    ]);
+    setVeedores(v);
+    setCoordinadores(c);
+    setAcreditados(a);
+  };
+
+  const acciones: Acciones = {
+    onMover: (clase, p) => setDialogo({ tipo: "mover", clase, p }),
+    onDesvincular: (clase, p) => setDialogo({ tipo: "desvincular", clase, p }),
+  };
+
+  const mover = async (
+    clase: Clase,
+    p: Persona,
+    destino: DestinoSolicitado,
+  ) => {
+    const r = await api<{
+      nombres: string;
+      clase: Clase;
+      rol: "titular" | "suplente";
+      recintoCodigo: number;
+      juntaId: string | null;
+      aviso?: string;
+    }>("/api/gestion/consolidado/mover", {
+      method: "POST",
+      body: JSON.stringify({ clase, id: p.id, destino }),
+    });
+    const lugar = recintos.find((x) => x.cod === r.recintoCodigo);
+    await refrescar();
+    setResultado(
+      `${r.nombres} pasó a ${PUESTO_CLASE[r.clase]} ${r.rol}${
+        r.juntaId ? ` de la junta ${etiquetaJunta(r.juntaId)}` : ""
+      }${lugar ? ` en ${title(lugar.nombre)}` : ""}.${r.aviso ? ` ${r.aviso}` : ""}`,
+    );
+  };
+
+  const desvincular = async (
+    clase: Clase,
+    p: Persona,
+    motivo: string | null,
+    listaNegra: boolean,
+  ) => {
+    await api(`${RUTA_API[clase]}/${p.id}/desvincular`, {
+      method: "POST",
+      body: JSON.stringify({ motivo, listaNegra }),
+    });
+    await refrescar();
+    setResultado(
+      `Se desvinculó a ${p.nombres}${listaNegra ? " y pasó a la lista negra" : ": volvió a Militancia"}.`,
+    );
+  };
+
   return (
     <div class="g-panel">
       <div class="g-consol-resumen">
@@ -263,6 +402,12 @@ export default function GestionConsolidado({
         onQuitar={quitarFiltros}
       />
 
+      {resultado ? (
+        <p class="g-mil-resultado" role="status">
+          {resultado}
+        </p>
+      ) : null}
+
       {grupos.length === 0 ? (
         <VacioFiltros
           mensaje="Ningún recinto coincide con estos filtros."
@@ -319,16 +464,10 @@ export default function GestionConsolidado({
                       {abierto ? (
                         <div class="g-consol-detalle">
                           <section>
-                            <h4>
-                              Coordinador{" "}
-                              <a
-                                class="g-btn-link"
-                                href="/gestion/coordinadores"
-                              >
-                                Gestionar
-                              </a>
-                            </h4>
+                            <h4>Coordinador</h4>
                             <PuestoLineas
+                              clase="coordinador"
+                              acciones={acciones}
                               nombreLider={nombreLider}
                               puesto={f.coordinador}
                               falta="Sin coordinador titular"
@@ -336,16 +475,10 @@ export default function GestionConsolidado({
                           </section>
                           {f.cda ? (
                             <section>
-                              <h4>
-                                Acreditado CDA{" "}
-                                <a
-                                  class="g-btn-link"
-                                  href="/gestion/acreditados-cda"
-                                >
-                                  Gestionar
-                                </a>
-                              </h4>
+                              <h4>Acreditado CDA</h4>
                               <PuestoLineas
+                                clase="cda"
+                                acciones={acciones}
                                 nombreLider={nombreLider}
                                 puesto={f.cda}
                                 falta="Sin acreditado titular"
@@ -353,12 +486,7 @@ export default function GestionConsolidado({
                             </section>
                           ) : null}
                           <section>
-                            <h4>
-                              Veedores por junta{" "}
-                              <a class="g-btn-link" href="/gestion/veedores">
-                                Gestionar
-                              </a>
-                            </h4>
+                            <h4>Veedores por junta</h4>
                             <ul class="g-consol-juntas">
                               {f.juntas.map((j) => (
                                 <li key={j.junta.id}>
@@ -368,6 +496,8 @@ export default function GestionConsolidado({
                                   </span>
                                   <div class="g-consol-junta-cuerpo">
                                     <PuestoLineas
+                                      clase="veedor"
+                                      acciones={acciones}
                                       nombreLider={nombreLider}
                                       puesto={j.puesto}
                                       falta="Sin veedor titular"
@@ -387,6 +517,34 @@ export default function GestionConsolidado({
           );
         })
       )}
+
+      {dialogo?.tipo === "mover" ? (
+        <DialogoMover
+          persona={{
+            id: dialogo.p.id,
+            cedula: dialogo.p.cedula,
+            nombres: dialogo.p.nombres,
+            clase: dialogo.clase,
+            tipo: dialogo.p.tipo,
+            recintoCodigo: dialogo.p.recintoCodigo,
+            juntaId: dialogo.p.juntaId ?? null,
+          }}
+          recintos={recintos}
+          parroquias={parroquias}
+          estado={{ veedores, coordinadores, acreditados }}
+          onMover={(destino) => mover(dialogo.clase, dialogo.p, destino)}
+          onCerrar={() => setDialogo(null)}
+        />
+      ) : null}
+      {dialogo?.tipo === "desvincular" ? (
+        <DialogoDesvincular
+          nombres={dialogo.p.nombres}
+          onConfirm={(motivo, listaNegra) =>
+            desvincular(dialogo.clase, dialogo.p, motivo, listaNegra)
+          }
+          onCerrar={() => setDialogo(null)}
+        />
+      ) : null}
     </div>
   );
 }
