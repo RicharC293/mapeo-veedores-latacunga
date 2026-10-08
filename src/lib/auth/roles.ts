@@ -7,6 +7,7 @@ export const COOKIE_ACCESO = "veeduria_acceso";
 // URL (index = /gestion).
 export const PAGINAS_GESTION: Record<string, Rol[]> = {
   index: ["gestor", "administrador"],
+  consolidado: ["gestor", "administrador"],
   veedores: ["gestor", "administrador"],
   coordinadores: ["gestor", "administrador"],
   "acreditados-cda": ["gestor", "administrador"],

@@ -1,0 +1,42 @@
+---
+import GestionLayout from "../../layouts/GestionLayout.astro";
+import GestionConsolidado from "../../components/gestion/GestionConsolidado";
+import { getMapData } from "../../lib/data";
+import { listVeedores } from "../../lib/gestion/veedores";
+import { listCoordinadores } from "../../lib/gestion/coordinadores";
+import { listAcreditadosCda } from "../../lib/gestion/acreditadosCda";
+import { listLideres } from "../../lib/gestion/lideres";
+import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
+
+if (!PAGINAS_GESTION.consolidado.includes(Astro.locals.rol)) {
+  return Astro.redirect(rutaPorDefecto(Astro.locals.rol));
+}
+
+const data = await getMapData();
+const [veedores, coordinadores, acreditados, lideres] = await Promise.all([
+  listVeedores(),
+  listCoordinadores(),
+  listAcreditadosCda(),
+  listLideres(),
+]);
+---
+
+<GestionLayout title="Consolidado" activo="consolidado">
+  <h1>Consolidado</h1>
+  <p class="g-sub">
+    Todo lo cubierto en cada recinto en un solo lugar: coordinador, acreditado
+    CDA y veedores de cada junta, con sus suplentes. Es una vista de consulta;
+    para cambiar algo usa el enlace "Gestionar" de cada sección.
+  </p>
+  <GestionConsolidado
+    client:load
+    parroquias={data.parroquias.features.map(({ properties }) => ({
+      properties,
+    }))}
+    recintos={data.recintos}
+    lideres={lideres.map(({ id, nombres }) => ({ id, nombres }))}
+    veedores={veedores}
+    coordinadores={coordinadores}
+    acreditados={acreditados}
+  />
+</GestionLayout>

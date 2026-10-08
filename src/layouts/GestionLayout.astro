@@ -7,6 +7,7 @@ interface Props {
   title: string;
   activo:
     | "index"
+    | "consolidado"
     | "veedores"
     | "coordinadores"
     | "acreditados-cda"
@@ -31,6 +32,12 @@ const GROUP_LABEL: Record<string, string> = {
 
 const links = [
   { href: "/gestion", key: "index", label: "Resumen", group: "gestion" },
+  {
+    href: "/gestion/consolidado",
+    key: "consolidado",
+    label: "Consolidado",
+    group: "gestion",
+  },
   {
     href: "/gestion/veedores",
     key: "veedores",

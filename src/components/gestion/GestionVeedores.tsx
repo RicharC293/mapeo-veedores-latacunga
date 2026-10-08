@@ -5,6 +5,7 @@ import FiltrosRecintos, {
   VacioFiltros,
 } from "./FiltrosRecintos";
 import GrupoParroquia from "./GrupoParroquia";
+import { useRecintosAbiertos } from "./useRecintosAbiertos";
 import { listJuntasDeRecinto } from "../../lib/gestion/juntas";
 import { normalizar, title } from "../../lib/format";
 import {
@@ -47,8 +48,6 @@ export default function GestionVeedores({
   const [ubicacion, setUbicacion] = useState<Ubicacion>("todas");
   const [estado, setEstado] = useState<Estado>("todos");
   const [busqueda, setBusqueda] = useState("");
-  // Lo que la persona abrió o cerró a mano; lo demás sigue la regla por defecto.
-  const [eleccion, setEleccion] = useState<Map<number, boolean>>(new Map());
 
   const refrescar = async () => {
     setVeedores(await api<Veedor[]>("/api/gestion/veedores"));
@@ -123,13 +122,7 @@ export default function GestionVeedores({
   };
   const abrirPorDefecto = visibles.length <= ABRIR_SI_HAY_HASTA;
 
-  const estaAbierto = (cod: number) => eleccion.get(cod) ?? abrirPorDefecto;
-  // El navegador también dispara "toggle" cuando el cambio lo hace la propia
-  // pantalla; solo cuenta como elección si difiere de lo que ya se muestra.
-  const alternar = (cod: number, abierto: boolean) => {
-    if (abierto === estaAbierto(cod)) return;
-    setEleccion((prev) => new Map(prev).set(cod, abierto));
-  };
+  const { estaAbierto, alternar } = useRecintosAbiertos(abrirPorDefecto);
 
   return (
     <div class="g-panel">

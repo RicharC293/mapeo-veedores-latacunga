@@ -1727,3 +1727,104 @@ select.g-campo-error {
     padding: 4px 8px 12px;
   }
 }
+
+/* Consolidado: todo lo cubierto en cada recinto, en modo consulta. */
+.g-consol-resumen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px 24px;
+}
+.g-consol-estados {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+.g-consol-detalle {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 14px 14px;
+}
+.g-consol-detalle h4 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+.g-consol-persona {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+.g-consol-persona strong {
+  overflow-wrap: anywhere;
+}
+.g-consol-persona small {
+  color: var(--muted);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+.g-consol-persona .g-persona-pref {
+  color: var(--ink);
+}
+.g-consol-falta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.g-consol-suplente {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.g-consol-rol {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.g-consol-juntas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.g-consol-juntas li {
+  display: grid;
+  grid-template-columns: 3.2rem minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.g-consol-juntas li:first-child {
+  border-top: 0;
+}
+.g-consol-junta {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.g-consol-junta-cuerpo {
+  min-width: 0;
+}
+@media (max-width: 560px) {
+  .g-consol-detalle {
+    padding: 4px 12px 12px;
+  }
+}
+
+/* Chevron y nombre siempre juntos: un nombre largo se parte en líneas junto
+   al chevron en vez de dejarlo solo en su propia línea. */
+.g-grupo > summary::before,
+.g-recinto > summary::before {
+  flex-shrink: 0;
+}
+.g-recinto > summary .g-grupo-nombre {
+  flex: 1 1 12rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
