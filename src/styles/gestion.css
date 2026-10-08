@@ -1684,9 +1684,13 @@ select.g-campo-error {
   font-size: 0.85rem;
   font-variant-numeric: tabular-nums;
 }
+/* Lo que hay dentro de una parroquia va sangrado y con una línea fina a la
+   altura del chevron: se ve a primera vista que pertenece a ella. */
 .g-grupo > .g-cards,
 .g-grupo-cuerpo {
-  padding: 12px 0 4px;
+  margin: 12px 0 4px 20px;
+  padding: 0 0 0 16px;
+  border-left: 1px solid var(--line);
 }
 /* Recinto plegable dentro de una parroquia (Veedores). */
 .g-grupo-cuerpo {
@@ -1737,7 +1741,7 @@ select.g-campo-error {
   border-radius: 10px;
 }
 .g-recinto > .g-cards {
-  padding: 14px;
+  padding: 14px 14px 14px 32px;
 }
 @media (prefers-reduced-motion: reduce) {
   .g-grupo > summary::before,
@@ -1755,13 +1759,14 @@ select.g-campo-error {
   }
   .g-grupo > .g-cards,
   .g-grupo-cuerpo {
-    padding: 10px 0 2px;
+    margin: 10px 0 2px 16px;
+    padding-left: 10px;
   }
   .g-recinto > summary {
     padding: 10px 12px;
   }
   .g-recinto > .g-cards {
-    padding: 10px;
+    padding: 10px 10px 10px 18px;
   }
 }
 
@@ -1898,7 +1903,7 @@ select.g-campo-error {
 .g-consol-detalle {
   display: flex;
   flex-direction: column;
-  padding: 14px;
+  padding: 14px 14px 14px 32px;
 }
 .g-consol-detalle > section + section {
   margin-top: 16px;
@@ -1957,7 +1962,7 @@ select.g-campo-error {
 }
 @media (max-width: 560px) {
   .g-consol-detalle {
-    padding: 12px;
+    padding: 12px 10px 12px 18px;
   }
 }
 
@@ -1996,7 +2001,7 @@ select.g-campo-error {
   flex-shrink: 0;
   gap: 6px;
 }
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .g-consol-persona {
     flex-wrap: wrap;
   }
