@@ -8,16 +8,22 @@ import { recintoDePreferencia } from "./recintoPreferencia";
 import type { ParroquiaFeature, Recinto } from "../types";
 import { rowToMilitante } from "./rows";
 import { agregarVeedor, listVeedores, veedoresPorJunta } from "./veedores";
-import { agregarCoordinador, coordinadoresPorRecinto } from "./coordinadores";
+import {
+  agregarCoordinador,
+  coordinadoresPorRecinto,
+  listCoordinadores,
+} from "./coordinadores";
 import {
   agregarAcreditadoCda,
   acreditadosCdaPorRecinto,
+  listAcreditadosCda,
 } from "./acreditadosCda";
 import { juntaId } from "./juntas";
 import { elegirJuntaAutomatica } from "./juntaAutomatica";
 import { listLideres } from "./lideres";
 import type {
   AcreditadoCda,
+  AsignacionExistente,
   CambioMilitante,
   Coordinador,
   EdicionMilitante,
@@ -33,7 +39,7 @@ const COLECCION_HISTORIAL = "militantes_historial";
 // Fila tal como se guarda: sin las banderas que se calculan al leer.
 type MilitanteSinDuplicado = Omit<
   Militante,
-  "duplicado" | "incorrecto" | "ediciones"
+  "duplicado" | "incorrecto" | "ediciones" | "asignado"
 >;
 
 function esFilaIncorrecta(f: MilitanteSinDuplicado): boolean {
@@ -47,6 +53,7 @@ function conBanderas(f: MilitanteSinDuplicado): Militante {
     duplicado: false,
     incorrecto: esFilaIncorrecta(f),
     ediciones: 0,
+    asignado: null,
   };
 }
 
@@ -57,6 +64,7 @@ function conBanderas(f: MilitanteSinDuplicado): Militante {
 export function marcarDuplicados(
   filas: MilitanteSinDuplicado[],
   ediciones: Map<string, number> = new Map(),
+  asignados: Map<string, AsignacionExistente> = new Map(),
 ): Militante[] {
   const cuenta = new Map<string, number>();
   for (const f of filas) cuenta.set(f.cedula, (cuenta.get(f.cedula) ?? 0) + 1);
@@ -65,19 +73,115 @@ export function marcarDuplicados(
     duplicado: (cuenta.get(f.cedula) ?? 0) > 1,
     incorrecto: esFilaIncorrecta(f),
     ediciones: ediciones.get(f.id) ?? 0,
+    asignado: asignados.get(f.cedula.trim()) ?? null,
   }));
 }
 
-export async function listMilitantes(): Promise<Militante[]> {
-  let filas: MilitanteSinDuplicado[];
+// Dónde consta ya cada cédula como veedor, coordinador o acreditado CDA. Si
+// aparece en más de un lugar se informa el primero (veedor, coordinador, CDA).
+// Con Supabase pide solo las columnas necesarias y las tres tablas a la vez.
+async function cedulasAsignadas(): Promise<Map<string, AsignacionExistente>> {
+  type Fila = {
+    cedula: string;
+    rol: "titular" | "suplente";
+    recintoCodigo: number;
+    junta: string | null;
+  };
+  let veedores: Fila[];
+  let coordinadores: Fila[];
+  let cda: Fila[];
+
+  if (supabaseSecret) {
+    const [v, c, a] = await Promise.all([
+      supabaseSecret
+        .from("veedores")
+        .select("cedula,tipo,recinto_codigo,junta_id"),
+      supabaseSecret.from("coordinadores").select("cedula,tipo,recinto_codigo"),
+      supabaseSecret
+        .from("acreditados_cda")
+        .select("cedula,tipo,recinto_codigo"),
+    ]);
+    for (const r of [v, c, a]) if (r.error) throw new Error(r.error.message);
+    veedores = (v.data ?? []).map((x) => ({
+      cedula: x.cedula,
+      rol: x.tipo as Fila["rol"],
+      recintoCodigo: x.recinto_codigo,
+      junta: x.junta_id.split("-")[1] ?? null,
+    }));
+    coordinadores = (c.data ?? []).map((x) => ({
+      cedula: x.cedula,
+      rol: x.tipo as Fila["rol"],
+      recintoCodigo: x.recinto_codigo,
+      junta: null,
+    }));
+    cda = (a.data ?? []).map((x) => ({
+      cedula: x.cedula,
+      rol: x.tipo as Fila["rol"],
+      recintoCodigo: x.recinto_codigo,
+      junta: null,
+    }));
+  } else {
+    const [v, c, a] = await Promise.all([
+      listVeedores(),
+      listCoordinadores(),
+      listAcreditadosCda(),
+    ]);
+    veedores = v.map((x) => ({
+      cedula: x.cedula,
+      rol: x.tipo,
+      recintoCodigo: x.recintoCodigo,
+      junta: x.juntaId.split("-")[1] ?? null,
+    }));
+    coordinadores = c.map((x) => ({
+      cedula: x.cedula,
+      rol: x.tipo,
+      recintoCodigo: x.recintoCodigo,
+      junta: null,
+    }));
+    cda = a.map((x) => ({
+      cedula: x.cedula,
+      rol: x.tipo,
+      recintoCodigo: x.recintoCodigo,
+      junta: null,
+    }));
+  }
+
+  const mapa = new Map<string, AsignacionExistente>();
+  const poner = (tipo: AsignacionExistente["tipo"], f: Fila) => {
+    const cedula = f.cedula.trim();
+    if (cedula && !mapa.has(cedula)) {
+      mapa.set(cedula, {
+        tipo,
+        rol: f.rol,
+        recintoCodigo: f.recintoCodigo,
+        junta: f.junta,
+      });
+    }
+  };
+  for (const f of veedores) poner("veedor", f);
+  for (const f of coordinadores) poner("coordinador", f);
+  for (const f of cda) poner("cda", f);
+  return mapa;
+}
+
+async function leerFilasMilitantes(): Promise<MilitanteSinDuplicado[]> {
   if (supabaseSecret) {
     const { data, error } = await supabaseSecret.from("militantes").select("*");
     if (error) throw new Error(error.message);
-    filas = data.map(rowToMilitante);
-  } else {
-    filas = await readCollection<MilitanteSinDuplicado>(COLLECTION);
+    return data.map(rowToMilitante);
   }
-  return marcarDuplicados(filas, await contarEdiciones());
+  return readCollection<MilitanteSinDuplicado>(COLLECTION);
+}
+
+// Las tres lecturas son independientes: se hacen a la vez, así listar
+// Militancia tarda lo de la más lenta y no la suma de todas.
+export async function listMilitantes(): Promise<Militante[]> {
+  const [filas, ediciones, asignados] = await Promise.all([
+    leerFilasMilitantes(),
+    contarEdiciones(),
+    cedulasAsignadas(),
+  ]);
+  return marcarDuplicados(filas, ediciones, asignados);
 }
 
 // Cuántas ediciones tiene registradas cada militante (para mostrar el enlace
@@ -519,12 +623,15 @@ export async function asignarMilitante(
       "Corrige los datos marcados en rojo antes de asignar a esta persona.",
     );
   }
-  const hayRepetida = (await listMilitantes()).some(
-    (m) => m.id === id && m.duplicado,
-  );
-  if (hayRepetida) {
+  const fila = (await listMilitantes()).find((m) => m.id === id);
+  if (fila?.duplicado) {
     throw new Error(
       "Esta cédula está repetida en Militancia: elimina o corrige una de las filas antes de asignar.",
+    );
+  }
+  if (fila?.asignado) {
+    throw new Error(
+      `Esta persona ya consta como ${fila.asignado.tipo === "cda" ? "acreditado CDA" : fila.asignado.tipo} ${fila.asignado.rol}: está repetida y asignada. Elimina esta fila de Militancia.`,
     );
   }
 
@@ -588,6 +695,7 @@ export async function asignarMilitante(
     nombres: militante.nombres,
     telefono: militante.telefono,
     email: militante.email,
+    preferencia: militante.preferencia,
     responsableLiderId: militante.responsableLiderId,
     recintoCodigo: destino.recintoCodigo,
     parroquiaCodigo: destino.parroquiaCodigo,

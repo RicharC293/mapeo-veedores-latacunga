@@ -15,6 +15,8 @@ export interface Veedor {
   nombres: string;
   telefono: string;
   email: string;
+  // Recinto de preferencia con el que llegó desde Militancia (texto libre).
+  preferencia: string;
   responsableLiderId: string | null;
   juntaId: string;
   recintoCodigo: number;
@@ -31,6 +33,8 @@ export interface Coordinador {
   nombres: string;
   telefono: string;
   email: string;
+  // Recinto de preferencia con el que llegó desde Militancia (texto libre).
+  preferencia: string;
   responsableLiderId: string | null;
   recintoCodigo: number;
   parroquiaCodigo: number;
@@ -49,6 +53,8 @@ export interface AcreditadoCda {
   nombres: string;
   telefono: string;
   email: string;
+  // Recinto de preferencia con el que llegó desde Militancia (texto libre).
+  preferencia: string;
   responsableLiderId: string | null;
   recintoCodigo: number;
   parroquiaCodigo: number;
@@ -66,10 +72,7 @@ export type AmbitoLider = "general" | "parroquia";
 // Dignidad electa que puede ostentar un líder, además de su rol
 // organizativo (ambito). Un concejal o el alcalde son líderes con cargo.
 export type Cargo =
-  | "alcalde"
-  | "concejal_urbano"
-  | "concejal_rural"
-  | "vocal_junta_parroquial";
+  "alcalde" | "concejal_urbano" | "concejal_rural" | "vocal_junta_parroquial";
 
 export const CUPO_CARGO: Record<Cargo, number> = {
   alcalde: 1,
@@ -113,6 +116,15 @@ export interface Lider {
 // a la persona por sí solos (eso pasa al confirmar la fila en la UI).
 export type TipoMilitancia = "veedor" | "coordinador" | "cda";
 
+// Dónde consta ya una persona de Militancia.
+export interface AsignacionExistente {
+  tipo: TipoMilitancia;
+  rol: TipoAsignacion;
+  recintoCodigo: number;
+  // Solo veedores: la junta (p. ej. "F9").
+  junta: string | null;
+}
+
 export interface Militante {
   id: string;
   cedula: string;
@@ -131,6 +143,10 @@ export interface Militante {
   creadoEn: string;
   // Cuántas veces se ha editado (calculado, de militantes_historial).
   ediciones: number;
+  // Si esta cédula ya consta como veedor, coordinador o acreditado CDA
+  // (calculado): la persona está "repetida y asignada" y no se vuelve a
+  // asignar desde Militancia.
+  asignado: AsignacionExistente | null;
   duplicado: boolean;
   // true si cédula, nombre, teléfono o correo tienen un error de formato
   // (calculado, no viene de la tabla). Ver validacionMilitante.ts.

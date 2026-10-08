@@ -9,6 +9,8 @@ export interface PersonaAsignada {
   nombres: string;
   telefono: string;
   email: string;
+  // Recinto de preferencia con el que llegó desde Militancia.
+  preferencia?: string;
   responsableLiderId: string | null;
   verificado: boolean;
 }
@@ -152,9 +154,7 @@ function PersonaRow({
   onVerificar: (verificado: boolean) => Promise<void>;
 }) {
   const [enviando, setEnviando] = useState(false);
-  const responsable = lideres.find(
-    (l) => l.id === persona.responsableLiderId,
-  );
+  const responsable = lideres.find((l) => l.id === persona.responsableLiderId);
 
   return (
     <div class="g-persona">
@@ -166,6 +166,11 @@ function PersonaRow({
           {persona.email ? ` · ${persona.email}` : ""}
           {responsable ? ` · ${responsable.nombres}` : ""}
         </small>
+        {persona.preferencia ? (
+          <small class="g-persona-pref">
+            Preferencia: {persona.preferencia}
+          </small>
+        ) : null}
         <label class="g-check g-check-verificado">
           <input
             type="checkbox"

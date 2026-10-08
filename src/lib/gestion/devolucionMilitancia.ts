@@ -12,6 +12,7 @@ export async function devolverAMilitanciaLocal(persona: {
   nombres: string;
   telefono: string;
   email?: string;
+  preferencia?: string;
   responsableLiderId: string | null;
   // Destino de donde salió: se precarga en la fila de Militancia.
   recintoCodigo: number;
@@ -19,13 +20,16 @@ export async function devolverAMilitanciaLocal(persona: {
   tipo: TipoMilitancia;
   juntaId?: string;
 }): Promise<void> {
-  const militante: Omit<Militante, "duplicado" | "incorrecto" | "ediciones"> = {
+  const militante: Omit<
+    Militante,
+    "duplicado" | "incorrecto" | "ediciones" | "asignado"
+  > = {
     id: randomUUID(),
     cedula: persona.cedula,
     nombres: persona.nombres,
     telefono: persona.telefono,
     email: persona.email ?? "",
-    preferencia: "",
+    preferencia: persona.preferencia ?? "",
     responsableLiderId: persona.responsableLiderId,
     recintoCodigo: persona.recintoCodigo,
     parroquiaCodigo: persona.parroquiaCodigo,

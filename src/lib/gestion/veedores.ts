@@ -37,6 +37,7 @@ export async function agregarVeedor(input: {
   nombres: string;
   telefono: string;
   email?: string;
+  preferencia?: string;
   responsableLiderId: string | null;
   juntaId: string;
   recintoCodigo: number;
@@ -55,6 +56,7 @@ export async function agregarVeedor(input: {
       p_nombres: input.nombres,
       p_telefono: input.telefono,
       p_email: email,
+      p_preferencia: (input.preferencia ?? "").trim(),
       p_junta_id: input.juntaId,
       p_recinto_codigo: input.recintoCodigo,
       p_parroquia_codigo: input.parroquiaCodigo,
@@ -103,6 +105,7 @@ export async function agregarVeedor(input: {
       nombres: input.nombres.trim(),
       telefono: input.telefono.trim(),
       email,
+      preferencia: (input.preferencia ?? "").trim(),
       responsableLiderId: input.responsableLiderId,
       juntaId: input.juntaId,
       recintoCodigo: input.recintoCodigo,
@@ -201,6 +204,7 @@ export async function desvincularVeedor(
       nombres: d.nombres,
       telefono: d.telefono,
       email: d.email,
+      preferencia: d.preferencia,
       responsableLiderId: d.responsableLiderId,
       recintoCodigo: d.recintoCodigo,
       parroquiaCodigo: d.parroquiaCodigo,

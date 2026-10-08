@@ -153,12 +153,18 @@ export default function MilitanteCard({
     .filter((k) => k !== "nombres" && erroresMilitante(militante)[k])
     .map((k) => ETIQUETA[k].toLowerCase());
   if (erroresMilitante(militante).nombres) malos.unshift("nombre");
+  // Ya consta como veedor, coordinador o CDA: repetida y asignada.
+  const asig = militante.asignado;
+  const yaAsignado = asig
+    ? `Ya consta como ${asig.tipo === "cda" ? "acreditado CDA" : asig.tipo} ${asig.rol}${asig.junta ? ` (junta ${asig.junta})` : ""} en ${title(recintos.find((r) => r.cod === asig.recintoCodigo)?.nombre ?? "")}. Elimina esta fila.`
+    : null;
   const bloqueo =
-    malos.length > 0
+    yaAsignado ??
+    (malos.length > 0
       ? `Corrige para poder asignar: ${malos.join(", ")}.`
       : militante.duplicado
         ? "Esta cédula está repetida: elimina o corrige una de las filas."
-        : null;
+        : null);
   const puedeAsignar = !bloqueo && faltantes.length === 0;
   const ayuda =
     bloqueo ??
@@ -358,6 +364,11 @@ export default function MilitanteCard({
               <strong class={errores.nombres ? "g-campo-error" : undefined}>
                 {militante.nombres || "Sin nombre"}
               </strong>
+              {militante.asignado ? (
+                <span class="chip-estado chip-estado-pendiente">
+                  Repetido y asignado
+                </span>
+              ) : null}
               {militante.incorrecto ? (
                 <span class="chip-estado chip-estado-pendiente">
                   Incorrecto

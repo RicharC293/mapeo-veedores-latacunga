@@ -41,6 +41,7 @@ export async function agregarAcreditadoCda(input: {
   nombres: string;
   telefono: string;
   email?: string;
+  preferencia?: string;
   responsableLiderId: string | null;
   recintoCodigo: number;
   parroquiaCodigo: number;
@@ -53,22 +54,20 @@ export async function agregarAcreditadoCda(input: {
   const email = resolverEmail(input.email);
 
   if (supabaseSecret) {
-    const { data, error } = await supabaseSecret.rpc(
-      "agregar_acreditado_cda",
-      {
-        p_cedula: cedula,
-        p_nombres: input.nombres,
-        p_telefono: input.telefono,
-        p_email: email,
-        p_recinto_codigo: input.recintoCodigo,
-        p_parroquia_codigo: input.parroquiaCodigo,
-        p_tipo: input.tipo,
-        // La función SQL acepta NULL para p_responsable_lider_id, pero el
-        // generador de tipos de Supabase no marca los parámetros como
-        // anulables (solo detecta opcionalidad por valores por defecto).
-        p_responsable_lider_id: input.responsableLiderId as string,
-      },
-    );
+    const { data, error } = await supabaseSecret.rpc("agregar_acreditado_cda", {
+      p_cedula: cedula,
+      p_nombres: input.nombres,
+      p_telefono: input.telefono,
+      p_email: email,
+      p_preferencia: (input.preferencia ?? "").trim(),
+      p_recinto_codigo: input.recintoCodigo,
+      p_parroquia_codigo: input.parroquiaCodigo,
+      p_tipo: input.tipo,
+      // La función SQL acepta NULL para p_responsable_lider_id, pero el
+      // generador de tipos de Supabase no marca los parámetros como
+      // anulables (solo detecta opcionalidad por valores por defecto).
+      p_responsable_lider_id: input.responsableLiderId as string,
+    });
     if (error) throw new Error(error.message);
     return rowToAcreditadoCda(data);
   }
@@ -110,6 +109,7 @@ export async function agregarAcreditadoCda(input: {
       nombres: input.nombres.trim(),
       telefono: input.telefono.trim(),
       email,
+      preferencia: (input.preferencia ?? "").trim(),
       responsableLiderId: input.responsableLiderId,
       recintoCodigo: input.recintoCodigo,
       parroquiaCodigo: input.parroquiaCodigo,
@@ -179,8 +179,7 @@ export async function desvincularAcreditadoCda(
     const suplentes = resto
       .filter(
         (a) =>
-          a.recintoCodigo === acreditado.recintoCodigo &&
-          a.tipo === "suplente",
+          a.recintoCodigo === acreditado.recintoCodigo && a.tipo === "suplente",
       )
       .sort((a, b) => a.orden - b.orden);
     if (suplentes.length === 0) return resto;
@@ -215,6 +214,7 @@ export async function desvincularAcreditadoCda(
       nombres: d.nombres,
       telefono: d.telefono,
       email: d.email,
+      preferencia: d.preferencia,
       responsableLiderId: d.responsableLiderId,
       recintoCodigo: d.recintoCodigo,
       parroquiaCodigo: d.parroquiaCodigo,

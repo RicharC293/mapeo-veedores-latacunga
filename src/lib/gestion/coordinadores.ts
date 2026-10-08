@@ -41,6 +41,7 @@ export async function agregarCoordinador(input: {
   nombres: string;
   telefono: string;
   email?: string;
+  preferencia?: string;
   responsableLiderId: string | null;
   recintoCodigo: number;
   parroquiaCodigo: number;
@@ -58,6 +59,7 @@ export async function agregarCoordinador(input: {
       p_nombres: input.nombres,
       p_telefono: input.telefono,
       p_email: email,
+      p_preferencia: (input.preferencia ?? "").trim(),
       p_recinto_codigo: input.recintoCodigo,
       p_parroquia_codigo: input.parroquiaCodigo,
       p_tipo: input.tipo,
@@ -107,6 +109,7 @@ export async function agregarCoordinador(input: {
       nombres: input.nombres.trim(),
       telefono: input.telefono.trim(),
       email,
+      preferencia: (input.preferencia ?? "").trim(),
       responsableLiderId: input.responsableLiderId,
       recintoCodigo: input.recintoCodigo,
       parroquiaCodigo: input.parroquiaCodigo,
@@ -212,6 +215,7 @@ export async function desvincularCoordinador(
       nombres: d.nombres,
       telefono: d.telefono,
       email: d.email,
+      preferencia: d.preferencia,
       responsableLiderId: d.responsableLiderId,
       recintoCodigo: d.recintoCodigo,
       parroquiaCodigo: d.parroquiaCodigo,

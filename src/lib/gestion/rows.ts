@@ -21,6 +21,7 @@ export function rowToVeedor(row: Record<string, unknown>): Veedor {
     nombres: row.nombres as string,
     telefono: row.telefono as string,
     email: (row.email as string | null) ?? "",
+    preferencia: (row.preferencia as string | null) ?? "",
     responsableLiderId: (row.responsable_lider_id as string | null) ?? null,
     juntaId: row.junta_id as string,
     recintoCodigo: row.recinto_codigo as number,
@@ -39,6 +40,7 @@ export function rowToCoordinador(row: Record<string, unknown>): Coordinador {
     nombres: row.nombres as string,
     telefono: row.telefono as string,
     email: (row.email as string | null) ?? "",
+    preferencia: (row.preferencia as string | null) ?? "",
     responsableLiderId: (row.responsable_lider_id as string | null) ?? null,
     recintoCodigo: row.recinto_codigo as number,
     parroquiaCodigo: row.parroquia_codigo as number,
@@ -58,6 +60,7 @@ export function rowToAcreditadoCda(
     nombres: row.nombres as string,
     telefono: row.telefono as string,
     email: (row.email as string | null) ?? "",
+    preferencia: (row.preferencia as string | null) ?? "",
     responsableLiderId: (row.responsable_lider_id as string | null) ?? null,
     recintoCodigo: row.recinto_codigo as number,
     parroquiaCodigo: row.parroquia_codigo as number,
@@ -87,7 +90,7 @@ export function rowToLider(row: Record<string, unknown>): Lider {
 
 export function rowToMilitante(
   row: Record<string, unknown>,
-): Omit<Militante, "duplicado" | "incorrecto" | "ediciones"> {
+): Omit<Militante, "duplicado" | "incorrecto" | "ediciones" | "asignado"> {
   return {
     id: row.id as string,
     cedula: row.cedula as string,

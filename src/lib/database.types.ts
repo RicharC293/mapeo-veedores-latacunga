@@ -78,6 +78,7 @@ export type Database = {
           nombres: string
           orden: number
           parroquia_codigo: number
+          preferencia: string
           recinto_codigo: number
           responsable_lider_id: string | null
           telefono: string
@@ -92,6 +93,7 @@ export type Database = {
           nombres: string
           orden?: number
           parroquia_codigo: number
+          preferencia?: string
           recinto_codigo: number
           responsable_lider_id?: string | null
           telefono?: string
@@ -106,6 +108,7 @@ export type Database = {
           nombres?: string
           orden?: number
           parroquia_codigo?: number
+          preferencia?: string
           recinto_codigo?: number
           responsable_lider_id?: string | null
           telefono?: string
@@ -146,6 +149,7 @@ export type Database = {
           nombres: string
           orden: number
           parroquia_codigo: number
+          preferencia: string
           recinto_codigo: number
           responsable_lider_id: string | null
           telefono: string
@@ -160,6 +164,7 @@ export type Database = {
           nombres: string
           orden?: number
           parroquia_codigo: number
+          preferencia?: string
           recinto_codigo: number
           responsable_lider_id?: string | null
           telefono?: string
@@ -174,6 +179,7 @@ export type Database = {
           nombres?: string
           orden?: number
           parroquia_codigo?: number
+          preferencia?: string
           recinto_codigo?: number
           responsable_lider_id?: string | null
           telefono?: string
@@ -537,6 +543,7 @@ export type Database = {
           nombres: string
           orden: number
           parroquia_codigo: number
+          preferencia: string
           recinto_codigo: number
           responsable_lider_id: string | null
           telefono: string
@@ -552,6 +559,7 @@ export type Database = {
           nombres: string
           orden?: number
           parroquia_codigo: number
+          preferencia?: string
           recinto_codigo: number
           responsable_lider_id?: string | null
           telefono?: string
@@ -567,6 +575,7 @@ export type Database = {
           nombres?: string
           orden?: number
           parroquia_codigo?: number
+          preferencia?: string
           recinto_codigo?: number
           responsable_lider_id?: string | null
           telefono?: string
@@ -598,6 +607,7 @@ export type Database = {
           p_email?: string
           p_nombres: string
           p_parroquia_codigo: number
+          p_preferencia?: string
           p_recinto_codigo: number
           p_responsable_lider_id?: string
           p_telefono: string
@@ -607,6 +617,7 @@ export type Database = {
           cedula: string
           creado_en: string
           email: string
+          preferencia: string
           id: string
           nombres: string
           orden: number
@@ -630,6 +641,7 @@ export type Database = {
           p_email?: string
           p_nombres: string
           p_parroquia_codigo: number
+          p_preferencia?: string
           p_recinto_codigo: number
           p_responsable_lider_id?: string
           p_telefono: string
@@ -639,6 +651,7 @@ export type Database = {
           cedula: string
           creado_en: string
           email: string
+          preferencia: string
           id: string
           nombres: string
           orden: number
@@ -663,6 +676,7 @@ export type Database = {
           p_junta_id: string
           p_nombres: string
           p_parroquia_codigo: number
+          p_preferencia?: string
           p_recinto_codigo: number
           p_responsable_lider_id?: string
           p_telefono: string
@@ -672,6 +686,7 @@ export type Database = {
           cedula: string
           creado_en: string
           email: string
+          preferencia: string
           id: string
           junta_id: string
           nombres: string

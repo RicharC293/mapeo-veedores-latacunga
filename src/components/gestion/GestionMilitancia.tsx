@@ -16,7 +16,8 @@ interface Props {
 }
 
 type TipoParroquiaFiltro = "todas" | "urbanas" | "rurales";
-type Vista = "todos" | "incorrectos" | "duplicados" | "sinrecinto";
+type Vista =
+  "todos" | "incorrectos" | "duplicados" | "asignados" | "sinrecinto";
 type Panel = null | "importar" | "agregar";
 type Orden = "recientes" | "antiguos" | "responsable" | "cedula";
 
@@ -240,6 +241,7 @@ export default function GestionMilitancia({
       todos: militantes.length,
       incorrectos: militantes.filter((m) => m.incorrecto).length,
       duplicados: militantes.filter((m) => m.duplicado).length,
+      asignados: militantes.filter((m) => m.asignado !== null).length,
       sinrecinto: militantes.filter((m) => m.recintoCodigo === null).length,
     }),
     [militantes],
@@ -250,6 +252,7 @@ export default function GestionMilitancia({
     return militantes.filter((m) => {
       if (vista === "incorrectos" && !m.incorrecto) return false;
       if (vista === "duplicados" && !m.duplicado) return false;
+      if (vista === "asignados" && !m.asignado) return false;
       if (vista === "sinrecinto" && m.recintoCodigo !== null) return false;
       if (filtroResponsable === "sin" && m.responsableLiderId) return false;
       if (
@@ -444,6 +447,7 @@ export default function GestionMilitancia({
     { clave: "todos", etiqueta: "Todos" },
     { clave: "incorrectos", etiqueta: "Incorrectos" },
     { clave: "duplicados", etiqueta: "Duplicados" },
+    { clave: "asignados", etiqueta: "Repetidos y asignados" },
     { clave: "sinrecinto", etiqueta: "Sin recinto" },
   ];
 
@@ -703,7 +707,9 @@ export default function GestionMilitancia({
               class="g-chip-filtro"
               aria-pressed={vista === c.clave}
               data-alerta={
-                (c.clave === "incorrectos" || c.clave === "duplicados") &&
+                (c.clave === "incorrectos" ||
+                  c.clave === "duplicados" ||
+                  c.clave === "asignados") &&
                 conteos[c.clave] > 0
                   ? "true"
                   : undefined

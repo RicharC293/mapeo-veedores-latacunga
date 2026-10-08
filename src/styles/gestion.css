@@ -1586,3 +1586,8 @@ select.g-campo-error {
   line-height: 1.35;
   color: var(--muted);
 }
+
+/* Preferencia de una persona asignada, para verla de un vistazo. */
+.g-persona .g-persona-pref {
+  color: var(--ink);
+}
