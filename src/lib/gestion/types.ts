@@ -200,6 +200,10 @@ export interface CoberturaRecinto {
   // que exige veedor Y coordinador para contar una junta como cubierta).
   // pct* = % con titular asignado; pct*Verificado = % (sobre el mismo total)
   // cuyo titular ya fue contactado.
+  // juntasConVeedor: juntas del recinto con veedor titular, sin mirar el
+  // coordinador (es el numerador de pctVeedores).
+  juntasConVeedor: number;
+  juntasConVeedorVerificado: number;
   pctVeedores: number;
   pctVeedoresVerificado: number;
   pctCoordinador: number;

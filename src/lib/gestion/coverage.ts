@@ -66,6 +66,8 @@ export function calcularCobertura(
       juntasCubiertasVerificado,
       tieneCoordinadorVerificado,
       pctVerificado: pct(juntasCubiertasVerificado, juntas.length),
+      juntasConVeedor: juntasConVeedorAqui,
+      juntasConVeedorVerificado: juntasConVeedorVerificadoAqui,
       pctVeedores: pct(juntasConVeedorAqui, juntas.length),
       pctVeedoresVerificado: pct(juntasConVeedorVerificadoAqui, juntas.length),
       pctCoordinador: tieneCoordinadorTitular ? 100 : 0,

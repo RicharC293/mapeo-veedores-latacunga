@@ -10,6 +10,10 @@ export interface CoberturaFila {
   tieneCoordinadorTitular: boolean;
   juntasCubiertas: number;
   juntasCubiertasVerificado: number;
+  // Juntas con veedor titular, sin mirar el coordinador: el mismo criterio
+  // de las gráficas de Veedores.
+  juntasConVeedor: number;
+  pctVeedores: number;
   totalJuntas: number;
   pct: number;
   pctVerificado: number;
@@ -67,6 +71,10 @@ export default function CoberturaTable({ filas, parroquias }: Props) {
   }, [filas, ambito, parroquiaCod, parroquiasOpciones]);
 
   const totalJuntas = filasFiltradas.reduce((a, f) => a + f.totalJuntas, 0);
+  const totalConVeedor = filasFiltradas.reduce(
+    (a, f) => a + f.juntasConVeedor,
+    0,
+  );
   const totalCubiertas = filasFiltradas.reduce(
     (a, f) => a + f.juntasCubiertas,
     0,
@@ -75,6 +83,7 @@ export default function CoberturaTable({ filas, parroquias }: Props) {
     (a, f) => a + f.juntasCubiertasVerificado,
     0,
   );
+  const pctConVeedor = pct(totalConVeedor, totalJuntas);
   const pctGlobal = pct(totalCubiertas, totalJuntas);
   const pctVerificadoGlobal = pct(totalCubiertasVerificado, totalJuntas);
 
@@ -120,25 +129,30 @@ export default function CoberturaTable({ filas, parroquias }: Props) {
       <div class="g-summary">
         <div class="g-summary-item">
           <b>
-            {fmt(totalCubiertas)} / {fmt(totalJuntas)}
+            {fmt(totalConVeedor)} / {fmt(totalJuntas)}
           </b>
-          <small>juntas cubiertas</small>
+          <small>juntas con veedor titular · {pctConVeedor}%</small>
         </div>
         <div class="g-summary-item">
-          <b>{pctGlobal}%</b>
-          <small>cobertura</small>
+          <b>
+            {fmt(totalCubiertas)} / {fmt(totalJuntas)}
+          </b>
+          <small>juntas con veedor y coordinador · {pctGlobal}%</small>
         </div>
         <div class="g-summary-item">
           <b>
             {fmt(totalCubiertasVerificado)} / {fmt(totalJuntas)}
           </b>
-          <small>juntas cubiertas y verificadas</small>
-        </div>
-        <div class="g-summary-item">
-          <b>{pctVerificadoGlobal}%</b>
-          <small>cobertura verificada</small>
+          <small>
+            con veedor y coordinador verificados · {pctVerificadoGlobal}%
+          </small>
         </div>
       </div>
+      <p class="g-sub">
+        Con veedor titular coincide con la gráfica de Veedores. Con veedor y
+        coordinador es la cobertura completa: un recinto sin coordinador titular
+        no suma ninguna junta aquí aunque sus juntas ya tengan veedor.
+      </p>
 
       {filasFiltradas.length === 0 ? (
         <p class="g-empty">No hay recintos para este filtro.</p>
@@ -150,9 +164,10 @@ export default function CoberturaTable({ filas, parroquias }: Props) {
                 <th>Parroquia</th>
                 <th>Recinto</th>
                 <th>Coordinador</th>
-                <th>Juntas cubiertas</th>
-                <th>% cobertura</th>
-                <th>% cobertura verificada</th>
+                <th>Juntas con veedor</th>
+                <th>% con veedor</th>
+                <th>% completa (veedor + coordinador)</th>
+                <th>% completa verificada</th>
               </tr>
             </thead>
             <tbody>
@@ -162,7 +177,15 @@ export default function CoberturaTable({ filas, parroquias }: Props) {
                   <td>{f.nombreRecinto}</td>
                   <td>{f.tieneCoordinadorTitular ? "Sí" : "No"}</td>
                   <td>
-                    {f.juntasCubiertas} / {f.totalJuntas}
+                    {f.juntasConVeedor} / {f.totalJuntas}
+                  </td>
+                  <td>
+                    <div class="g-bar">
+                      <span
+                        style={`width:${f.pctVeedores}%; background:${colorFor(f.pctVeedores)}`}
+                      />
+                    </div>
+                    {f.pctVeedores}%
                   </td>
                   <td>
                     <div class="g-bar">
