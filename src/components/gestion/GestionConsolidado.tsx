@@ -4,6 +4,7 @@ import FiltrosRecintos, {
   VacioFiltros,
 } from "./FiltrosRecintos";
 import GrupoParroquia from "./GrupoParroquia";
+import Iniciales from "./Iniciales";
 import { useRecintosAbiertos } from "./useRecintosAbiertos";
 import { normalizar, title } from "../../lib/format";
 import {
@@ -51,9 +52,11 @@ type Persona = PersonaVista & { tipo: "titular" | "suplente"; orden: number };
 
 function Linea({
   p,
+  rol,
   nombreLider,
 }: {
   p: PersonaVista;
+  rol: "titular" | "suplente";
   nombreLider: Map<string, string>;
 }) {
   const responsable = p.responsableLiderId
@@ -61,19 +64,22 @@ function Linea({
     : undefined;
   return (
     <div class="g-consol-persona">
-      <strong>{p.nombres}</strong>
-      <small>
-        CI {p.cedula}
-        {p.telefono ? ` · ${p.telefono}` : ""}
-        {p.email ? ` · ${p.email}` : ""}
-        {responsable ? ` · ${responsable}` : ""}
-      </small>
-      {p.preferencia ? (
-        <small class="g-persona-pref">Preferencia: {p.preferencia}</small>
-      ) : null}
-      {p.verificado ? (
-        <span class="chip-estado chip-estado-ok">Verificado</span>
-      ) : null}
+      <Iniciales nombres={p.nombres} rol={rol} />
+      <div class="g-consol-persona-texto">
+        <strong>{p.nombres}</strong>
+        <small>
+          CI {p.cedula}
+          {p.telefono ? ` · ${p.telefono}` : ""}
+          {p.email ? ` · ${p.email}` : ""}
+          {responsable ? ` · ${responsable}` : ""}
+        </small>
+        {p.preferencia ? (
+          <small class="g-persona-pref">Preferencia: {p.preferencia}</small>
+        ) : null}
+        {p.verificado ? (
+          <span class="chip-estado chip-estado-ok">Verificado</span>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -91,14 +97,14 @@ function PuestoLineas({
   return (
     <>
       {puesto.titular ? (
-        <Linea p={puesto.titular} nombreLider={nombreLider} />
+        <Linea p={puesto.titular} rol="titular" nombreLider={nombreLider} />
       ) : (
         <p class="g-consol-falta">{falta}</p>
       )}
       {puesto.suplentes.map((s, i) => (
         <div class="g-consol-suplente" key={i}>
           <span class="g-consol-rol">Suplente</span>
-          <Linea p={s} nombreLider={nombreLider} />
+          <Linea p={s} rol="suplente" nombreLider={nombreLider} />
         </div>
       ))}
     </>

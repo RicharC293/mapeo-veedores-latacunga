@@ -1,6 +1,7 @@
 import { useState } from "preact/hooks";
 import PersonaForm from "./PersonaForm";
 import DesvincularForm from "./DesvincularForm";
+import Iniciales from "./Iniciales";
 import type { Lider } from "../../lib/gestion/types";
 
 export interface PersonaAsignada {
@@ -60,10 +61,11 @@ export default function AsignacionCard({
     <div class="g-card">
       <h4>{titulo}</h4>
 
-      <div class="g-slot">
+      <div class="g-slot g-slot-titular">
         <span class="g-slot-label">Titular</span>
         {titular ? (
           <PersonaRow
+            rol="titular"
             persona={titular}
             lideres={lideres}
             onDesvincular={() => setAbierto({ desvincular: titular.id })}
@@ -103,6 +105,7 @@ export default function AsignacionCard({
           {suplentes.map((s) => (
             <li key={s.id}>
               <PersonaRow
+                rol="suplente"
                 persona={s}
                 lideres={lideres}
                 onDesvincular={() => setAbierto({ desvincular: s.id })}
@@ -143,11 +146,13 @@ export default function AsignacionCard({
 }
 
 function PersonaRow({
+  rol,
   persona,
   lideres,
   onDesvincular,
   onVerificar,
 }: {
+  rol: "titular" | "suplente";
   persona: PersonaAsignada;
   lideres: Lider[];
   onDesvincular: () => void;
@@ -157,8 +162,9 @@ function PersonaRow({
   const responsable = lideres.find((l) => l.id === persona.responsableLiderId);
 
   return (
-    <div class="g-persona">
-      <div>
+    <div class="g-persona g-persona-asig">
+      <Iniciales nombres={persona.nombres} rol={rol} />
+      <div class="g-persona-texto">
         <strong>{persona.nombres}</strong>
         <small>
           CI {persona.cedula}

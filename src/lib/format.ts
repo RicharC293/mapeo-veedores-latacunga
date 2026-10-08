@@ -20,3 +20,18 @@ export const rango = (a: number, b: number): string =>
 
 export const normalizar = (s: string): string =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+// Hasta dos iniciales de un nombre, para identificar a la persona de un
+// vistazo ("María Fernanda Altamirano" → "MF"). Ignora partículas sueltas.
+export const iniciales = (nombres: string): string => {
+  const palabras = nombres
+    .trim()
+    .split(/\s+/)
+    .filter((w) => /[a-záéíóúñü]/i.test(w[0] ?? ""));
+  const util = palabras.filter((w) => !/^(de|del|la|las|los|y|e)$/i.test(w));
+  const fuente = util.length > 0 ? util : palabras;
+  return fuente
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+};

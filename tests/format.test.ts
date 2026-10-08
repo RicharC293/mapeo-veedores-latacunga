@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fmt, normalizar, rango, title } from "../src/lib/format";
+import { fmt, iniciales, normalizar, rango, title } from "../src/lib/format";
 
 describe("title", () => {
   it.each([
@@ -50,5 +50,23 @@ describe("normalizar", () => {
   });
   it("permite comparar sin importar mayúsculas ni tildes", () => {
     expect(normalizar("PANUPALÍ")).toBe(normalizar("panupali"));
+  });
+});
+
+describe("iniciales", () => {
+  it("toma la primera letra de las dos primeras palabras", () => {
+    expect(iniciales("María Fernanda Altamirano")).toBe("MF");
+    expect(iniciales("juan pérez")).toBe("JP");
+  });
+
+  it("ignora partículas y espacios sobrantes", () => {
+    expect(iniciales("  Luis  de la Torre ")).toBe("LT");
+    expect(iniciales("del Rocío")).toBe("R");
+  });
+
+  it("con un solo nombre devuelve una inicial y sin nombre, vacío", () => {
+    expect(iniciales("Segundo")).toBe("S");
+    expect(iniciales("")).toBe("");
+    expect(iniciales("123 456")).toBe("");
   });
 });

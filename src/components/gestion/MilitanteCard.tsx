@@ -8,6 +8,7 @@ import type {
 } from "../../lib/gestion/militancia";
 import DialogoAsignacion, { type AvisoAsignacion } from "./DialogoAsignacion";
 import DialogoHistorial from "./DialogoHistorial";
+import Iniciales from "./Iniciales";
 import {
   MENSAJE_ERROR,
   erroresMilitante,
@@ -361,6 +362,7 @@ export default function MilitanteCard({
         ) : (
           <>
             <div class="g-mil-nombre">
+              <Iniciales nombres={militante.nombres} />
               <strong class={errores.nombres ? "g-campo-error" : undefined}>
                 {militante.nombres || "Sin nombre"}
               </strong>
@@ -411,6 +413,7 @@ export default function MilitanteCard({
       </div>
 
       <div class="g-mil-asignacion">
+        <p class="g-mil-seccion">Asignar a</p>
         <label class="g-mil-campo">
           Parroquia
           <select
