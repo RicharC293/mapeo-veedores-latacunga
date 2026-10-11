@@ -2270,7 +2270,7 @@ select.g-campo-error {
   /* Nombres de parroquia y de recinto: una columna con ancho razonable para
      que no se partan en cuatro líneas; la tabla hace scroll a la derecha. */
   .g-informe .g-table td:first-child {
-    min-width: 108px;
+    min-width: 84px;
   }
 }
 .g-informe-tabla .g-num {
@@ -2292,91 +2292,47 @@ select.g-campo-error {
   font-weight: 700;
   border-top: 1px solid var(--muted);
 }
+.g-informe-zona {
+  margin-top: 22px;
+}
 .g-informe-subtitulo {
-  margin: 22px 0 10px;
+  margin: 0 0 10px;
   font-size: 1rem;
 }
-.g-informe-parroquia {
-  margin: 0 0 14px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--panel);
+.g-informe-recintos {
+  margin-top: 10px;
 }
-.g-informe-parroquia > summary {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 2px 18px;
-  padding: 10px 14px;
+.g-informe-recintos > summary {
+  width: fit-content;
+  padding: 6px 0;
+  color: var(--sel);
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
 }
-.g-informe-parroquia-nombre {
-  font-weight: 700;
+.g-informe-recintos[open] > summary {
+  margin-bottom: 6px;
 }
-.g-informe-parroquia-resumen {
-  color: var(--muted);
-  font-size: 0.85rem;
-}
-.g-informe-parroquia > :not(summary) {
-  box-sizing: border-box;
-  padding: 0 14px 12px;
-}
-.g-informe-barra {
-  display: flex;
-  height: 14px;
-  overflow: hidden;
-  border-radius: 99px;
+.g-informe-tabla .g-informe-parroquia-fila th,
+.g-informe-tabla .g-informe-parroquia-fila td {
   background: var(--chip);
-}
-.g-informe-barra-ok {
-  background: #2f9e57;
-}
-.g-informe-barra-espera {
-  background: #e0a800;
-}
-.g-informe-leyenda {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 24px;
-  margin: 10px 0 0;
-  padding: 0;
-  list-style: none;
-  font-size: 0.9rem;
-}
-.g-informe-punto {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  margin-right: 8px;
-  border-radius: 50%;
-}
-.g-informe-punto-ok {
-  background: #2f9e57;
-}
-.g-informe-punto-espera {
-  background: #e0a800;
-}
-.g-informe-datos {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 0 32px;
-  margin: 0;
-}
-.g-informe-datos > div {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 9px 0;
-  border-bottom: 1px solid var(--line);
-}
-.g-informe-datos dt {
-  color: var(--muted);
-}
-.g-informe-datos dd {
-  margin: 0;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: inherit;
+  color: var(--ink);
+}
+.g-informe-tabla .g-informe-parroquia-fila td {
   text-align: right;
+}
+.g-informe-tabla td.g-informe-recinto {
+  padding-left: 22px;
+}
+@media (max-width: 560px) {
+  .g-informe-tabla td.g-informe-recinto {
+    padding-left: 12px;
+  }
 }
 .g-informe-notas {
   display: flex;
@@ -2433,16 +2389,8 @@ select.g-campo-error {
   .g-informe h2 {
     break-after: avoid;
   }
-  .g-informe tr,
-  .g-informe-datos > div,
-  .g-informe-parroquia > summary {
+  .g-informe tr {
     break-inside: avoid;
-  }
-  .g-informe-parroquia > summary {
-    break-after: avoid;
-  }
-  .g-informe-parroquia {
-    background: #fff;
   }
   .g-table-scroll {
     overflow: visible;
@@ -2451,11 +2399,10 @@ select.g-campo-error {
     min-width: 0;
     font-size: 0.78rem;
   }
-  .g-informe-barra,
-  .g-informe-barra span,
-  .g-informe-punto,
   .g-informe-destacada td,
-  .g-informe-grupo th {
+  .g-informe-grupo th,
+  .g-informe-parroquia-fila th,
+  .g-informe-parroquia-fila td {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }

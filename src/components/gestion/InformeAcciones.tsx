@@ -19,7 +19,7 @@ export default function InformeAcciones({
     const cerradas: HTMLDetailsElement[] = [];
     const abrir = () => {
       document
-        .querySelectorAll<HTMLDetailsElement>("details.g-informe-parroquia")
+        .querySelectorAll<HTMLDetailsElement>("details.g-informe-recintos")
         .forEach((d) => {
           if (!d.open) {
             d.open = true;

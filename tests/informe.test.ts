@@ -97,25 +97,41 @@ describe("informe: cifras principales", () => {
     expect(informe.cobertura.cubiertasVerificadas).toBe(1); // solo R2
   });
 
-  it("el avance por rol usa titulares sobre lo necesario", () => {
+  it("cada rol trae requerido, ingresados, verificados, faltan y los dos porcentajes", () => {
     const porClave = Object.fromEntries(informe.roles.map((r) => [r.clave, r]));
-    expect(porClave.veedores).toMatchObject({ necesarios: 5, registrados: 4 });
-    expect(porClave.veedores.pct).toBe(80);
-    expect(porClave.coordinadores).toMatchObject({
-      necesarios: 4,
-      registrados: 2,
+    expect(porClave.veedores).toEqual({
+      clave: "veedores",
+      etiqueta: "Veedores",
+      requerido: 5,
+      ingresados: 4,
       verificados: 1,
+      faltan: 1,
+      pct: 80,
+      pctFaltante: 20,
     });
-    expect(porClave.cda).toMatchObject({ necesarios: 1, registrados: 0 });
-    expect(porClave.completa.registrados).toBe(2);
+    expect(porClave.coordinadores).toMatchObject({
+      requerido: 4,
+      ingresados: 2,
+      verificados: 1,
+      faltan: 2,
+      pct: 50,
+      pctFaltante: 50,
+    });
+    expect(porClave.cda).toMatchObject({
+      requerido: 1,
+      ingresados: 0,
+      faltan: 1,
+      pct: 0,
+      pctFaltante: 100,
+    });
+    expect(porClave.completa).toMatchObject({ ingresados: 2, faltan: 3 });
   });
 
-  it("de los veedores registrados a los cubiertos: la cuenta cierra", () => {
-    const c = informe.cascada;
-    expect(c.registrados).toBe(4);
-    expect(c.cubiertos + c.esperandoCoordinador).toBe(c.registrados);
-    expect(c.esperandoCoordinador).toBe(2);
-    expect(c.recintosEsperando).toBe(1);
+  it("el porcentaje de cobertura y el faltante siempre suman 100", () => {
+    for (const r of informe.roles) {
+      expect(r.pct + r.pctFaltante).toBeCloseTo(100, 5);
+      expect(r.ingresados + r.faltan).toBe(r.requerido);
+    }
   });
 });
 
@@ -129,30 +145,66 @@ describe("informe: se concilia con el cálculo por parroquia y cantón", () => {
   );
   const canton = calcularCoberturaCanton(porParroquia);
 
-  it("cada parroquia da las mismas juntas cubiertas", () => {
+  it("cada parroquia da las mismas juntas cubiertas y recintos con coordinador", () => {
     for (const p of [...informe.urbanas, ...informe.rurales]) {
-      expect(p.cubiertas).toBe(porParroquia[p.codigo].juntasCubiertas);
-      expect(p.juntas).toBe(porParroquia[p.codigo].totalJuntas);
-      expect(p.conCoordinador).toBe(
+      expect(p.completa.ingresados).toBe(
+        porParroquia[p.codigo].juntasCubiertas,
+      );
+      expect(p.completa.requerido).toBe(porParroquia[p.codigo].totalJuntas);
+      expect(p.coordinadores.ingresados).toBe(
         porParroquia[p.codigo].recintosConCoordinador,
       );
     }
   });
 
   it("el total y los subtotales suman lo mismo que el cantón", () => {
-    expect(informe.total.cubiertas).toBe(canton.juntasCubiertas);
-    expect(informe.total.pct).toBe(canton.pctCobertura);
-    expect(
-      informe.subtotalUrbanas.cubiertas + informe.subtotalRurales.cubiertas,
-    ).toBe(informe.total.cubiertas);
+    expect(informe.total.completa.ingresados).toBe(canton.juntasCubiertas);
+    expect(informe.total.completa.pct).toBe(canton.pctCobertura);
+    for (const rol of ["veedores", "coordinadores", "cda"] as const) {
+      expect(
+        informe.subtotalUrbanas[rol].requerido +
+          informe.subtotalRurales[rol].requerido,
+      ).toBe(informe.total[rol].requerido);
+      expect(
+        informe.subtotalUrbanas[rol].ingresados +
+          informe.subtotalRurales[rol].ingresados,
+      ).toBe(informe.total[rol].ingresados);
+    }
     expect(informe.cobertura.cubiertas).toBe(canton.juntasCubiertas);
   });
 
   it("separa urbanas y rurales", () => {
     expect(informe.urbanas.map((p) => p.nombre)).toEqual(["Urbana A"]);
     expect(informe.rurales.map((p) => p.nombre)).toEqual(["Rural B"]);
-    expect(informe.subtotalUrbanas.juntas).toBe(4);
-    expect(informe.subtotalRurales.juntas).toBe(1);
+    expect(informe.subtotalRurales.veedores.requerido).toBe(1);
+  });
+
+  it("los recintos de cada parroquia suman las cifras de la parroquia", () => {
+    for (const p of [...informe.urbanas, ...informe.rurales]) {
+      for (const rol of [
+        "veedores",
+        "coordinadores",
+        "cda",
+        "completa",
+      ] as const) {
+        expect(p.recintos.reduce((a, r) => a + r[rol].requerido, 0)).toBe(
+          p[rol].requerido,
+        );
+        expect(p.recintos.reduce((a, r) => a + r[rol].ingresados, 0)).toBe(
+          p[rol].ingresados,
+        );
+        expect(p.recintos.reduce((a, r) => a + r[rol].verificados, 0)).toBe(
+          p[rol].verificados,
+        );
+      }
+    }
+  });
+
+  it("los porcentajes de un grupo salen de sus cifras, no de promediar", () => {
+    const u = informe.urbanas[0];
+    expect(u.veedores.pct).toBe(
+      Math.round((u.veedores.ingresados / u.veedores.requerido) * 1000) / 10,
+    );
   });
 });
 
@@ -184,12 +236,9 @@ describe("informe: dónde actuar primero", () => {
   });
 });
 
-describe("informe: calidad del dato y ritmo", () => {
-  it("cuenta suplentes, excedentes y Militancia", () => {
-    expect(informe.calidad.veedoresSuplentes).toBe(1);
-    // R1 tiene 3 veedores (2 titulares y 1 suplente) para 2 juntas.
-    expect(informe.calidad.recintosConExcedente).toBe(1);
-    expect(informe.calidad.militancia).toEqual({
+describe("informe: ritmo y Militancia", () => {
+  it("cuenta las personas de Militancia", () => {
+    expect(informe.militancia).toEqual({
       total: 3,
       incorrectos: 1,
       duplicados: 1,
@@ -209,60 +258,39 @@ describe("informe: calidad del dato y ritmo", () => {
     expect(informe.ritmo.cuenta.iniciada).toBe(false);
     expect(informe.ritmo.cuenta.dias).toBe(10);
   });
-
-  it("el detalle por recinto trae una fila por recinto", () => {
-    expect(informe.detalle).toHaveLength(4);
-    const r1 = informe.detalle.find((d) => d.recinto === "R1")!;
-    expect(r1).toMatchObject({
-      juntas: 2,
-      juntasConVeedor: 2,
-      veedoresTotal: 3,
-      coordinador: false,
-      cubiertas: 0,
-    });
-  });
 });
 
-describe("informe: desglose por parroquia y recinto", () => {
-  it("cada parroquia trae sus recintos, que suman lo mismo que la parroquia", () => {
-    for (const p of [...informe.urbanas, ...informe.rurales]) {
-      expect(p.detalle).toHaveLength(p.recintos);
-      expect(p.detalle.reduce((a, d) => a + d.juntas, 0)).toBe(p.juntas);
-      expect(p.detalle.reduce((a, d) => a + d.cubiertas, 0)).toBe(p.cubiertas);
-      expect(p.detalle.reduce((a, d) => a + d.juntasSinVeedor, 0)).toBe(
-        p.sinVeedor,
-      );
-    }
+describe("informe: detalle por recinto", () => {
+  it("trae una fila por recinto con las cifras de cada rol", () => {
+    expect(informe.detalle).toHaveLength(4);
+    const r1 = informe.detalle.find((d) => d.recinto === "R1")!;
+    expect(r1.veedores).toMatchObject({
+      requerido: 2,
+      ingresados: 2,
+      faltan: 0,
+    });
+    expect(r1.coordinadores).toMatchObject({ ingresados: 0, faltan: 1 });
+    expect(r1.completa.ingresados).toBe(0);
+  });
+
+  it("el CDA solo se pide en recintos CDA", () => {
+    const r1 = informe.detalle.find((d) => d.recinto === "R1")!;
+    const r4 = informe.detalle.find((d) => d.recinto === "R4")!;
+    expect(r1.cda.requerido).toBe(0);
+    expect(r4.cda).toMatchObject({ requerido: 1, ingresados: 0, faltan: 1 });
   });
 
   it("clasifica el estado de cada recinto", () => {
     const estado = (n: string) =>
       informe.detalle.find((d) => d.recinto === n)!.estado;
-    // R2 y R3: veedor y coordinador, sin CDA. R1 sin coordinador. R4 CDA vacío.
     expect(estado("R2")).toBe("completo");
     expect(estado("R3")).toBe("completo");
     expect(estado("R1")).toBe("pendiente");
     expect(estado("R4")).toBe("pendiente");
   });
 
-  it("cuenta lo que falta para cubrir el cantón", () => {
-    expect(informe.brechas).toEqual({
-      juntasSinVeedor: 1,
-      recintosSinCoordinador: 2,
-      recintosCdaSinTitular: 1,
-      recintosSinNada: 1,
-    });
-    expect(informe.total.sinVeedor).toBe(1);
-    expect(informe.total.recintosCda).toBe(1);
-    expect(informe.total.cdaConTitular).toBe(0);
-  });
-
   it("lista los recintos con coordinador y juntas sin veedor", () => {
     // R2 y R3 tienen coordinador pero ya todas sus juntas tienen veedor.
     expect(informe.accionesVeedores).toEqual([]);
-  });
-
-  it("cuenta las personas de Militancia con recinto precargado", () => {
-    expect(informe.calidad.militancia.conRecinto).toBe(1);
   });
 });

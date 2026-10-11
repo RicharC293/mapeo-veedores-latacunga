@@ -1,0 +1,137 @@
+---
+import { fmt, title } from "../../lib/format";
+import type {
+  Cifras,
+  CifrasPorRol,
+  FilaParroquia,
+} from "../../lib/gestion/informe";
+
+type Rol = "veedores" | "coordinadores" | "cda";
+
+interface Props {
+  rol: Rol;
+  urbanas: FilaParroquia[];
+  rurales: FilaParroquia[];
+  subtotalUrbanas: CifrasPorRol;
+  subtotalRurales: CifrasPorRol;
+}
+
+// Un bloque por rol (Veedores, Coordinadores o CDA) con las mismas seis cifras:
+// requerido, ingresados, verificados, faltan y los dos porcentajes. Urbano y
+// rural van separados, cada uno por parroquia y con su detalle por recinto
+// plegado debajo.
+const { rol, urbanas, rurales, subtotalUrbanas, subtotalRurales } = Astro.props;
+
+const pctTxt = (n: number) =>
+  `${n.toLocaleString("es-EC", { maximumFractionDigits: 1 })} %`;
+const valores = (c: Cifras) => [
+  fmt(c.requerido),
+  fmt(c.ingresados),
+  fmt(c.verificados),
+  fmt(c.faltan),
+  pctTxt(c.pct),
+  pctTxt(c.pctFaltante),
+];
+const unidad = {
+  veedores: "Juntas",
+  coordinadores: "Recintos",
+  cda: "Recintos CDA",
+}[rol];
+
+const grupos = [
+  { nombre: "Urbano", filas: urbanas, sub: subtotalUrbanas },
+  { nombre: "Rural", filas: rurales, sub: subtotalRurales },
+]
+  // En CDA solo cuentan las parroquias que tienen recintos CDA.
+  .map((g) => ({
+    ...g,
+    filas: g.filas.filter((p) => p[rol].requerido > 0),
+  }))
+  .filter((g) => g.filas.length > 0);
+---
+
+{grupos.map((g) => (
+  <div class="g-informe-zona">
+    <h3 class="g-informe-subtitulo">
+      {g.nombre}: {fmt(g.sub[rol].ingresados)} de {fmt(g.sub[rol].requerido)} (
+      {pctTxt(g.sub[rol].pct)})
+    </h3>
+    <div class="g-table-scroll">
+      <table class="g-table g-informe-tabla">
+        <caption class="g-sr-only">
+          {unidad} por parroquia, {g.nombre.toLowerCase()}
+        </caption>
+        <thead>
+          <tr>
+            <th>Parroquia</th>
+            <th class="g-num">Requerido</th>
+            <th class="g-num">Ingresados</th>
+            <th class="g-num">Verificados</th>
+            <th class="g-num">Faltan</th>
+            <th class="g-num">% Cobertura</th>
+            <th class="g-num">% Faltante</th>
+          </tr>
+        </thead>
+        <tbody>
+          {g.filas.map((p) => (
+            <tr>
+              <td>{p.nombre}</td>
+              {valores(p[rol]).map((v) => (
+                <td class="g-num">{v}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr class="g-informe-subtotal">
+            <td>Total {g.nombre.toLowerCase()}</td>
+            {valores(g.sub[rol]).map((v) => (
+              <td class="g-num">{v}</td>
+            ))}
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <details class="g-informe-recintos">
+      <summary>Ver el detalle por recinto ({g.nombre.toLowerCase()})</summary>
+      <div class="g-table-scroll">
+        <table class="g-table g-informe-tabla">
+          <caption class="g-sr-only">
+            {unidad} por recinto, agrupados por parroquia
+          </caption>
+          <thead>
+            <tr>
+              <th>Parroquia y recinto</th>
+              <th class="g-num">Requerido</th>
+              <th class="g-num">Ingresados</th>
+              <th class="g-num">Verificados</th>
+              <th class="g-num">Faltan</th>
+              <th class="g-num">% Cobertura</th>
+              <th class="g-num">% Faltante</th>
+            </tr>
+          </thead>
+          {g.filas.map((p) => (
+            <tbody>
+              <tr class="g-informe-parroquia-fila">
+                <th scope="row">{p.nombre}</th>
+                {valores(p[rol]).map((v) => (
+                  <td class="g-num">{v}</td>
+                ))}
+              </tr>
+              {p.recintos
+                .filter((r) => r[rol].requerido > 0)
+                .map((r) => (
+                  <tr>
+                    <td class="g-informe-recinto">{title(r.recinto)}</td>
+                    {valores(r[rol]).map((v) => (
+                      <td class="g-num">{v}</td>
+                    ))}
+                  </tr>
+                ))}
+            </tbody>
+          ))}
+        </table>
+      </div>
+    </details>
+  </div>
+))}
