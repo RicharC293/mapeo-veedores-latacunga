@@ -2399,6 +2399,58 @@ select.g-campo-error {
     min-width: 0;
     font-size: 0.78rem;
   }
+  /* Filas más bajas y primera columna más ancha para que los nombres de
+     parroquia y recinto no se partan en tres líneas. */
+  .g-informe .g-table th,
+  .g-informe .g-table td {
+    padding: 5px 8px;
+  }
+  .g-informe-zona .g-table td:first-child,
+  .g-informe-zona .g-table th:first-child {
+    width: 40%;
+  }
+  .g-informe .g-table th.g-num,
+  .g-informe .g-table td.g-num {
+    padding-right: 6px;
+    padding-left: 4px;
+  }
+  .g-informe-tabla td.g-informe-recinto {
+    padding-left: 18px;
+  }
+  /* El detalle por recinto se imprime siempre abierto, sin depender de que
+     el navegador dispare el evento de impresión. */
+  /* Cada rol empieza en hoja nueva, la tabla por parroquia no se parte entre
+     hojas y las notas finales quedan juntas. */
+  .g-informe section[aria-labelledby="inf-veedores"],
+  .g-informe section[aria-labelledby="inf-coordinadores"],
+  .g-informe section[aria-labelledby="inf-cda"] {
+    break-before: page;
+  }
+  .g-informe-zona > .g-table-scroll,
+  .g-informe-notas,
+  .g-informe-notas li {
+    break-inside: avoid;
+  }
+  .g-informe-subtitulo {
+    break-after: avoid;
+  }
+  .g-informe {
+    padding-bottom: 14px;
+  }
+  .g-informe-recintos::details-content {
+    content-visibility: visible;
+    display: block;
+  }
+  .g-informe-recintos > summary {
+    margin: 14px 0 6px;
+    break-after: avoid;
+    list-style: none;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+  .g-informe-recintos > summary::-webkit-details-marker {
+    display: none;
+  }
   .g-informe-destacada td,
   .g-informe-grupo th,
   .g-informe-parroquia-fila th,
