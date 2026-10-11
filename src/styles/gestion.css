@@ -1080,6 +1080,16 @@ select.g-campo-error {
   flex-wrap: wrap;
   gap: 8px;
 }
+.g-mil-copiar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+.g-mil-copiar-ayuda {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
 .g-chip-filtro {
   display: inline-flex;
   align-items: center;

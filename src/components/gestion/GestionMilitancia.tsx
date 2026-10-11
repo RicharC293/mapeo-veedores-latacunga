@@ -7,6 +7,7 @@ import type { ParroquiaBasica, Recinto } from "../../lib/types";
 import type { Lider, Militante, TipoMilitancia } from "../../lib/gestion/types";
 import type { ResultadoAsignacion } from "../../lib/gestion/militancia";
 import { normalizar, title } from "../../lib/format";
+import { textoIncorrectos } from "../../lib/gestion/copiarIncorrectos";
 
 interface Props {
   parroquias: ParroquiaBasica[];
@@ -275,6 +276,19 @@ export default function GestionMilitancia({
     const m = new Map(lideres.map((l) => [l.id, l.nombres]));
     return (id: string | null) => (id ? (m.get(id) ?? "") : "");
   }, [lideres]);
+
+  const [copiado, setCopiado] = useState(false);
+  // Copia todos los registros incorrectos (sin importar los filtros activos).
+  const copiarIncorrectos = async () => {
+    const texto = textoIncorrectos(militantes, nombreResponsable);
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch {
+      window.prompt("Copia los registros incorrectos:", texto);
+    }
+  };
 
   // Cuántas filas hay en la bandeja con cada cédula (para agrupar repetidas).
   const filasPorCedula = useMemo(() => {
@@ -721,6 +735,24 @@ export default function GestionMilitancia({
             </button>
           ))}
         </div>
+        {conteos.incorrectos > 0 ? (
+          <div class="g-mil-copiar">
+            <button
+              type="button"
+              class="g-btn-ghost"
+              onClick={copiarIncorrectos}
+            >
+              {copiado
+                ? "Copiado"
+                : `Copiar incorrectos (${conteos.incorrectos})`}
+            </button>
+            <span class="g-mil-copiar-ayuda" role="status">
+              {copiado
+                ? "Pega el texto donde lo necesites."
+                : "Nombres, cédula, teléfono, correo, responsable y la razón."}
+            </span>
+          </div>
+        ) : null}
         <div class="g-mil-buscar">
           <label>
             Buscar
