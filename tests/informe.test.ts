@@ -67,7 +67,13 @@ const veedores = [
 const coordinadores = [coord(2, true), coord(3)];
 const acreditados: AcreditadoCda[] = [];
 const militantes = [
-  { cedula: "m1", incorrecto: true, duplicado: false, asignado: null },
+  {
+    cedula: "m1",
+    incorrecto: true,
+    duplicado: false,
+    asignado: null,
+    recintoCodigo: 3,
+  },
   { cedula: "m2", incorrecto: false, duplicado: true, asignado: null },
   { cedula: "k99", incorrecto: false, duplicado: false, asignado: {} },
 ];
@@ -188,6 +194,7 @@ describe("informe: calidad del dato y ritmo", () => {
       incorrectos: 1,
       duplicados: 1,
       repetidosAsignados: 1,
+      conRecinto: 1,
     });
   });
 
@@ -213,5 +220,49 @@ describe("informe: calidad del dato y ritmo", () => {
       coordinador: false,
       cubiertas: 0,
     });
+  });
+});
+
+describe("informe: desglose por parroquia y recinto", () => {
+  it("cada parroquia trae sus recintos, que suman lo mismo que la parroquia", () => {
+    for (const p of [...informe.urbanas, ...informe.rurales]) {
+      expect(p.detalle).toHaveLength(p.recintos);
+      expect(p.detalle.reduce((a, d) => a + d.juntas, 0)).toBe(p.juntas);
+      expect(p.detalle.reduce((a, d) => a + d.cubiertas, 0)).toBe(p.cubiertas);
+      expect(p.detalle.reduce((a, d) => a + d.juntasSinVeedor, 0)).toBe(
+        p.sinVeedor,
+      );
+    }
+  });
+
+  it("clasifica el estado de cada recinto", () => {
+    const estado = (n: string) =>
+      informe.detalle.find((d) => d.recinto === n)!.estado;
+    // R2 y R3: veedor y coordinador, sin CDA. R1 sin coordinador. R4 CDA vacío.
+    expect(estado("R2")).toBe("completo");
+    expect(estado("R3")).toBe("completo");
+    expect(estado("R1")).toBe("pendiente");
+    expect(estado("R4")).toBe("pendiente");
+  });
+
+  it("cuenta lo que falta para cubrir el cantón", () => {
+    expect(informe.brechas).toEqual({
+      juntasSinVeedor: 1,
+      recintosSinCoordinador: 2,
+      recintosCdaSinTitular: 1,
+      recintosSinNada: 1,
+    });
+    expect(informe.total.sinVeedor).toBe(1);
+    expect(informe.total.recintosCda).toBe(1);
+    expect(informe.total.cdaConTitular).toBe(0);
+  });
+
+  it("lista los recintos con coordinador y juntas sin veedor", () => {
+    // R2 y R3 tienen coordinador pero ya todas sus juntas tienen veedor.
+    expect(informe.accionesVeedores).toEqual([]);
+  });
+
+  it("cuenta las personas de Militancia con recinto precargado", () => {
+    expect(informe.calidad.militancia.conRecinto).toBe(1);
   });
 });

@@ -48,7 +48,8 @@ const corte = new Intl.DateTimeFormat("es-EC", {
 }).format(new Date(informe.corte));
 const fechaArchivo = new Date(informe.corte).toISOString().slice(0, 10);
 
-const { cobertura, cascada, roles, calidad, ritmo, acciones } = informe;
+const { cobertura, cascada, roles, calidad, ritmo, acciones, brechas } =
+  informe;
 const pctDe = (parte: number, total: number) =>
   total > 0 ? (parte / total) * 100 : 0;
 const pctCubiertos = pctDe(cascada.cubiertos, cascada.registrados);
@@ -59,6 +60,21 @@ const desbloqueanPrimeras = primeras.reduce((a, x) => a + x.desbloquea, 0);
 const pctConPrimeras =
   primeras.length > 0 ? primeras[primeras.length - 1].pctAcumulado : null;
 const filasAcciones = acciones.slice(0, 10);
+const filasVeedores = informe.accionesVeedores.slice(0, 10);
+const juntasPorVeedores = informe.accionesVeedores.reduce(
+  (a, x) => a + x.sinVeedor,
+  0,
+);
+const etiquetaEstado = {
+  completo: "Completo",
+  casi: "Casi completo",
+  pendiente: "Con pendientes",
+} as const;
+const claseEstado = {
+  completo: "chip-estado-ok",
+  casi: "chip-estado-casi",
+  pendiente: "chip-estado-pendiente",
+} as const;
 
 const rolVeedores = roles.find((r) => r.clave === "veedores")!;
 const rolCda = roles.find((r) => r.clave === "cda")!;
@@ -70,12 +86,14 @@ const csvEncabezados = [
   "Recinto",
   "Juntas",
   "Juntas con veedor titular",
+  "Juntas sin veedor titular",
   "Veedores (titulares y suplentes)",
   "Coordinador titular",
   "Juntas cubiertas (veedor y coordinador)",
   "% cobertura",
   "Recinto CDA",
   "Acreditado CDA titular",
+  "Estado del recinto",
 ];
 const csvFilas = informe.detalle.map((d) => [
   d.parroquia,
@@ -83,12 +101,14 @@ const csvFilas = informe.detalle.map((d) => [
   title(d.recinto),
   d.juntas,
   d.juntasConVeedor,
+  d.juntasSinVeedor,
   d.veedoresTotal,
   d.coordinador ? "Sí" : "No",
   d.cubiertas,
   d.pct,
   d.esCda ? "Sí" : "No",
   d.esCda ? (d.cdaTitular ? "Sí" : "No") : "",
+  etiquetaEstado[d.estado],
 ]);
 
 const grupos: { nombre: string; filas: FilaParroquia[]; sub: Subtotal }[] = [
@@ -135,6 +155,23 @@ const grupos: { nombre: string; filas: FilaParroquia[]; sub: Subtotal }[] = [
         {cobertura.cubiertasVerificadas > 0
           ? `De ellas, ${fmt(cobertura.cubiertasVerificadas)} (${pctTxt(cobertura.pctVerificadas)} del total) ya están verificadas.`
           : "Ninguna está verificada todavía."}
+      </p>
+      <p class="g-informe-lead">
+        Para cubrir todo el cantón faltan{" "}
+        <strong>
+          {fmt(brechas.juntasSinVeedor)} juntas sin veedor titular
+        </strong>
+        ,{" "}
+        <strong>
+          {fmt(brechas.recintosSinCoordinador)} recintos sin coordinador titular
+        </strong>
+        {brechas.recintosCdaSinTitular > 0
+          ? ` y ${fmt(brechas.recintosCdaSinTitular)} de ${fmt(informe.totales.recintosCda)} recintos CDA sin acreditado titular`
+          : ""}
+        .
+        {brechas.recintosSinNada > 0
+          ? ` En ${fmt(brechas.recintosSinNada)} recintos no hay todavía ni veedor ni coordinador.`
+          : ""}
       </p>
       <div class="g-table-scroll">
         <table class="g-table g-informe-tabla">
@@ -226,6 +263,7 @@ const grupos: { nombre: string; filas: FilaParroquia[]; sub: Subtotal }[] = [
               <th>Parroquia</th>
               <th class="g-num">Juntas</th>
               <th class="g-num">Con veedor</th>
+              <th class="g-num">Sin veedor</th>
               <th class="g-num">Cubiertas</th>
               <th class="g-num">Cobertura</th>
               <th class="g-num">Recintos con coordinador</th>
@@ -234,7 +272,7 @@ const grupos: { nombre: string; filas: FilaParroquia[]; sub: Subtotal }[] = [
           {grupos.map((g) => (
             <tbody>
               <tr class="g-informe-grupo">
-                <th scope="colgroup" colspan="6">
+                <th scope="colgroup" colspan="7">
                   {g.nombre}
                 </th>
               </tr>
@@ -243,6 +281,7 @@ const grupos: { nombre: string; filas: FilaParroquia[]; sub: Subtotal }[] = [
                   <td>{p.nombre}</td>
                   <td class="g-num">{fmt(p.juntas)}</td>
                   <td class="g-num">{fmt(p.conVeedor)}</td>
+                  <td class="g-num">{fmt(p.sinVeedor)}</td>
                   <td class="g-num">{fmt(p.cubiertas)}</td>
                   <td class="g-num">{pctTxt(pctDe(p.cubiertas, p.juntas))}</td>
                   <td class="g-num">
@@ -254,6 +293,7 @@ const grupos: { nombre: string; filas: FilaParroquia[]; sub: Subtotal }[] = [
                 <td>Subtotal</td>
                 <td class="g-num">{fmt(g.sub.juntas)}</td>
                 <td class="g-num">{fmt(g.sub.conVeedor)}</td>
+                <td class="g-num">{fmt(g.sub.sinVeedor)}</td>
                 <td class="g-num">{fmt(g.sub.cubiertas)}</td>
                 <td class="g-num">{pctTxt(g.sub.pct)}</td>
                 <td class="g-num">
@@ -267,6 +307,7 @@ const grupos: { nombre: string; filas: FilaParroquia[]; sub: Subtotal }[] = [
               <td>Cantón</td>
               <td class="g-num">{fmt(informe.total.juntas)}</td>
               <td class="g-num">{fmt(informe.total.conVeedor)}</td>
+              <td class="g-num">{fmt(informe.total.sinVeedor)}</td>
               <td class="g-num">{fmt(informe.total.cubiertas)}</td>
               <td class="g-num">{pctTxt(informe.total.pct)}</td>
               <td class="g-num">
@@ -277,8 +318,84 @@ const grupos: { nombre: string; filas: FilaParroquia[]; sub: Subtotal }[] = [
         </table>
       </div>
       <p class="g-informe-pie">
-        Con veedor: juntas con veedor titular, sin mirar el coordinador.
-        Cubiertas: además el recinto tiene coordinador titular.
+        Con veedor: juntas con veedor titular, sin mirar el coordinador. Sin
+        veedor: juntas que aún no tienen titular. Cubiertas: además el recinto
+        tiene coordinador titular.
+      </p>
+    </section>
+
+    <section aria-labelledby="inf-recintos">
+      <h2 id="inf-recintos">Desglose por parroquia y recinto</h2>
+      <p class="g-informe-lead">
+        Cada parroquia con sus recintos electorales: cuántas juntas tienen
+        veedor, cuántas faltan, si el recinto cuenta con coordinador y
+        acreditado CDA, y su estado.
+      </p>
+      {grupos.map((g) => (
+        <>
+          <h3 class="g-informe-subtitulo">{g.nombre}</h3>
+          {g.filas.map((p) => (
+            <details class="g-informe-parroquia" open>
+              <summary>
+                <span class="g-informe-parroquia-nombre">{p.nombre}</span>
+                <span class="g-informe-parroquia-resumen">
+                  {fmt(p.cubiertas)} de {fmt(p.juntas)} juntas cubiertas (
+                  {pctTxt(pctDe(p.cubiertas, p.juntas))})
+                </span>
+                <span class="g-informe-parroquia-resumen">
+                  {p.conCoordinador} de {p.recintos}{" "}
+                  {p.recintos === 1 ? "recinto" : "recintos"} con coordinador
+                  {p.recintosCda > 0
+                    ? ` · CDA ${p.cdaConTitular} de ${p.recintosCda}`
+                    : ""}
+                </span>
+              </summary>
+              <div class="g-table-scroll">
+                <table class="g-table g-informe-tabla">
+                  <caption class="g-sr-only">Recintos de {p.nombre}</caption>
+                  <thead>
+                    <tr>
+                      <th>Recinto</th>
+                      <th class="g-num">Juntas</th>
+                      <th class="g-num">Con veedor</th>
+                      <th class="g-num">Sin veedor</th>
+                      <th>Coordinador</th>
+                      <th>CDA</th>
+                      <th class="g-num">Cobertura</th>
+                      <th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {p.detalle.map((d) => (
+                      <tr>
+                        <td>{title(d.recinto)}</td>
+                        <td class="g-num">{fmt(d.juntas)}</td>
+                        <td class="g-num">{fmt(d.juntasConVeedor)}</td>
+                        <td class="g-num">{fmt(d.juntasSinVeedor)}</td>
+                        <td>{d.coordinador ? "Sí" : "Falta"}</td>
+                        <td>
+                          {d.esCda ? (d.cdaTitular ? "Sí" : "Falta") : "—"}
+                        </td>
+                        <td class="g-num">{pctTxt(d.pct)}</td>
+                        <td>
+                          <span class={`chip-estado ${claseEstado[d.estado]}`}>
+                            {etiquetaEstado[d.estado]}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          ))}
+        </>
+      ))}
+      <p class="g-informe-pie">
+        Estado: completo si el recinto tiene coordinador, todas sus juntas con
+        veedor titular y, si es CDA, su acreditado; casi completo si ya tiene
+        coordinador y le falta un solo veedor titular; con pendientes en los
+        demás casos. «—» en CDA: el recinto no necesita acreditado.
       </p>
     </section>
 
@@ -340,6 +457,50 @@ const grupos: { nombre: string; filas: FilaParroquia[]; sub: Subtotal }[] = [
           </p>
         </>
       )}
+      {filasVeedores.length > 0 ? (
+        <>
+          <h3 class="g-informe-subtitulo">
+            Dónde faltan veedores (recintos que ya tienen coordinador)
+          </h3>
+          <p class="g-informe-lead">
+            En estos {fmt(informe.accionesVeedores.length)} recintos cada veedor
+            titular nuevo suma una junta cubierta de inmediato. En conjunto
+            faltan <strong>{fmt(juntasPorVeedores)} veedores</strong>.
+          </p>
+          <div class="g-table-scroll">
+            <table class="g-table g-informe-tabla">
+              <caption class="g-sr-only">
+                Recintos con coordinador y juntas sin veedor titular
+              </caption>
+              <thead>
+                <tr>
+                  <th class="g-num">N.º</th>
+                  <th>Recinto</th>
+                  <th>Parroquia</th>
+                  <th class="g-num">Juntas sin veedor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filasVeedores.map((a, i) => (
+                  <tr>
+                    <td class="g-num">{i + 1}</td>
+                    <td>{title(a.recinto)}</td>
+                    <td>{a.parroquia}</td>
+                    <td class="g-num">
+                      {a.sinVeedor} de {a.totalJuntas}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p class="g-informe-pie">
+            {informe.accionesVeedores.length > filasVeedores.length
+              ? `Se muestran los ${filasVeedores.length} primeros de ${informe.accionesVeedores.length} recintos; el resto está en el desglose y en el CSV.`
+              : ""}
+          </p>
+        </>
+      ) : null}
     </section>
 
     <section aria-labelledby="inf-calidad">
@@ -380,6 +541,10 @@ const grupos: { nombre: string; filas: FilaParroquia[]; sub: Subtotal }[] = [
             <div>
               <dt>Personas en Militancia sin asignar</dt>
               <dd>{fmt(calidad.militancia.total)}</dd>
+            </div>
+            <div>
+              <dt>… con recinto ya precargado</dt>
+              <dd>{fmt(calidad.militancia.conRecinto)}</dd>
             </div>
             <div>
               <dt>… con datos por corregir (incorrectos)</dt>
@@ -446,7 +611,8 @@ const grupos: { nombre: string; filas: FilaParroquia[]; sub: Subtotal }[] = [
           indicadas arriba. El informe se recalcula cada vez que se abre.
         </li>
         <li>
-          <strong>CSV.</strong> El archivo trae una fila por recinto, con
+          <strong>CSV.</strong> El archivo trae una fila por recinto con sus
+          juntas con y sin veedor, coordinador, CDA, cobertura y estado, con
           separador «;» y coma decimal, listo para abrir en Excel.
         </li>
       </ul>

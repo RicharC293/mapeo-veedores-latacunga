@@ -2292,6 +2292,35 @@ select.g-campo-error {
   font-weight: 700;
   border-top: 1px solid var(--muted);
 }
+.g-informe-subtitulo {
+  margin: 22px 0 10px;
+  font-size: 1rem;
+}
+.g-informe-parroquia {
+  margin: 0 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.g-informe-parroquia > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 18px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+.g-informe-parroquia-nombre {
+  font-weight: 700;
+}
+.g-informe-parroquia-resumen {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.g-informe-parroquia > :not(summary) {
+  box-sizing: border-box;
+  padding: 0 14px 12px;
+}
 .g-informe-barra {
   display: flex;
   height: 14px;
@@ -2405,8 +2434,15 @@ select.g-campo-error {
     break-after: avoid;
   }
   .g-informe tr,
-  .g-informe-datos > div {
+  .g-informe-datos > div,
+  .g-informe-parroquia > summary {
     break-inside: avoid;
+  }
+  .g-informe-parroquia > summary {
+    break-after: avoid;
+  }
+  .g-informe-parroquia {
+    background: #fff;
   }
   .g-table-scroll {
     overflow: visible;

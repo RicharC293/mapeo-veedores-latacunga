@@ -1,3 +1,4 @@
+import { useEffect } from "preact/hooks";
 import { aCsv, type Celda } from "../../lib/gestion/csv";
 
 interface Props {
@@ -13,6 +14,30 @@ export default function InformeAcciones({
   filas,
   nombreArchivo,
 }: Props) {
+  // Al imprimir, el desglose por parroquia sale siempre desplegado.
+  useEffect(() => {
+    const cerradas: HTMLDetailsElement[] = [];
+    const abrir = () => {
+      document
+        .querySelectorAll<HTMLDetailsElement>("details.g-informe-parroquia")
+        .forEach((d) => {
+          if (!d.open) {
+            d.open = true;
+            cerradas.push(d);
+          }
+        });
+    };
+    const restaurar = () => {
+      cerradas.splice(0).forEach((d) => (d.open = false));
+    };
+    window.addEventListener("beforeprint", abrir);
+    window.addEventListener("afterprint", restaurar);
+    return () => {
+      window.removeEventListener("beforeprint", abrir);
+      window.removeEventListener("afterprint", restaurar);
+    };
+  }, []);
+
   const descargar = () => {
     const blob = new Blob([aCsv(encabezados, filas)], {
       type: "text/csv;charset=utf-8",

@@ -14,6 +14,8 @@ export interface PersonaMilitancia {
   incorrecto: boolean;
   duplicado: boolean;
   asignado: unknown | null;
+  // Recinto ya precargado en la fila de Militancia, si lo tiene.
+  recintoCodigo?: number | null;
 }
 
 export interface EntradaInforme {
@@ -49,6 +51,12 @@ export interface FilaParroquia {
   pct: number;
   recintos: number;
   conCoordinador: number;
+  // Juntas sin veedor titular y recintos CDA de la parroquia con su titular.
+  sinVeedor: number;
+  recintosCda: number;
+  cdaConTitular: number;
+  // Recintos de la parroquia, ordenados por nombre, para el desglose.
+  detalle: FilaDetalle[];
 }
 
 export interface Subtotal {
@@ -58,6 +66,21 @@ export interface Subtotal {
   pct: number;
   recintos: number;
   conCoordinador: number;
+  sinVeedor: number;
+  recintosCda: number;
+  cdaConTitular: number;
+}
+
+export type EstadoRecinto = "completo" | "casi" | "pendiente";
+
+// Un recinto que ya tiene coordinador y aún necesita veedores: cada veedor
+// titular que se consiga suma una junta cubierta.
+export interface AccionVeedores {
+  recintoCodigo: number;
+  recinto: string;
+  parroquia: string;
+  sinVeedor: number;
+  totalJuntas: number;
 }
 
 export interface AccionPrioritaria {
@@ -75,17 +98,21 @@ export interface AccionPrioritaria {
 }
 
 export interface FilaDetalle {
+  codigo: number;
+  parroquiaCodigo: number;
   parroquia: string;
   urbana: boolean;
   recinto: string;
   juntas: number;
   juntasConVeedor: number;
+  juntasSinVeedor: number;
   veedoresTotal: number;
   coordinador: boolean;
   cubiertas: number;
   pct: number;
   esCda: boolean;
   cdaTitular: boolean;
+  estado: EstadoRecinto;
 }
 
 export interface Informe {
@@ -111,6 +138,15 @@ export interface Informe {
   subtotalRurales: Subtotal;
   total: Subtotal;
   acciones: AccionPrioritaria[];
+  // Lo que falta para cubrir el cantón, en puestos titulares.
+  brechas: {
+    juntasSinVeedor: number;
+    recintosSinCoordinador: number;
+    recintosCdaSinTitular: number;
+    // Recintos sin un solo veedor titular ni coordinador: partir de cero.
+    recintosSinNada: number;
+  };
+  accionesVeedores: AccionVeedores[];
   calidad: {
     veedoresSuplentes: number;
     recintosConExcedente: number;
@@ -121,6 +157,8 @@ export interface Informe {
       incorrectos: number;
       duplicados: number;
       repetidosAsignados: number;
+      // Personas pendientes que ya traen recinto, listas para asignar.
+      conRecinto: number;
     };
   };
   ritmo: {
@@ -130,6 +168,12 @@ export interface Informe {
     cuenta: CuentaRegresiva;
   };
   detalle: FilaDetalle[];
+}
+
+function titularesConJunta(
+  filas: { consolidado: { juntasConTitular: number } }[],
+): number {
+  return filas.reduce((a, f) => a + f.consolidado.juntasConTitular, 0);
 }
 
 function subtotal(filas: FilaParroquia[]): Subtotal {
@@ -142,6 +186,9 @@ function subtotal(filas: FilaParroquia[]): Subtotal {
     pct: pct(cubiertas, juntas),
     recintos: filas.reduce((a, f) => a + f.recintos, 0),
     conCoordinador: filas.reduce((a, f) => a + f.conCoordinador, 0),
+    sinVeedor: filas.reduce((a, f) => a + f.sinVeedor, 0),
+    recintosCda: filas.reduce((a, f) => a + f.recintosCda, 0),
+    cdaConTitular: filas.reduce((a, f) => a + f.cdaConTitular, 0),
   };
 }
 
@@ -202,6 +249,36 @@ export function armarInforme(entrada: EntradaInforme): Informe {
     pctVerificados: pct(verificados, necesarios),
   });
 
+  const estadoDe = (f: (typeof filas)[number]): EstadoRecinto =>
+    f.consolidado.completo
+      ? "completo"
+      : f.consolidado.casiCompleto
+        ? "casi"
+        : "pendiente";
+  const detalle: FilaDetalle[] = filas
+    .map((f) => ({
+      codigo: f.recinto.cod,
+      parroquiaCodigo: f.recinto.par,
+      parroquia: porCodigo.get(f.recinto.par)?.properties.name ?? "",
+      urbana: porCodigo.get(f.recinto.par)?.properties.urbana ?? false,
+      recinto: f.recinto.nombre,
+      juntas: f.consolidado.juntas.length,
+      juntasConVeedor: f.consolidado.juntasConTitular,
+      juntasSinVeedor: f.consolidado.juntasSinTitular,
+      veedoresTotal: f.consolidado.veedoresTotal,
+      coordinador: f.consolidado.coordinador.titular !== null,
+      cubiertas: f.cobertura.juntasCubiertas,
+      pct: f.cobertura.pct,
+      esCda: f.recinto.cda,
+      cdaTitular: f.consolidado.cda?.titular != null,
+      estado: estadoDe(f),
+    }))
+    .sort(
+      (a, b) =>
+        a.parroquia.localeCompare(b.parroquia) ||
+        a.recinto.localeCompare(b.recinto),
+    );
+
   // Por parroquia
   const porParroquia = new Map<number, FilaParroquia>();
   for (const p of parroquias) {
@@ -215,6 +292,10 @@ export function armarInforme(entrada: EntradaInforme): Informe {
       pct: 0,
       recintos: 0,
       conCoordinador: 0,
+      sinVeedor: 0,
+      recintosCda: 0,
+      cdaConTitular: 0,
+      detalle: detalle.filter((d) => d.parroquiaCodigo === p.properties.code),
     });
   }
   for (const f of filas) {
@@ -224,7 +305,12 @@ export function armarInforme(entrada: EntradaInforme): Informe {
     p.conVeedor += f.consolidado.juntasConTitular;
     p.cubiertas += f.cobertura.juntasCubiertas;
     p.recintos += 1;
+    p.sinVeedor += f.consolidado.juntasSinTitular;
     if (f.consolidado.coordinador.titular) p.conCoordinador += 1;
+    if (f.recinto.cda) {
+      p.recintosCda += 1;
+      if (f.consolidado.cda?.titular) p.cdaConTitular += 1;
+    }
   }
   const todas = [...porParroquia.values()].map((p) => ({
     ...p,
@@ -264,6 +350,38 @@ export function armarInforme(entrada: EntradaInforme): Informe {
   });
   const esperandoCoordinador = esperando.reduce((a, e) => a + e.desbloquea, 0);
 
+  // Dónde faltan veedores: recintos que ya tienen coordinador, donde cada
+  // veedor titular nuevo suma una junta cubierta de inmediato.
+  const accionesVeedores: AccionVeedores[] = filas
+    .filter(
+      (f) =>
+        f.consolidado.coordinador.titular && f.consolidado.juntasSinTitular > 0,
+    )
+    .map((f) => ({
+      recintoCodigo: f.recinto.cod,
+      recinto: f.recinto.nombre,
+      parroquia: porCodigo.get(f.recinto.par)?.properties.name ?? "",
+      sinVeedor: f.consolidado.juntasSinTitular,
+      totalJuntas: f.consolidado.juntas.length,
+    }))
+    .sort(
+      (a, b) => b.sinVeedor - a.sinVeedor || a.recinto.localeCompare(b.recinto),
+    );
+  const brechas = {
+    juntasSinVeedor: totalJuntas - titularesConJunta(filas),
+    recintosSinCoordinador: filas.filter(
+      (f) => !f.consolidado.coordinador.titular,
+    ).length,
+    recintosCdaSinTitular: filas.filter(
+      (f) => f.recinto.cda && !f.consolidado.cda?.titular,
+    ).length,
+    recintosSinNada: filas.filter(
+      (f) =>
+        !f.consolidado.coordinador.titular &&
+        f.consolidado.juntasConTitular === 0,
+    ).length,
+  };
+
   // Ritmo: mismo cálculo del Resumen (puestos que se necesitan menos las
   // personas únicas registradas, en Militancia o ya asignadas).
   const puestosNecesarios = totalJuntas + recintos.length + recintosCda;
@@ -273,26 +391,6 @@ export function armarInforme(entrada: EntradaInforme): Informe {
       .filter(Boolean),
   );
   const faltan = Math.max(0, puestosNecesarios - cedulas.size);
-
-  const detalle: FilaDetalle[] = filas
-    .map((f) => ({
-      parroquia: porCodigo.get(f.recinto.par)?.properties.name ?? "",
-      urbana: porCodigo.get(f.recinto.par)?.properties.urbana ?? false,
-      recinto: f.recinto.nombre,
-      juntas: f.consolidado.juntas.length,
-      juntasConVeedor: f.consolidado.juntasConTitular,
-      veedoresTotal: f.consolidado.veedoresTotal,
-      coordinador: f.consolidado.coordinador.titular !== null,
-      cubiertas: f.cobertura.juntasCubiertas,
-      pct: f.cobertura.pct,
-      esCda: f.recinto.cda,
-      cdaTitular: f.consolidado.cda?.titular != null,
-    }))
-    .sort(
-      (a, b) =>
-        a.parroquia.localeCompare(b.parroquia) ||
-        a.recinto.localeCompare(b.recinto),
-    );
 
   return {
     corte: entrada.ahora,
@@ -349,6 +447,8 @@ export function armarInforme(entrada: EntradaInforme): Informe {
     subtotalRurales: subtotal(rurales),
     total: subtotal(todas),
     acciones,
+    brechas,
+    accionesVeedores,
     calidad: {
       veedoresSuplentes: veedores.filter((v) => v.tipo === "suplente").length,
       recintosConExcedente: filas.filter((f) => f.consolidado.excedente > 0)
@@ -361,6 +461,8 @@ export function armarInforme(entrada: EntradaInforme): Informe {
         incorrectos: entrada.militantes.filter((m) => m.incorrecto).length,
         duplicados: entrada.militantes.filter((m) => m.duplicado).length,
         repetidosAsignados: entrada.militantes.filter((m) => m.asignado).length,
+        conRecinto: entrada.militantes.filter((m) => m.recintoCodigo != null)
+          .length,
       },
     },
     ritmo: {
