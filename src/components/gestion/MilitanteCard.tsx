@@ -9,6 +9,7 @@ import type {
 import DialogoAsignacion, { type AvisoAsignacion } from "./DialogoAsignacion";
 import DialogoHistorial from "./DialogoHistorial";
 import Iniciales from "./Iniciales";
+import Resaltado from "./Resaltado";
 import {
   MENSAJE_ERROR,
   erroresMilitante,
@@ -17,6 +18,8 @@ import {
 
 interface Props {
   militante: Militante;
+  // Texto de la búsqueda activa: lo que coincide se pinta aparte.
+  busqueda?: string;
   parroquias: ParroquiaBasica[];
   recintos: Recinto[];
   lideres: Lider[];
@@ -75,6 +78,7 @@ function ordenarPorNombre(parroquias: ParroquiaBasica[]) {
 
 export default function MilitanteCard({
   militante,
+  busqueda = "",
   parroquias,
   recintos,
   lideres,
@@ -317,7 +321,7 @@ export default function MilitanteCard({
         class={errores[clave] ? "g-campo-error" : undefined}
         title={errores[clave] ? MENSAJE_ERROR[clave] : undefined}
       >
-        {texto || "—"}
+        {texto ? <Resaltado texto={texto} consulta={busqueda} /> : "—"}
       </dd>
     </div>
   );
@@ -364,7 +368,11 @@ export default function MilitanteCard({
             <div class="g-mil-nombre">
               <Iniciales nombres={militante.nombres} />
               <strong class={errores.nombres ? "g-campo-error" : undefined}>
-                {militante.nombres || "Sin nombre"}
+                {militante.nombres ? (
+                  <Resaltado texto={militante.nombres} consulta={busqueda} />
+                ) : (
+                  "Sin nombre"
+                )}
               </strong>
               {militante.asignado ? (
                 <span class="chip-estado chip-estado-pendiente">
@@ -392,7 +400,16 @@ export default function MilitanteCard({
               </div>
               <div class="g-mil-dato">
                 <dt>Preferencia</dt>
-                <dd>{militante.preferencia || "—"}</dd>
+                <dd>
+                  {militante.preferencia ? (
+                    <Resaltado
+                      texto={militante.preferencia}
+                      consulta={busqueda}
+                    />
+                  ) : (
+                    "—"
+                  )}
+                </dd>
               </div>
               <div class="g-mil-dato">
                 <dt>Subida</dt>

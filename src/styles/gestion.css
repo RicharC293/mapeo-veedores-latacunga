@@ -1234,6 +1234,15 @@ select.g-campo-error {
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
 }
+/* Coincidencia de la búsqueda: resaltador amarillo con tinta oscura fija, para
+   que se lea igual en claro y en oscuro y no se confunda con el rojo de los
+   datos incorrectos. */
+.g-resaltado {
+  padding: 0 2px;
+  border-radius: 3px;
+  background: #ffe066;
+  color: #14283d;
+}
 .g-mil-asignacion,
 .g-mil-edicion {
   display: grid;

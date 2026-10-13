@@ -909,6 +909,7 @@ export default function GestionMilitancia({
                   <MilitanteCard
                     key={m.id}
                     militante={m}
+                    busqueda={busqueda}
                     parroquias={parroquias}
                     recintos={recintos}
                     lideres={lideres}
