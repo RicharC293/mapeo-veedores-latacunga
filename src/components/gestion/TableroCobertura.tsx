@@ -21,6 +21,9 @@ import {
 import { fmt, title } from "../../lib/format";
 import type { Lider } from "../../lib/gestion/types";
 
+const pctTxt = (n: number) =>
+  `${n.toLocaleString("es-EC", { maximumFractionDigits: 1 })} %`;
+
 interface ParroquiaOpcion {
   code: number;
   name: string;
@@ -136,127 +139,142 @@ function Seccion({
           : "por parroquia";
 
   return (
-    <section class="g-cobertura-track" aria-labelledby={`cob-${rol}`}>
-      <h2 id={`cob-${rol}`}>{nombreRol}</h2>
-      <p class="g-sub">{DESCRIPCION[rol]}</p>
+    <section class="g-cob-seccion" aria-labelledby={`cob-${rol}`}>
+      <header class="g-cob-cabecera">
+        <h2 id={`cob-${rol}`}>{nombreRol}</h2>
+        <p>{DESCRIPCION[rol]}</p>
+      </header>
 
-      <div class="g-panel">
-        <div class="g-selects">
+      <div class="g-selects g-cob-filtros">
+        <label>
+          Ámbito
+          <select
+            value={alcance.ambito}
+            onChange={(e) =>
+              setAlcance({
+                ambito: (e.currentTarget as HTMLSelectElement).value as Ambito,
+                parroquia: "",
+                recinto: "",
+              })
+            }
+          >
+            <option value="todas">Todos</option>
+            <option value="urbanas">Solo urbanas</option>
+            <option value="rurales">Solo rurales</option>
+          </select>
+        </label>
+        <label>
+          Parroquia
+          <select
+            value={alcance.parroquia}
+            onChange={(e) =>
+              setAlcance({
+                ...alcance,
+                parroquia:
+                  Number((e.currentTarget as HTMLSelectElement).value) || "",
+                recinto: "",
+              })
+            }
+          >
+            <option value="">Todas</option>
+            {parroquiasOpciones.map((p) => (
+              <option key={p.code} value={p.code}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {conRecinto ? (
           <label>
-            Ámbito
+            Recinto
             <select
-              value={alcance.ambito}
-              onChange={(e) =>
-                setAlcance({
-                  ambito: (e.currentTarget as HTMLSelectElement)
-                    .value as Ambito,
-                  parroquia: "",
-                  recinto: "",
-                })
-              }
-            >
-              <option value="todas">Todos</option>
-              <option value="urbanas">Solo urbanas</option>
-              <option value="rurales">Solo rurales</option>
-            </select>
-          </label>
-          <label>
-            Parroquia
-            <select
-              value={alcance.parroquia}
+              value={alcance.recinto}
+              disabled={alcance.parroquia === ""}
               onChange={(e) =>
                 setAlcance({
                   ...alcance,
-                  parroquia:
+                  recinto:
                     Number((e.currentTarget as HTMLSelectElement).value) || "",
-                  recinto: "",
                 })
               }
             >
-              <option value="">Todas</option>
-              {parroquiasOpciones.map((p) => (
-                <option key={p.code} value={p.code}>
-                  {p.name}
+              <option value="">
+                {alcance.parroquia === "" ? "Elige una parroquia" : "Todos"}
+              </option>
+              {recintosOpciones.map((r) => (
+                <option key={r.codigo} value={r.codigo}>
+                  {title(r.recinto)}
                 </option>
               ))}
             </select>
           </label>
-          {conRecinto ? (
-            <label>
-              Recinto
-              <select
-                value={alcance.recinto}
-                disabled={alcance.parroquia === ""}
-                onChange={(e) =>
-                  setAlcance({
-                    ...alcance,
-                    recinto:
-                      Number((e.currentTarget as HTMLSelectElement).value) ||
-                      "",
-                  })
-                }
-              >
-                <option value="">
-                  {alcance.parroquia === "" ? "Elige una parroquia" : "Todos"}
-                </option>
-                {recintosOpciones.map((r) => (
-                  <option key={r.codigo} value={r.codigo}>
-                    {title(r.recinto)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-        </div>
-
-        <div class="g-summary">
-          <div class="g-summary-item">
-            <b>
-              {fmt(totales.ingresados)} / {fmt(totales.requerido)}
-            </b>
-            <small>ingresados ({totales.pct}%)</small>
-          </div>
-          <div class="g-summary-item">
-            <b>
-              {fmt(totales.verificados)} / {fmt(totales.requerido)}
-            </b>
-            <small>verificados ({porcentaje(totales, "verificados")}%)</small>
-          </div>
-          <div class="g-summary-item">
-            <b>{fmt(totales.faltan)}</b>
-            <small>faltan por ingresar</small>
-          </div>
-        </div>
+        ) : null}
       </div>
 
-      <p class="g-tablero-titulo">
-        {SERIE_POR_MODO[modo]} {desglose}
-      </p>
+      <dl class="g-cob-cifras">
+        <div>
+          <dt>
+            <i class="g-cob-punto g-cob-punto-ingresados" aria-hidden="true" />
+            Ingresados
+          </dt>
+          <dd>
+            {fmt(totales.ingresados)} <span>de {fmt(totales.requerido)}</span>{" "}
+            <small>{pctTxt(totales.pct)}</small>
+          </dd>
+        </div>
+        <div>
+          <dt>
+            <i class="g-cob-punto g-cob-punto-verificados" aria-hidden="true" />
+            Verificados
+          </dt>
+          <dd>
+            {fmt(totales.verificados)} <span>de {fmt(totales.requerido)}</span>{" "}
+            <small>{pctTxt(porcentaje(totales, "verificados"))}</small>
+          </dd>
+        </div>
+        <div>
+          <dt>
+            <i class="g-cob-punto g-cob-punto-faltan" aria-hidden="true" />
+            Faltan por ingresar
+          </dt>
+          <dd>
+            {fmt(totales.faltan)} <small>{pctTxt(totales.pctFaltante)}</small>
+          </dd>
+        </div>
+      </dl>
+
       {grafica.length === 0 ? (
         <p class="g-empty">
           No hay datos de {nombreRol.toLowerCase()} para este filtro.
         </p>
       ) : (
-        <>
-          <div class="g-cobertura-barras">
+        <div class={`g-cob-grid${personas ? "" : " g-cob-grid-solo"}`}>
+          <div class="g-cob-barras">
+            <h3>
+              {SERIE_POR_MODO[modo]} {desglose}
+            </h3>
             <GraficoBarrasCobertura
               barras={grafica}
               modo={modo}
               serie={SERIE_POR_MODO[modo]}
             />
           </div>
-          <div class="g-cobertura-lateral">
+          <div class="g-cob-dona">
+            <h3>Avance total</h3>
             <GraficoDona segmentos={partes} modo={modo} titulo={nombreRol} />
-            {personas ? (
+          </div>
+          {personas ? (
+            <div class="g-cob-resp">
+              <h3>Por responsable</h3>
               <GraficoResponsables
                 titulo={nombreRol}
                 lideres={lideres}
                 personas={personasFiltradas}
                 modo={modo}
               />
-            ) : null}
-          </div>
-        </>
+            </div>
+          ) : null}
+        </div>
       )}
     </section>
   );
@@ -296,13 +314,13 @@ export default function TableroCobertura({
             ))}
           </select>
         </label>
-        <p class="g-sub">
+        <p>
           {modo === "ingresados"
-            ? "Cuenta a todos los titulares registrados, estén o no verificados."
+            ? "Todos los titulares registrados, estén o no verificados."
             : modo === "verificados"
-              ? "Cuenta solo a los titulares que ya fueron contactados y verificados."
-              : "Cuenta a los titulares registrados que todavía no se verificaron."}{" "}
-          El porcentaje es sobre los puestos que se necesitan.
+              ? "Solo los titulares ya contactados y verificados."
+              : "Titulares registrados que aún no se verifican."}{" "}
+          <span>Porcentajes sobre los puestos que se necesitan.</span>
         </p>
       </div>
 

@@ -821,71 +821,207 @@ select.g-campo-error {
   position: relative;
 }
 
-.g-cobertura-track {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-bottom: 32px;
-}
-.g-cobertura-track h2 {
-  margin: 0 0 4px;
-  font-size: 1.1rem;
-}
-.g-cobertura-lateral {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-/* Cada gráfico va dentro de un <astro-island> (display: contents), así que
-   el que cuenta como elemento flexible es el gráfico mismo. Sin esto no
-   crecían y quedaban angostos y pegados a la izquierda. */
-.g-cobertura-lateral > *,
-.g-cobertura-lateral > astro-island > * {
-  flex: 1 1 320px;
-  min-width: 0;
-}
-.g-cobertura-lateral > astro-island:nth-child(2) > *,
-.g-cobertura-lateral > :nth-child(2):not(astro-island) {
-  flex-grow: 1.6;
-}
-/* Tablero de Cobertura: un selector de modo arriba y un bloque por rol. */
+/* Tablero de Cobertura: arriba, el selector de modo (fijo al desplazarse, para
+   cambiarlo sin volver al inicio) y debajo un bloque por rol, separados por
+   una línea. Dentro de cada bloque: filtros, tres cifras en una línea y los
+   gráficos en una grilla. */
 .g-tablero {
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 .g-tablero-modo {
+  position: sticky;
+  /* Alto de la barra superior fija. */
+  top: 73px;
+  z-index: 5;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 8px 20px;
-  margin-bottom: 16px;
+  gap: 6px 20px;
+  margin: 0 -20px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
 }
-.g-tablero-modo .g-sub {
-  flex: 1 1 280px;
+.g-tablero-modo label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+.g-tablero-modo select {
+  font: inherit;
+  min-width: 240px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--sel);
+  background: var(--panel);
+  color: var(--ink);
+  font-weight: 700;
+}
+.g-tablero-modo select:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.g-tablero-modo p {
+  flex: 1 1 260px;
+  max-width: 62ch;
+  margin: 0;
+  padding-bottom: 8px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+@media (max-width: 560px) {
+  .g-tablero-modo {
+    align-items: stretch;
+    padding-block: 8px;
+  }
+  .g-tablero-modo label {
+    flex: 1 1 100%;
+  }
+  .g-tablero-modo select {
+    min-width: 0;
+    width: 100%;
+  }
+  /* El detalle del modo sobra en el teléfono: las opciones ya lo dicen. */
+  .g-tablero-modo p span,
+  .g-tablero-modo p {
+    display: none;
+  }
+}
+
+/* El margen lateral de .g-main baja a 16 px en pantallas muy angostas. */
+@media (max-width: 480px) {
+  .g-tablero-modo {
+    margin-inline: -16px;
+    padding-inline: 16px;
+  }
+}
+
+.g-cob-seccion {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 28px 0 8px;
+  /* Al saltar a un bloque, que no quede bajo las barras fijas. */
+  scroll-margin-top: 150px;
+}
+.g-cob-seccion + .g-cob-seccion {
+  margin-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.g-cob-cabecera h2 {
+  margin: 0 0 4px;
+  font-size: 1.3rem;
+}
+.g-cob-cabecera p {
+  max-width: 70ch;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.g-cob-filtros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px 16px;
+}
+.g-cob-filtros select {
+  min-width: 0;
+  width: 100%;
+}
+.g-cob-filtros select:disabled {
+  opacity: 0.6;
+}
+
+/* Las tres cifras del alcance elegido, en una línea: sin cajas, con un punto
+   del color que usan los gráficos. */
+.g-cob-cifras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 36px;
   margin: 0;
 }
-.g-tablero-titulo {
-  margin: 4px 0 0;
+.g-cob-cifras dt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.85rem;
   font-weight: 700;
+}
+.g-cob-cifras dd {
+  margin: 2px 0 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.g-cob-cifras dd span {
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 400;
+}
+.g-cob-cifras dd small {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.g-cob-punto {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.g-cob-punto-ingresados {
+  background: #2a78d6;
+}
+.g-cob-punto-verificados {
+  background: #2f9e57;
+}
+.g-cob-punto-faltan {
+  background: #c94b4b;
+}
+
+/* Gráficos: barras (y responsables debajo) a la izquierda, la dona a la
+   derecha. En pantallas angostas, una sola columna. */
+.g-cob-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  grid-template-areas:
+    "barras dona"
+    "resp dona";
+  gap: 20px 16px;
+  align-items: start;
+}
+.g-cob-grid-solo {
+  grid-template-areas: "barras dona";
+}
+.g-cob-barras {
+  grid-area: barras;
+}
+.g-cob-dona {
+  grid-area: dona;
+}
+.g-cob-resp {
+  grid-area: resp;
+}
+.g-cob-grid > div {
+  min-width: 0;
+}
+.g-cob-grid h3 {
+  margin: 0 0 8px;
   font-size: 0.95rem;
 }
-.g-cobertura-track > .g-sub {
-  margin: 0;
-}
-@media (max-width: 780px) {
-  /* nowrap: con "wrap" el ancho de la columna lo fija el contenido (el lienzo
-     de 300 px) y no el contenedor, y en pantallas muy angostas se desbordaba. */
-  .g-cobertura-lateral {
-    flex-direction: column;
-    flex-wrap: nowrap;
-  }
-  /* En columna, el "320px" de arriba pasaría a ser un alto mínimo: tarjetas
-     altas y medio vacías. Cada gráfico mide lo que necesita. */
-  .g-cobertura-lateral > *,
-  .g-cobertura-lateral > astro-island > * {
-    flex: 0 0 auto;
+@media (max-width: 900px) {
+  .g-cob-grid,
+  .g-cob-grid-solo {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "barras"
+      "dona"
+      "resp";
   }
 }
 
