@@ -1,5 +1,6 @@
 import { useMemo, useState } from "preact/hooks";
 import AsignacionCard from "./AsignacionCard";
+import Resaltado from "./Resaltado";
 import FiltrosRecintos, {
   ResumenAvance,
   VacioFiltros,
@@ -160,13 +161,23 @@ export default function GestionAcreditadosCda({
             <GrupoParroquia
               key={g.parroquia?.properties.code ?? "sin-parroquia"}
               parroquia={g.parroquia}
+              busqueda={busqueda}
               cuenta={`${con} de ${g.items.length} con acreditado`}
             >
               <div class="g-cards">
                 {g.items.map((f) => (
                   <AsignacionCard
                     key={f.recinto.cod}
-                    titulo={`Acreditado CDA de ${title(f.recinto.nombre)}`}
+                    titulo={
+                      <>
+                        Acreditado CDA de{" "}
+                        <Resaltado
+                          texto={title(f.recinto.nombre)}
+                          consulta={busqueda}
+                        />
+                      </>
+                    }
+                    busqueda={busqueda}
                     titular={f.titular}
                     suplentes={f.suplentes}
                     lideres={lideres}

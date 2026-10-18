@@ -7,6 +7,7 @@ import BotonIcono from "./BotonIcono";
 import DialogoDesvincular from "./DialogoDesvincular";
 import DialogoMover from "./DialogoMover";
 import GrupoParroquia from "./GrupoParroquia";
+import Resaltado from "./Resaltado";
 import Iniciales from "./Iniciales";
 import { useRecintosAbiertos } from "./useRecintosAbiertos";
 import { normalizar, title } from "../../lib/format";
@@ -92,12 +93,14 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 
 function Linea({
   p,
+  busqueda,
   rol,
   clase,
   nombreLider,
   acciones,
 }: {
   p: Persona;
+  busqueda: string;
   rol: "titular" | "suplente";
   clase: Clase;
   nombreLider: Map<string, string>;
@@ -110,10 +113,19 @@ function Linea({
     <div class="g-consol-persona">
       <Iniciales nombres={p.nombres} rol={rol} />
       <div class="g-consol-persona-texto">
-        <strong>{p.nombres}</strong>
+        <strong>
+          <Resaltado texto={p.nombres} consulta={busqueda} />
+        </strong>
         <small>
-          CI {p.cedula}
-          {p.telefono ? ` · ${p.telefono}` : ""}
+          CI <Resaltado texto={p.cedula} consulta={busqueda} />
+          {p.telefono ? (
+            <>
+              {" · "}
+              <Resaltado texto={p.telefono} consulta={busqueda} />
+            </>
+          ) : (
+            ""
+          )}
           {p.email ? ` · ${p.email}` : ""}
           {responsable ? ` · ${responsable}` : ""}
         </small>
@@ -143,12 +155,14 @@ function Linea({
 
 // Titular de un puesto (o aviso de que falta) y sus suplentes.
 function PuestoLineas({
+  busqueda,
   puesto,
   falta,
   clase,
   nombreLider,
   acciones,
 }: {
+  busqueda: string;
   puesto: Puesto<Persona>;
   falta: string;
   clase: Clase;
@@ -160,6 +174,7 @@ function PuestoLineas({
       {puesto.titular ? (
         <Linea
           p={puesto.titular}
+          busqueda={busqueda}
           rol="titular"
           clase={clase}
           nombreLider={nombreLider}
@@ -173,6 +188,7 @@ function PuestoLineas({
           <span class="g-consol-rol">Suplente</span>
           <Linea
             p={s}
+            busqueda={busqueda}
             rol="suplente"
             clase={clase}
             nombreLider={nombreLider}
@@ -433,6 +449,7 @@ export default function GestionConsolidado({
             <GrupoParroquia
               key={g.parroquia?.properties.code ?? "sin-parroquia"}
               parroquia={g.parroquia}
+              busqueda={busqueda}
               cuenta={`${completosGrupo} de ${g.items.length} completos`}
             >
               <div class="g-grupo-cuerpo">
@@ -452,7 +469,10 @@ export default function GestionConsolidado({
                     >
                       <summary>
                         <span class="g-grupo-nombre">
-                          {title(f.recinto.nombre)}
+                          <Resaltado
+                            texto={title(f.recinto.nombre)}
+                            consulta={busqueda}
+                          />
                         </span>
                         <span class="g-consol-estados">
                           <span
@@ -511,6 +531,7 @@ export default function GestionConsolidado({
                             <h4>Coordinador</h4>
                             <PuestoLineas
                               clase="coordinador"
+                              busqueda={busqueda}
                               acciones={acciones}
                               nombreLider={nombreLider}
                               puesto={f.coordinador}
@@ -522,6 +543,7 @@ export default function GestionConsolidado({
                               <h4>Acreditado CDA</h4>
                               <PuestoLineas
                                 clase="cda"
+                                busqueda={busqueda}
                                 acciones={acciones}
                                 nombreLider={nombreLider}
                                 puesto={f.cda}
@@ -541,6 +563,7 @@ export default function GestionConsolidado({
                                   <div class="g-consol-junta-cuerpo">
                                     <PuestoLineas
                                       clase="veedor"
+                                      busqueda={busqueda}
                                       acciones={acciones}
                                       nombreLider={nombreLider}
                                       puesto={j.puesto}

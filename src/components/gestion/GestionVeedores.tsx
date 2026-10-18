@@ -1,5 +1,6 @@
 import { useMemo, useState } from "preact/hooks";
 import AsignacionCard from "./AsignacionCard";
+import Resaltado from "./Resaltado";
 import FiltrosRecintos, {
   ResumenAvance,
   VacioFiltros,
@@ -175,6 +176,7 @@ export default function GestionVeedores({
             <GrupoParroquia
               key={g.parroquia?.properties.code ?? "sin-parroquia"}
               parroquia={g.parroquia}
+              busqueda={busqueda}
               cuenta={`${con} de ${juntas} juntas con veedor`}
             >
               <div class="g-grupo-cuerpo">
@@ -194,7 +196,10 @@ export default function GestionVeedores({
                     >
                       <summary>
                         <span class="g-grupo-nombre">
-                          {title(f.recinto.nombre)}
+                          <Resaltado
+                            texto={title(f.recinto.nombre)}
+                            consulta={busqueda}
+                          />
                         </span>
                         <span class="g-grupo-cuenta">
                           {f.conTitular} de {f.juntas.length} juntas con veedor
@@ -221,6 +226,7 @@ export default function GestionVeedores({
                               <AsignacionCard
                                 key={junta.id}
                                 titulo={`Junta ${junta.genero}${junta.numero}`}
+                                busqueda={busqueda}
                                 titular={tit}
                                 suplentes={sup}
                                 lideres={lideres}

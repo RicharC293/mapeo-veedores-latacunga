@@ -1,5 +1,6 @@
 import { useMemo, useState } from "preact/hooks";
 import AsignacionCard from "./AsignacionCard";
+import Resaltado from "./Resaltado";
 import FiltrosRecintos, {
   ResumenAvance,
   VacioFiltros,
@@ -156,13 +157,20 @@ export default function GestionCoordinadores({
             <GrupoParroquia
               key={g.parroquia?.properties.code ?? "sin-parroquia"}
               parroquia={g.parroquia}
+              busqueda={busqueda}
               cuenta={`${con} de ${g.items.length} con coordinador`}
             >
               <div class="g-cards">
                 {g.items.map((f) => (
                   <AsignacionCard
                     key={f.recinto.cod}
-                    titulo={title(f.recinto.nombre)}
+                    titulo={
+                      <Resaltado
+                        texto={title(f.recinto.nombre)}
+                        consulta={busqueda}
+                      />
+                    }
+                    busqueda={busqueda}
                     titular={f.titular}
                     suplentes={f.suplentes}
                     lideres={lideres}

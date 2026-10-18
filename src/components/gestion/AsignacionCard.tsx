@@ -1,8 +1,10 @@
+import type { ComponentChildren } from "preact";
 import { useState } from "preact/hooks";
 import PersonaForm from "./PersonaForm";
 import BotonIcono from "./BotonIcono";
 import DesvincularForm from "./DesvincularForm";
 import Iniciales from "./Iniciales";
+import Resaltado from "./Resaltado";
 import type { Lider } from "../../lib/gestion/types";
 
 export interface PersonaAsignada {
@@ -18,7 +20,10 @@ export interface PersonaAsignada {
 }
 
 interface Props {
-  titulo: string;
+  // El título puede traer su propio resaltado (el nombre del recinto).
+  titulo: ComponentChildren;
+  // Búsqueda activa: se pinta lo que coincide con el nombre y la cédula.
+  busqueda?: string;
   titular: PersonaAsignada | null;
   suplentes: PersonaAsignada[];
   lideres: Lider[];
@@ -48,6 +53,7 @@ type Abierto = null | "titular" | "suplente" | { desvincular: string };
 
 export default function AsignacionCard({
   titulo,
+  busqueda = "",
   titular,
   suplentes,
   lideres,
@@ -67,6 +73,7 @@ export default function AsignacionCard({
         {titular ? (
           <PersonaRow
             rol="titular"
+            busqueda={busqueda}
             persona={titular}
             lideres={lideres}
             onDesvincular={() => setAbierto({ desvincular: titular.id })}
@@ -107,6 +114,7 @@ export default function AsignacionCard({
             <li key={s.id}>
               <PersonaRow
                 rol="suplente"
+                busqueda={busqueda}
                 persona={s}
                 lideres={lideres}
                 onDesvincular={() => setAbierto({ desvincular: s.id })}
@@ -148,12 +156,14 @@ export default function AsignacionCard({
 
 function PersonaRow({
   rol,
+  busqueda,
   persona,
   lideres,
   onDesvincular,
   onVerificar,
 }: {
   rol: "titular" | "suplente";
+  busqueda: string;
   persona: PersonaAsignada;
   lideres: Lider[];
   onDesvincular: () => void;
@@ -166,9 +176,11 @@ function PersonaRow({
     <div class="g-persona g-persona-asig">
       <Iniciales nombres={persona.nombres} rol={rol} />
       <div class="g-persona-texto">
-        <strong>{persona.nombres}</strong>
+        <strong>
+          <Resaltado texto={persona.nombres} consulta={busqueda} />
+        </strong>
         <small>
-          CI {persona.cedula}
+          CI <Resaltado texto={persona.cedula} consulta={busqueda} />
           {persona.telefono ? ` · ${persona.telefono}` : ""}
           {persona.email ? ` · ${persona.email}` : ""}
           {responsable ? ` · ${responsable.nombres}` : ""}
