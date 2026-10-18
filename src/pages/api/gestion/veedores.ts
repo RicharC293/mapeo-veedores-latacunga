@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { getMapData } from "../../../lib/data";
 import { agregarVeedor, listVeedores } from "../../../lib/gestion/veedores";
-import { juntaId } from "../../../lib/gestion/juntas";
+import { existeJunta, juntaId } from "../../../lib/gestion/juntas";
 import {
   json,
   handle,
@@ -34,6 +34,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const recinto = data.recintos.find((r) => r.cod === body.recintoCodigo);
     if (!recinto) throw new Error("Recinto no encontrado.");
 
+    if (!existeJunta(recinto, body.genero, body.numero)) {
+      throw new Error(
+        `El recinto ${recinto.nombre} no tiene la junta ${body.genero}${body.numero}.`,
+      );
+    }
     const id = juntaId(recinto.cod, body.genero, body.numero);
     const veedor = await agregarVeedor({
       cedula: body.cedula,

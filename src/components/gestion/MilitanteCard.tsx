@@ -1,5 +1,6 @@
 import { useMemo, useState } from "preact/hooks";
 import { title } from "../../lib/format";
+import { numeroDeMesaConservada, parsearJunta } from "../../lib/gestion/juntas";
 import type { ParroquiaBasica, Recinto } from "../../lib/types";
 import type { Lider, Militante, TipoMilitancia } from "../../lib/gestion/types";
 import type {
@@ -98,9 +99,9 @@ export default function MilitanteCard({
   // De la junta no se elige el número sino el género: el sistema asigna la
   // siguiente libre. Si la persona regresa de un puesto de veedor, se conserva
   // su mesa de origen.
-  const mesaOrigen = /-([FM])(\d+)$/.exec(militante.juntaPreasignada ?? "");
+  const mesaOrigen = parsearJunta(militante.juntaPreasignada);
   const [generoSel, setGeneroSel] = useState<"F" | "M" | "">(
-    (mesaOrigen?.[1] as "F" | "M" | undefined) ?? "",
+    mesaOrigen?.genero ?? "",
   );
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -191,11 +192,14 @@ export default function MilitanteCard({
     }
   };
 
-  // Número de mesa que se conserva: solo si coincide con el género elegido.
-  const numeroOrigen =
-    mesaOrigen && mesaOrigen[1] === generoSel
-      ? Number(mesaOrigen[2])
-      : undefined;
+  // Número de mesa que se conserva: solo si coincide con el género elegido y se
+  // asigna al mismo recinto del que salió. En otro recinto ese número puede no
+  // existir, y entonces se elige la siguiente junta libre.
+  const numeroOrigen = numeroDeMesaConservada(
+    militante.juntaPreasignada,
+    recintoCod,
+    generoSel,
+  );
 
   // Descripción del lugar elegido, para el aviso de cupos.
   const descripcionLugar = () => {

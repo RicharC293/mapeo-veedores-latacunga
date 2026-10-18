@@ -10,7 +10,10 @@ import {
 } from "../../../../../lib/gestion/apiHelpers";
 import { PAGINAS_GESTION } from "../../../../../lib/auth/roles";
 import { getMapData } from "../../../../../lib/data";
-import { listJuntasDeRecinto } from "../../../../../lib/gestion/juntas";
+import {
+  existeJunta,
+  listJuntasDeRecinto,
+} from "../../../../../lib/gestion/juntas";
 
 export const POST: APIRoute = async ({ params, request, locals }) => {
   const bloqueo = requireApiRole(locals, PAGINAS_GESTION.militancia);
@@ -23,6 +26,18 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
         confirmarSuplente?: boolean;
       };
     const d = destino as AsignarDestino;
+    if (d.tipo === "veedor") {
+      const data = await getMapData();
+      const recinto = data.recintos.find((r) => r.cod === d.recintoCodigo);
+      if (!recinto) throw new Error("Recinto no encontrado.");
+      // Con número, la mesa debe existir en ese recinto: no se guarda un
+      // veedor en una mesa que el recinto no tiene.
+      if (d.numero != null && !existeJunta(recinto, d.genero, d.numero)) {
+        throw new Error(
+          `El recinto ${recinto.nombre} no tiene la junta ${d.genero}${d.numero}.`,
+        );
+      }
+    }
     // Veedor sin número de junta: la junta se elige sola entre las del
     // género indicado, así que se le pasan sus ids en orden.
     if (d.tipo === "veedor" && d.numero == null) {
