@@ -1,54 +1,53 @@
 import { useCallback, useMemo } from "preact/hooks";
 import type { ChartData, ChartOptions } from "chart.js";
 import ChartCanvas, { type TemaColores } from "./ChartCanvas";
-import { totalesDeTrack } from "../../lib/gestion/coverage";
 import {
   COLOR_PENDIENTE,
+  COLOR_SIN_VERIFICAR,
   COLOR_VERIFICADO,
 } from "../../lib/gestion/chartColors";
-import type { CoberturaCanton, CoberturaTrack } from "../../lib/gestion/types";
+import type { Modo, Segmento } from "../../lib/gestion/tablero";
 
 interface Props {
-  track: CoberturaTrack;
+  segmentos: Segmento[];
+  modo: Modo;
   titulo: string;
-  canton: CoberturaCanton;
 }
 
-function segmentoColor(ctx: {
-  dataIndex: number;
-  chart: { canvas: HTMLCanvasElement };
-}): string {
-  if (ctx.dataIndex === 1) {
-    return (
-      getComputedStyle(ctx.chart.canvas)
-        .getPropertyValue("--series-1")
-        .trim() || "#2a78d6"
-    );
-  }
-  return ctx.dataIndex === 0 ? COLOR_VERIFICADO : COLOR_PENDIENTE;
+function colorPrincipal(
+  modo: Modo,
+  ctx: { chart: { canvas: HTMLCanvasElement } },
+): string {
+  if (modo === "verificados") return COLOR_VERIFICADO;
+  if (modo === "sinverificar") return COLOR_SIN_VERIFICAR;
+  return (
+    getComputedStyle(ctx.chart.canvas).getPropertyValue("--series-1").trim() ||
+    "#2a78d6"
+  );
 }
 
-export default function GraficoPastelCobertura({
-  track,
-  titulo,
-  canton,
-}: Props) {
-  const { total, cubiertos, verificados } = totalesDeTrack(track, canton);
-  const sinVerificar = Math.max(0, cubiertos - verificados);
-  const sinCubrir = Math.max(0, total - cubiertos);
+// Dona con lo que cuenta según el modo y el resto hasta lo requerido.
+export default function GraficoDona({ segmentos, modo, titulo }: Props) {
+  const total = segmentos.reduce((a, s) => a + s.valor, 0);
 
   const data: ChartData<"doughnut"> = useMemo(
     () => ({
-      labels: ["Cubierto y verificado", "Cubierto sin verificar", "Sin cubrir"],
+      labels: segmentos.map((s) => s.etiqueta),
       datasets: [
         {
-          data: [verificados, sinVerificar, sinCubrir],
-          backgroundColor: segmentoColor,
+          data: segmentos.map((s) => s.valor),
+          backgroundColor: (ctx: {
+            dataIndex: number;
+            chart: { canvas: HTMLCanvasElement };
+          }) =>
+            segmentos[ctx.dataIndex]?.tono === "principal"
+              ? colorPrincipal(modo, ctx)
+              : COLOR_PENDIENTE,
           borderWidth: 0,
         },
       ],
     }),
-    [verificados, sinVerificar, sinCubrir],
+    [segmentos, modo],
   );
 
   const buildOptions = useCallback(
@@ -68,12 +67,12 @@ export default function GraficoPastelCobertura({
           color: "#fff",
           font: { weight: "bold", size: 11 },
           formatter: (valor: number, ctx) => {
-            const datos = (ctx.dataset.data as number[]).reduce(
+            const suma = (ctx.dataset.data as number[]).reduce(
               (a, b) => a + b,
               0,
             );
-            if (datos === 0 || valor === 0) return "";
-            return `${Math.round((valor / datos) * 100)}%`;
+            if (suma === 0 || valor === 0) return "";
+            return `${Math.round((valor / suma) * 100)}%`;
           },
         },
       },
@@ -93,7 +92,9 @@ export default function GraficoPastelCobertura({
       data={data}
       buildOptions={buildOptions}
       height={280}
-      ariaLabel={`Gráfico de pastel: ${titulo}. ${verificados} verificados, ${sinVerificar} sin verificar y ${sinCubrir} sin cubrir de ${total}.`}
+      ariaLabel={`Gráfico de dona: ${titulo}. ${segmentos
+        .map((s) => `${s.valor} ${s.etiqueta.toLowerCase()}`)
+        .join(" y ")} de ${total}.`}
     />
   );
 }

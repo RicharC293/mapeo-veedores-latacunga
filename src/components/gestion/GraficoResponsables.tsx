@@ -2,7 +2,11 @@ import { useCallback, useMemo } from "preact/hooks";
 import type { ChartData, ChartOptions } from "chart.js";
 import ChartCanvas, { type TemaColores } from "./ChartCanvas";
 import { etiquetaAjustada } from "./etiquetaEje";
-import { COLOR_VERIFICADO } from "../../lib/gestion/chartColors";
+import {
+  COLOR_SIN_VERIFICAR,
+  COLOR_VERIFICADO,
+} from "../../lib/gestion/chartColors";
+import type { Modo } from "../../lib/gestion/tablero";
 import {
   ESPACIO_ROTULO_DERECHO,
   anchoEtiquetas,
@@ -18,6 +22,9 @@ interface Props {
   titulo: string;
   lideres: Lider[];
   personas: Persona[];
+  // Con "ingresados" se ven asignados y verificados; con los otros dos modos,
+  // las personas ya vienen filtradas y se dibuja una sola serie.
+  modo?: Modo;
 }
 
 function colorSerie1(ctx: { chart: { canvas: HTMLCanvasElement } }): string {
@@ -31,6 +38,7 @@ export default function GraficoResponsables({
   titulo,
   lideres,
   personas,
+  modo = "ingresados",
 }: Props) {
   const filas = useMemo(() => {
     const porLider = new Map<
@@ -58,24 +66,38 @@ export default function GraficoResponsables({
   const data: ChartData<"bar"> = useMemo(
     () => ({
       labels: filas.map((f) => f.nombre),
-      datasets: [
-        {
-          label: "Asignados",
-          data: filas.map((f) => f.total),
-          backgroundColor: colorSerie1,
-          borderRadius: 4,
-          maxBarThickness: 22,
-        },
-        {
-          label: "Verificados",
-          data: filas.map((f) => f.verificados),
-          backgroundColor: COLOR_VERIFICADO,
-          borderRadius: 4,
-          maxBarThickness: 22,
-        },
-      ],
+      datasets:
+        modo === "ingresados"
+          ? [
+              {
+                label: "Asignados",
+                data: filas.map((f) => f.total),
+                backgroundColor: colorSerie1,
+                borderRadius: 4,
+                maxBarThickness: 22,
+              },
+              {
+                label: "Verificados",
+                data: filas.map((f) => f.verificados),
+                backgroundColor: COLOR_VERIFICADO,
+                borderRadius: 4,
+                maxBarThickness: 22,
+              },
+            ]
+          : [
+              {
+                label: modo === "verificados" ? "Verificados" : "Sin verificar",
+                data: filas.map((f) => f.total),
+                backgroundColor:
+                  modo === "verificados"
+                    ? COLOR_VERIFICADO
+                    : COLOR_SIN_VERIFICAR,
+                borderRadius: 4,
+                maxBarThickness: 22,
+              },
+            ],
     }),
-    [filas],
+    [filas, modo],
   );
 
   const buildOptions = useCallback(

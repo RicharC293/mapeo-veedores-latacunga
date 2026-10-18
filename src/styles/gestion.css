@@ -845,8 +845,34 @@ select.g-campo-error {
   flex: 1 1 320px;
   min-width: 0;
 }
-.g-cobertura-lateral > astro-island:nth-child(2) > * {
+.g-cobertura-lateral > astro-island:nth-child(2) > *,
+.g-cobertura-lateral > :nth-child(2):not(astro-island) {
   flex-grow: 1.6;
+}
+/* Tablero de Cobertura: un selector de modo arriba y un bloque por rol. */
+.g-tablero {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.g-tablero-modo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 20px;
+  margin-bottom: 16px;
+}
+.g-tablero-modo .g-sub {
+  flex: 1 1 280px;
+  margin: 0;
+}
+.g-tablero-titulo {
+  margin: 4px 0 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.g-cobertura-track > .g-sub {
+  margin: 0;
 }
 @media (max-width: 780px) {
   /* nowrap: con "wrap" el ancho de la columna lo fija el contenido (el lienzo

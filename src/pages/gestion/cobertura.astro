@@ -1,19 +1,14 @@
 ---
 import GestionLayout from "../../layouts/GestionLayout.astro";
 import CoberturaTable from "../../components/gestion/CoberturaTable";
-import GraficoCobertura from "../../components/gestion/GraficoCobertura";
-import GraficoPastelCobertura from "../../components/gestion/GraficoPastelCobertura";
-import GraficoResponsables from "../../components/gestion/GraficoResponsables";
+import TableroCobertura from "../../components/gestion/TableroCobertura";
 import { getMapData } from "../../lib/data";
 import { listVeedores } from "../../lib/gestion/veedores";
 import { listCoordinadores } from "../../lib/gestion/coordinadores";
 import { listAcreditadosCda } from "../../lib/gestion/acreditadosCda";
 import { listLideres } from "../../lib/gestion/lideres";
-import {
-  calcularCobertura,
-  calcularCoberturaPorParroquia,
-  calcularCoberturaCanton,
-} from "../../lib/gestion/coverage";
+import { calcularCobertura } from "../../lib/gestion/coverage";
+import { cifrasPorRecinto } from "../../lib/gestion/informe";
 import { title as titleCase } from "../../lib/format";
 import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
 
@@ -32,14 +27,6 @@ const cobertura = calcularCobertura(
   coordinadores,
   acreditadosCda,
 );
-const porParroquia = calcularCoberturaPorParroquia(
-  data.parroquias.features,
-  data.recintos,
-  veedores,
-  coordinadores,
-  acreditadosCda,
-);
-const canton = calcularCoberturaCanton(porParroquia);
 
 const parByCode = new Map(
   data.parroquias.features.map((f) => [f.properties.code, f]),
@@ -60,6 +47,28 @@ const filas = cobertura.map((c) => ({
   pctVerificado: c.pctVerificado,
 }));
 
+// Cifras por recinto (veedores, coordinador, CDA y cobertura completa) para los
+// gráficos: los filtros y los modos se calculan en el navegador sobre estas
+// filas, con el mismo cálculo del Informe.
+const tablero = cifrasPorRecinto({
+  recintos: data.recintos,
+  parroquias: data.parroquias.features.map(({ properties }) => ({
+    properties,
+  })),
+  veedores,
+  coordinadores,
+  acreditados: acreditadosCda,
+});
+const personaTablero = (p: {
+  recintoCodigo: number;
+  responsableLiderId: string | null;
+  verificado: boolean;
+}) => ({
+  recintoCodigo: p.recintoCodigo,
+  responsableLiderId: p.responsableLiderId,
+  verificado: p.verificado,
+});
+
 const parroquiasOpciones = data.parroquias.features.map((f) => ({
   code: f.properties.code,
   name: f.properties.name,
@@ -70,104 +79,24 @@ const parroquiasOpciones = data.parroquias.features.map((f) => ({
 <GestionLayout title="Cobertura" activo="cobertura">
   <h1>Cobertura de veedores y coordinadores</h1>
   <p class="g-sub">
-    Una junta cuenta como cubierta si tiene veedor titular y su recinto tiene
-    coordinador titular. Cuenta como cubierta y verificada si, además, ambos ya
-    fueron contactados. Esa es la cobertura que miden la gráfica de juntas, el
-    mapa, el resumen y la tabla del final; los coordinadores y los acreditados
-    CDA se cuentan además por recinto. Para una versión lista para imprimir,
-    abre el <a href="/gestion/informe">Informe</a>; para ver la evolución día a
-    día, revisa <a href="/gestion/crecimiento">Crecimiento</a>.
+    Cada gráfico mide un rol por separado contra los puestos que se necesitan:
+    una junta por veedor, un recinto por coordinador y un recinto CDA por
+    acreditado. El General mide la cobertura completa: una junta cuenta si tiene
+    veedor titular y su recinto tiene coordinador titular, la misma medida del
+    mapa y del resumen. Para una versión lista para imprimir, abre el{" "}
+    <a href="/gestion/informe">Informe</a>; para ver la evolución día a día,
+    revisa <a href="/gestion/crecimiento">Crecimiento</a>.
   </p>
 
-  <div class="g-cobertura-track">
-    <h2>Cobertura de juntas</h2>
-    <div class="g-cobertura-barras">
-      <GraficoCobertura
-        client:load
-        track="veedores"
-        titulo="Cobertura de juntas"
-        canton={canton}
-        porParroquia={porParroquia}
-        porRecinto={cobertura}
-        parroquias={data.parroquias.features}
-        recintos={data.recintos}
-      />
-    </div>
-    <div class="g-cobertura-lateral">
-      <GraficoPastelCobertura
-        client:load
-        track="veedores"
-        titulo="Cobertura de juntas"
-        canton={canton}
-      />
-      <GraficoResponsables
-        client:load
-        titulo="Veedores"
-        lideres={lideres}
-        personas={veedores}
-      />
-    </div>
-  </div>
-
-  <div class="g-cobertura-track">
-    <h2>Coordinadores</h2>
-    <div class="g-cobertura-barras">
-      <GraficoCobertura
-        client:load
-        track="coordinadores"
-        titulo="Coordinadores"
-        canton={canton}
-        porParroquia={porParroquia}
-        porRecinto={cobertura}
-        parroquias={data.parroquias.features}
-        recintos={data.recintos}
-      />
-    </div>
-    <div class="g-cobertura-lateral">
-      <GraficoPastelCobertura
-        client:load
-        track="coordinadores"
-        titulo="Coordinadores"
-        canton={canton}
-      />
-      <GraficoResponsables
-        client:load
-        titulo="Coordinadores"
-        lideres={lideres}
-        personas={coordinadores}
-      />
-    </div>
-  </div>
-
-  <div class="g-cobertura-track">
-    <h2>Acreditados CDA</h2>
-    <div class="g-cobertura-barras">
-      <GraficoCobertura
-        client:load
-        track="cda"
-        titulo="Acreditados CDA"
-        canton={canton}
-        porParroquia={porParroquia}
-        porRecinto={cobertura}
-        parroquias={data.parroquias.features}
-        recintos={data.recintos}
-      />
-    </div>
-    <div class="g-cobertura-lateral">
-      <GraficoPastelCobertura
-        client:load
-        track="cda"
-        titulo="Acreditados CDA"
-        canton={canton}
-      />
-      <GraficoResponsables
-        client:load
-        titulo="Acreditados CDA"
-        lideres={lideres}
-        personas={acreditadosCda}
-      />
-    </div>
-  </div>
+  <TableroCobertura
+    client:load
+    filas={tablero}
+    parroquias={parroquiasOpciones}
+    lideres={lideres}
+    veedores={veedores.map(personaTablero)}
+    coordinadores={coordinadores.map(personaTablero)}
+    acreditados={acreditadosCda.map(personaTablero)}
+  />
 
   <h2>Detalle por recinto</h2>
   <CoberturaTable client:load filas={filas} parroquias={parroquiasOpciones} />

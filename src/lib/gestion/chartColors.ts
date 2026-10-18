@@ -4,6 +4,8 @@
 export const COLOR_VERIFICADO = "#2f9e57";
 export const COLOR_PENDIENTE = "#c94b4b";
 export const COLOR_NEUTRO = "#8a97a4";
+// Ingresados que todavía no fueron contactados (mismo ámbar del informe).
+export const COLOR_SIN_VERIFICAR = "#e0a800";
 
 // Paleta rotativa para series dinámicas (una por líder, etc.) sin depender
 // de una lista fija de colores en CSS.
