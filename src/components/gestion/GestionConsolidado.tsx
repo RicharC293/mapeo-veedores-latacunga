@@ -8,6 +8,8 @@ import DialogoDesvincular from "./DialogoDesvincular";
 import DialogoMover from "./DialogoMover";
 import GrupoParroquia from "./GrupoParroquia";
 import Resaltado from "./Resaltado";
+import AlertaMesasInexistentes from "./AlertaMesasInexistentes";
+import { veedoresEnMesaInexistente } from "../../lib/gestion/mesasInexistentes";
 import Iniciales from "./Iniciales";
 import { useRecintosAbiertos } from "./useRecintosAbiertos";
 import { normalizar, title } from "../../lib/format";
@@ -358,8 +360,26 @@ export default function GestionConsolidado({
     );
   };
 
+  const enMesaInexistente = useMemo(
+    () => veedoresEnMesaInexistente(veedores, recintos),
+    [veedores, recintos],
+  );
+  const devolverAMilitancia = async (id: string) => {
+    await api(`${RUTA_API.veedor}/${id}/desvincular`, {
+      method: "POST",
+      body: JSON.stringify({ motivo: null, listaNegra: false }),
+    });
+    await refrescar();
+    setResultado("El veedor volvió a Militancia: asígnalo de nuevo.");
+  };
+
   return (
     <div class="g-panel">
+      <AlertaMesasInexistentes
+        veedores={enMesaInexistente}
+        recintos={recintos}
+        onDevolver={devolverAMilitancia}
+      />
       <div class="g-consol-resumen">
         <ResumenAvance
           parte={conCoordinador}

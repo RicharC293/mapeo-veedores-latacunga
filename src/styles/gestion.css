@@ -495,6 +495,51 @@
   cursor: pointer;
   font-weight: 700;
 }
+/* Veedores guardados en una mesa que su recinto no tiene. */
+.g-alerta-mesas {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--error);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--error) 10%, var(--panel));
+}
+.g-alerta-mesas h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--error);
+}
+.g-alerta-mesas p {
+  margin: 0;
+  max-width: 70ch;
+  line-height: 1.45;
+}
+.g-alerta-mesas ul {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.g-alerta-mesas li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 0;
+  border-top: 1px solid color-mix(in srgb, var(--error) 30%, transparent);
+}
+.g-alerta-mesas-texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.g-alerta-mesas-texto small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
 .g-error {
   color: var(--error);
   font-size: 0.85rem;

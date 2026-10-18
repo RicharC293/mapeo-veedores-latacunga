@@ -48,17 +48,25 @@ describe("parsearJunta", () => {
 });
 
 describe("numeroDeMesaConservada", () => {
+  // Recinto 1560 con mesas F1 a F3 y M1 a M2 (el del inicio del archivo).
+  const otro = { ...recinto, cod: 406 } as Recinto;
+
   it("conserva la mesa solo en el mismo recinto y género", () => {
-    expect(numeroDeMesaConservada("1560-F9", 1560, "F")).toBe(9);
+    expect(numeroDeMesaConservada("1560-F3", recinto, "F")).toBe(3);
   });
 
   it("en otro recinto no conserva el número: allí puede no existir", () => {
-    expect(numeroDeMesaConservada("1560-F9", 406, "F")).toBeUndefined();
+    expect(numeroDeMesaConservada("1560-F3", otro, "F")).toBeUndefined();
   });
 
-  it("con otro género o sin recinto elegido tampoco", () => {
-    expect(numeroDeMesaConservada("1560-F9", 1560, "M")).toBeUndefined();
-    expect(numeroDeMesaConservada("1560-F9", "", "F")).toBeUndefined();
-    expect(numeroDeMesaConservada(null, 1560, "F")).toBeUndefined();
+  it("si la mesa guardada no existe en el recinto, tampoco se conserva", () => {
+    expect(numeroDeMesaConservada("1560-F9", recinto, "F")).toBeUndefined();
+  });
+
+  it("con otro género, sin recinto elegido o sin mesa de origen tampoco", () => {
+    expect(numeroDeMesaConservada("1560-F3", recinto, "M")).toBeUndefined();
+    expect(numeroDeMesaConservada("1560-F3", null, "F")).toBeUndefined();
+    expect(numeroDeMesaConservada("1560-F3", recinto, "")).toBeUndefined();
+    expect(numeroDeMesaConservada(null, recinto, "F")).toBeUndefined();
   });
 });

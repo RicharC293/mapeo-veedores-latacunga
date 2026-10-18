@@ -1,6 +1,8 @@
 import { useMemo, useState } from "preact/hooks";
 import AsignacionCard from "./AsignacionCard";
 import Resaltado from "./Resaltado";
+import AlertaMesasInexistentes from "./AlertaMesasInexistentes";
+import { veedoresEnMesaInexistente } from "../../lib/gestion/mesasInexistentes";
 import FiltrosRecintos, {
   ResumenAvance,
   VacioFiltros,
@@ -52,6 +54,20 @@ export default function GestionVeedores({
 
   const refrescar = async () => {
     setVeedores(await api<Veedor[]>("/api/gestion/veedores"));
+  };
+
+  // Veedores guardados en una mesa que su recinto no tiene: no salen en
+  // ninguna junta, así que se avisan aparte.
+  const enMesaInexistente = useMemo(
+    () => veedoresEnMesaInexistente(veedores, recintos),
+    [veedores, recintos],
+  );
+  const devolverAMilitancia = async (id: string) => {
+    await api(`/api/gestion/veedores/${id}/desvincular`, {
+      method: "POST",
+      body: JSON.stringify({ motivo: null, listaNegra: false }),
+    });
+    await refrescar();
   };
 
   // Un registro por recinto: sus juntas y cuántas ya tienen veedor titular.
@@ -127,6 +143,11 @@ export default function GestionVeedores({
 
   return (
     <div class="g-panel">
+      <AlertaMesasInexistentes
+        veedores={enMesaInexistente}
+        recintos={recintos}
+        onDevolver={devolverAMilitancia}
+      />
       <ResumenAvance
         parte={juntasConTitular}
         total={totalJuntas}

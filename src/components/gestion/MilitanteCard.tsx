@@ -197,7 +197,7 @@ export default function MilitanteCard({
   // existir, y entonces se elige la siguiente junta libre.
   const numeroOrigen = numeroDeMesaConservada(
     militante.juntaPreasignada,
-    recintoCod,
+    recinto,
     generoSel,
   );
 

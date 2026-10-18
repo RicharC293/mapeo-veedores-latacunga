@@ -52,16 +52,19 @@ export function parsearJunta(
 }
 
 // Número de mesa que se conserva al reasignar a quien regresó de un puesto de
-// veedor: solo si se asigna al mismo recinto del que salió y al mismo género.
-// En otro recinto ese número puede no existir, y entonces no se conserva (el
-// servidor elige la siguiente junta libre).
+// veedor: solo si se asigna al mismo recinto del que salió, al mismo género y
+// la mesa existe en ese recinto. En otro recinto (o si la mesa nunca existió)
+// no se conserva y el servidor elige la siguiente junta libre.
 export function numeroDeMesaConservada(
   juntaPreasignada: string | null,
-  recintoCodigo: number | "",
+  recinto: Recinto | null,
   genero: Genero | "",
 ): number | undefined {
   const origen = parsearJunta(juntaPreasignada);
-  return origen && origen.recinto === recintoCodigo && origen.genero === genero
+  if (!origen || !recinto || genero === "") return undefined;
+  return origen.recinto === recinto.cod &&
+    origen.genero === genero &&
+    existeJunta(recinto, genero, origen.numero)
     ? origen.numero
     : undefined;
 }
