@@ -1,0 +1,209 @@
+---
+import GestionLayout from "../../layouts/GestionLayout.astro";
+import InformeAcciones from "../../components/gestion/InformeAcciones";
+import { getMapData } from "../../lib/data";
+import { listVeedores } from "../../lib/gestion/veedores";
+import { listCoordinadores } from "../../lib/gestion/coordinadores";
+import { listAcreditadosCda } from "../../lib/gestion/acreditadosCda";
+import { cifrasPorRecinto } from "../../lib/gestion/informe";
+import {
+  armarInformeSimple,
+  type AnalisisSimple,
+} from "../../lib/gestion/informeSimple";
+import { fmt, title } from "../../lib/format";
+import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
+
+if (!PAGINAS_GESTION["informe-simple"].includes(Astro.locals.rol)) {
+  return Astro.redirect(rutaPorDefecto(Astro.locals.rol));
+}
+
+const [data, veedores, coordinadores, acreditados] = await Promise.all([
+  getMapData(),
+  listVeedores(),
+  listCoordinadores(),
+  listAcreditadosCda(),
+]);
+
+const filas = cifrasPorRecinto({
+  recintos: data.recintos,
+  parroquias: data.parroquias.features.map(({ properties }) => ({
+    properties,
+  })),
+  veedores,
+  coordinadores,
+  acreditados,
+});
+// Dos análisis, elegidos con ?analisis=: sin verificar (por defecto) cuenta a
+// todos los ingresados; verificado, solo a los ya verificados.
+const analisis: AnalisisSimple =
+  Astro.url.searchParams.get("analisis") === "verificado"
+    ? "verificado"
+    : "noverificado";
+const parroquias = armarInformeSimple(filas, analisis);
+const secciones = [
+  {
+    id: "urbanas",
+    titulo: "Parroquias urbanas",
+    parroquias: parroquias.filter((p) => p.urbana),
+  },
+  {
+    id: "rurales",
+    titulo: "Parroquias rurales",
+    parroquias: parroquias.filter((p) => !p.urbana),
+  },
+];
+const opciones = [
+  {
+    clave: "noverificado",
+    etiqueta: "Análisis no verificado",
+    ayuda: "Cuenta a todos los titulares ingresados, estén o no verificados.",
+  },
+  {
+    clave: "verificado",
+    etiqueta: "Análisis verificado",
+    ayuda:
+      "Cuenta solo a los titulares ya verificados; los ingresados sin verificar figuran como faltantes.",
+  },
+] as const;
+const elegida = opciones.find((o) => o.clave === analisis)!;
+const ayudaAnalisis = elegida.ayuda;
+const etiquetaAnalisis = elegida.etiqueta;
+
+const corte = new Intl.DateTimeFormat("es-EC", {
+  dateStyle: "long",
+  timeStyle: "short",
+  timeZone: "America/Guayaquil",
+}).format(new Date());
+const fechaArchivo = `${new Date().toISOString().slice(0, 10)}-${analisis}`;
+
+const sino = (tiene: boolean) => (tiene ? "Sí" : "Falta");
+const csvEncabezados = [
+  "Tipo de parroquia",
+  "Parroquia",
+  "Recinto",
+  "Coordinador",
+  "Veedores que tenemos",
+  "Veedores que faltan",
+  "CDA",
+];
+const csvFilas = parroquias.flatMap((p) =>
+  p.recintos.map((r) => [
+    p.urbana ? "Urbana" : "Rural",
+    p.nombre,
+    title(r.recinto),
+    sino(r.coordinador),
+    r.veedoresTenemos,
+    r.veedoresFaltan,
+    r.cda === null ? "No aplica" : sino(r.cda),
+  ]),
+);
+---
+
+<GestionLayout title="Informe simple" activo="informe-simple">
+  <article class="g-informe g-simple">
+    <header class="g-informe-cabecera">
+      <div>
+        <h1>Informe simple</h1>
+        <p class="g-informe-corte">
+          Cantón Latacunga · datos al {corte} (hora de Ecuador)
+        </p>
+      </div>
+      <InformeAcciones
+        client:load
+        encabezados={csvEncabezados}
+        filas={csvFilas}
+        nombreArchivo={`informe-simple-latacunga-${fechaArchivo}.csv`}
+      />
+    </header>
+
+    <nav class="g-simple-analisis" aria-label="Tipo de análisis">
+      <div class="g-simple-opciones">
+        {opciones.map((o) => (
+          <a
+            href={`?analisis=${o.clave}`}
+            class="g-simple-opcion"
+            aria-current={o.clave === analisis ? "page" : undefined}
+          >
+            {o.etiqueta}
+          </a>
+        ))}
+      </div>
+      <p>
+        <strong>{etiquetaAnalisis}.</strong> {ayudaAnalisis}
+      </p>
+    </nav>
+
+    {secciones.map((sec) => (
+      <section class="g-simple-seccion" aria-labelledby={`simple-${sec.id}`}>
+        <h2 id={`simple-${sec.id}`}>{sec.titulo}</h2>
+        {sec.parroquias.map((p) => (
+          <section class="g-simple-parroquia">
+            <h3>{p.nombre}</h3>
+            <div class="g-table-scroll">
+              <table class="g-table g-informe-tabla g-simple-tabla">
+                <caption class="g-sr-only">Recintos de {p.nombre}</caption>
+                <thead>
+                  <tr>
+                    <th rowspan="2" scope="col">
+                      Recinto
+                    </th>
+                    <th rowspan="2" scope="col" class="g-simple-centro">
+                      Coordinador
+                    </th>
+                    <th colspan="2" scope="colgroup" class="g-simple-centro">
+                      Veedores
+                    </th>
+                    <th rowspan="2" scope="col" class="g-simple-centro">
+                      CDA
+                    </th>
+                  </tr>
+                  <tr>
+                    <th scope="col" class="g-num">
+                      Tenemos
+                    </th>
+                    <th scope="col" class="g-num">
+                      Faltan
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {p.recintos.map((r) => (
+                    <tr>
+                      <td>{title(r.recinto)}</td>
+                      <td class="g-simple-centro">
+                        <span
+                          class={r.coordinador ? undefined : "g-simple-falta"}
+                        >
+                          {sino(r.coordinador)}
+                        </span>
+                      </td>
+                      <td class="g-num">{fmt(r.veedoresTenemos)}</td>
+                      <td class="g-num">
+                        <span
+                          class={
+                            r.veedoresFaltan > 0 ? "g-simple-falta" : undefined
+                          }
+                        >
+                          {fmt(r.veedoresFaltan)}
+                        </span>
+                      </td>
+                      <td class="g-simple-centro">
+                        {r.cda === null ? (
+                          <span class="g-simple-na">—</span>
+                        ) : (
+                          <span class={r.cda ? undefined : "g-simple-falta"}>
+                            {sino(r.cda)}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ))}
+      </section>
+    ))}
+  </article>
+</GestionLayout>
