@@ -7,9 +7,10 @@ import {
   estadoIdentidad,
   nombreAntesDeAplicar,
   sePuedeConsultar,
+  vistaIdentidad,
   type ValidacionCedula,
 } from "../src/lib/validacion/plan";
-import { identidadPorCedula } from "../src/lib/validacion/pantalla";
+import { validacionesParaVista } from "../src/lib/validacion/pantalla";
 
 // fetch simulado: no se hace ninguna consulta real (cada una cuesta dinero).
 const respuesta = (status: number, cuerpo: unknown) =>
@@ -256,33 +257,47 @@ describe("datos personales", () => {
 });
 
 describe("identidad en el Consolidado", () => {
-  it("marca verificada o por revisar y da los datos personales", () => {
-    const r = identidadPorCedula(
-      [
-        { cedula: "0503451163", nombres: "PÉREZ GARCÍA JUAN ANDRÉS" },
-        { cedula: "0502646599", nombres: "Otro Nombre" },
-        { cedula: "0550173926", nombres: "Sin consultar" },
-      ],
-      [
-        val("0503451163", "validada", {
-          ...JUAN,
-          fechaNacimiento: "1990-04-18",
-          genero: "male",
-        }),
-        val("0502646599", "validada", JUAN),
-      ],
-    );
-    expect(r["0503451163"]).toEqual({
-      verificada: true,
-      porRevisar: false,
+  it("junta estado, nombre oficial, datos personales y nombre anterior", () => {
+    const v = val("0503451163", "validada", {
+      ...JUAN,
       fechaNacimiento: "1990-04-18",
-      genero: "masculino",
+      genero: "male",
+      nombreAnterior: "Juan Pérez",
+      respuesta: EXITO,
     });
-    expect(r["0502646599"]).toMatchObject({
-      verificada: false,
-      porRevisar: true,
+    expect(vistaIdentidad("PÉREZ GARCÍA JUAN ANDRÉS", "0503451163", v)).toEqual(
+      {
+        estado: "verificada",
+        oficial: "PÉREZ GARCÍA JUAN ANDRÉS",
+        coincidencia: null,
+        fechaNacimiento: "1990-04-18",
+        genero: "masculino",
+        nombreAnterior: "Juan Pérez",
+        error: null,
+        respuesta: EXITO,
+      },
+    );
+  });
+
+  it("sin consulta queda sin verificar, y una no encontrada lleva su motivo", () => {
+    expect(vistaIdentidad("Ana", "0502646599", undefined)).toMatchObject({
+      estado: "sin_consultar",
+      error: null,
     });
-    expect(r["0550173926"]).toBeUndefined();
+    expect(
+      vistaIdentidad(
+        "Ana",
+        "0502646599",
+        val("0502646599", "no_encontrada", { error: "Cédula no encontrada" }),
+      ),
+    ).toMatchObject({ estado: "no_encontrada", error: "Cédula no encontrada" });
+  });
+
+  it("la respuesta completa solo va a quien puede verificar", () => {
+    const vs = [val("0503451163", "validada", { ...JUAN, respuesta: EXITO })];
+    expect(validacionesParaVista(vs, true)[0].respuesta).toEqual(EXITO);
+    expect(validacionesParaVista(vs, false)[0].respuesta).toBeNull();
+    expect(validacionesParaVista(vs, false)[0].nombres).toBe("JUAN ANDRÉS");
   });
 });
 

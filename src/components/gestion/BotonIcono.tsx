@@ -1,10 +1,12 @@
 interface Props {
-  icono: "mover" | "basura";
+  icono: "mover" | "basura" | "check" | "candado" | "deshacer" | "documento";
   // Nombre de la acción: lo leen los lectores de pantalla y aparece como
   // sugerencia al pasar el cursor, porque el botón no lleva texto.
   etiqueta: string;
   peligro?: boolean;
   disabled?: boolean;
+  // Botón que abre o cierra algo (la respuesta del Registro Civil).
+  presionado?: boolean;
   onClick: () => void;
 }
 
@@ -27,6 +29,22 @@ const TRAZOS: Record<Props["icono"], string[]> = {
     "M10 11v6",
     "M14 11v6",
   ],
+  // Visto: usar el nombre oficial.
+  check: ["M4 12.5l5 5L20 6.5"],
+  // Candado cerrado: mantener el nombre actual.
+  candado: [
+    "M6 11h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z",
+    "M8 11V7a4 4 0 0 1 8 0v4",
+  ],
+  // Flecha que vuelve: deshacer.
+  deshacer: ["M9 14L4 9l5-5", "M4 9h11a5 5 0 0 1 0 10h-3"],
+  // Hoja con renglones: ver la respuesta del Registro Civil.
+  documento: [
+    "M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z",
+    "M14 3v5h5",
+    "M9 13h6",
+    "M9 17h6",
+  ],
 };
 
 export default function BotonIcono({
@@ -34,6 +52,7 @@ export default function BotonIcono({
   etiqueta,
   peligro,
   disabled,
+  presionado,
   onClick,
 }: Props) {
   return (
@@ -43,6 +62,7 @@ export default function BotonIcono({
       aria-label={etiqueta}
       title={etiqueta}
       disabled={disabled}
+      aria-pressed={presionado}
       onClick={onClick}
     >
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">

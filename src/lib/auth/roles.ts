@@ -24,7 +24,8 @@ export const PAGINAS_GESTION: Record<string, Rol[]> = {
   organigrama: ["militante", "gestor", "administrador"],
   estructura: ["militante", "gestor", "administrador"],
   accesos: ["administrador"],
-  // Consulta una API de pago y guarda datos del Registro Civil.
+  // Verificar identidades (Sincronizar y decidir nombres en el Consolidado):
+  // consulta una API de pago y guarda datos del Registro Civil.
   validacion: ["administrador"],
 };
 

@@ -7,10 +7,9 @@ import { listCoordinadores } from "../../lib/gestion/coordinadores";
 import { listAcreditadosCda } from "../../lib/gestion/acreditadosCda";
 import { listLideres } from "../../lib/gestion/lideres";
 import { listValidaciones } from "../../lib/validacion/validaciones";
-import {
-  identidadPorCedula,
-  type IdentidadConsolidado,
-} from "../../lib/validacion/pantalla";
+import { validacionesParaVista } from "../../lib/validacion/pantalla";
+import { COSTO_POR_CONSULTA } from "../../lib/validacion/ecuadorApi";
+import type { ValidacionCedula } from "../../lib/validacion/plan";
 import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
 
 if (!PAGINAS_GESTION.consolidado.includes(Astro.locals.rol)) {
@@ -25,22 +24,19 @@ const [veedores, coordinadores, acreditados, lideres] = await Promise.all([
   listLideres(),
 ]);
 
-// Edad, género y verificación de identidad de quienes ya se consultaron en el
-// Registro Civil. Si la tabla aún no existe (migración sin aplicar), el
-// Consolidado se muestra igual, sin esos datos.
-async function cargarIdentidad(): Promise<
-  Record<string, IdentidadConsolidado>
-> {
+// Verificación de identidad en el Registro Civil: todos ven el estado, la edad
+// y el género; solo el administrador sincroniza y decide los nombres. Si la
+// tabla aún no existe, el Consolidado se muestra igual, sin esos datos.
+const puedeVerificar = PAGINAS_GESTION.validacion.includes(Astro.locals.rol);
+async function cargarValidaciones(): Promise<ValidacionCedula[]> {
   try {
-    return identidadPorCedula(
-      [...veedores, ...coordinadores, ...acreditados],
-      await listValidaciones(),
-    );
+    return validacionesParaVista(await listValidaciones(), puedeVerificar);
   } catch {
-    return {};
+    return [];
   }
 }
-const identidad = await cargarIdentidad();
+const validaciones = await cargarValidaciones();
+const hayClave = Boolean(import.meta.env.ECUADORAPI_KEY);
 ---
 
 <GestionLayout title="Consolidado" activo="consolidado">
@@ -60,6 +56,9 @@ const identidad = await cargarIdentidad();
     veedores={veedores}
     coordinadores={coordinadores}
     acreditados={acreditados}
-    identidad={identidad}
+    validaciones={validaciones}
+    puedeVerificar={puedeVerificar}
+    hayClave={hayClave}
+    costoPorConsulta={COSTO_POR_CONSULTA}
   />
 </GestionLayout>

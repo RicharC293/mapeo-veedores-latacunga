@@ -11,8 +11,16 @@ import Resaltado from "./Resaltado";
 import AlertaMesasInexistentes from "./AlertaMesasInexistentes";
 import { veedoresEnMesaInexistente } from "../../lib/gestion/mesasInexistentes";
 import Iniciales from "./Iniciales";
-import type { IdentidadConsolidado } from "../../lib/validacion/pantalla";
-import { ETIQUETA_GENERO, edad } from "../../lib/validacion/plan";
+import SincronizarIdentidad from "./SincronizarIdentidad";
+import {
+  ETIQUETA_GENERO,
+  edad,
+  sePuedeConsultar,
+  vistaIdentidad,
+  type EstadoIdentidad,
+  type IdentidadVista,
+  type ValidacionCedula,
+} from "../../lib/validacion/plan";
 import { useRecintosAbiertos } from "./useRecintosAbiertos";
 import { normalizar, title } from "../../lib/format";
 import {
@@ -59,9 +67,48 @@ interface Props {
   veedores: Veedor[];
   coordinadores: Coordinador[];
   acreditados: AcreditadoCda[];
-  // Por cédula: verificación en el Registro Civil, fecha de nacimiento y género.
-  identidad?: Record<string, IdentidadConsolidado>;
+  // Verificación de identidad en el Registro Civil, por cédula.
+  validaciones?: ValidacionCedula[];
+  // El administrador puede sincronizar y decidir los nombres.
+  puedeVerificar?: boolean;
+  hayClave?: boolean;
+  costoPorConsulta?: number;
 }
+
+// Decisiones sobre el nombre de una persona frente al oficial.
+interface VerifAcciones {
+  onUsar: (cedula: string) => void;
+  onMantener: (cedula: string) => void;
+  onDeshacer: (cedula: string) => void;
+  ocupado: boolean;
+}
+
+type FiltroIdentidad =
+  "todas" | "sinconsultar" | "coincide" | "revisar" | "verificada" | "problema";
+
+const IDENTIDAD: Record<EstadoIdentidad, { texto: string; clase: string }> = {
+  verificada: { texto: "Identidad verificada", clase: "g-consol-identidad-ok" },
+  coincide: { texto: "Coincide", clase: "g-consol-identidad-revisar" },
+  revisar: { texto: "Nombre por revisar", clase: "g-consol-identidad-revisar" },
+  no_encontrada: {
+    texto: "No encontrada en el Registro Civil",
+    clase: "g-consol-identidad-mal",
+  },
+  invalida: { texto: "Cédula inválida", clase: "g-consol-identidad-mal" },
+  error: {
+    texto: "Sin verificar (error al consultar)",
+    clase: "g-consol-identidad-sin",
+  },
+  sin_consultar: { texto: "Sin verificar", clase: "g-consol-identidad-sin" },
+};
+
+const enFiltroIdentidad = (e: EstadoIdentidad, f: FiltroIdentidad) =>
+  f === "todas" ||
+  (f === "sinconsultar"
+    ? e === "sin_consultar" || e === "error"
+    : f === "problema"
+      ? e === "no_encontrada" || e === "invalida"
+      : e === f);
 
 type Estado = "todos" | "completos" | "casi" | "pendientes" | "excedente";
 
@@ -97,13 +144,16 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-// "Identidad verificada · 34 años · Masculino" bajo el nombre, con lo que
-// trae el Registro Civil; "Nombre por revisar" si difiere del oficial.
+// Estado de identidad bajo el nombre: "Identidad verificada · 34 años ·
+// Masculino", el nombre oficial cuando difiere, el anterior si se cambió y, a
+// pedido, la respuesta del Registro Civil.
 const HOY = new Date();
 function LineaIdentidad({
   identidad,
+  verRespuesta,
 }: {
-  identidad: IdentidadConsolidado | undefined;
+  identidad: IdentidadVista | undefined;
+  verRespuesta: boolean;
 }) {
   if (!identidad) return null;
   const e = edad(identidad.fechaNacimiento, HOY);
@@ -111,15 +161,29 @@ function LineaIdentidad({
     e !== null ? `${e} años` : null,
     identidad.genero ? ETIQUETA_GENERO[identidad.genero] : null,
   ].filter(Boolean);
+  const estado = IDENTIDAD[identidad.estado];
   return (
-    <small class="g-consol-identidad">
-      {identidad.verificada ? (
-        <span class="g-consol-identidad-ok">Identidad verificada</span>
-      ) : identidad.porRevisar ? (
-        <span class="g-consol-identidad-revisar">Nombre por revisar</span>
+    <>
+      <small class="g-consol-identidad">
+        <span class={estado.clase}>{estado.texto}</span>
+        {partes.length > 0 ? <span>{partes.join(" · ")}</span> : null}
+      </small>
+      {identidad.oficial &&
+      (identidad.estado === "coincide" || identidad.estado === "revisar") ? (
+        <small class="g-persona-pref">Oficial: {identidad.oficial}</small>
       ) : null}
-      {partes.length > 0 ? <span>{partes.join(" · ")}</span> : null}
-    </small>
+      {identidad.nombreAnterior ? (
+        <small>Antes: {identidad.nombreAnterior}</small>
+      ) : null}
+      {identidad.error && identidad.estado !== "sin_consultar" ? (
+        <small>{identidad.error}</small>
+      ) : null}
+      {verRespuesta && identidad.respuesta ? (
+        <pre class="g-consol-respuesta">
+          {JSON.stringify(identidad.respuesta, null, 2)}
+        </pre>
+      ) : null}
+    </>
   );
 }
 
@@ -127,6 +191,7 @@ function Linea({
   p,
   busqueda,
   identidad,
+  verif,
   rol,
   clase,
   nombreLider,
@@ -134,7 +199,8 @@ function Linea({
 }: {
   p: Persona;
   busqueda: string;
-  identidad: IdentidadConsolidado | undefined;
+  identidad: IdentidadVista | undefined;
+  verif: VerifAcciones | null;
   rol: "titular" | "suplente";
   clase: Clase;
   nombreLider: Map<string, string>;
@@ -143,6 +209,9 @@ function Linea({
   const responsable = p.responsableLiderId
     ? nombreLider.get(p.responsableLiderId)
     : undefined;
+  const [verRespuesta, setVerRespuesta] = useState(false);
+  const decidir =
+    identidad?.estado === "coincide" || identidad?.estado === "revisar";
   return (
     <div class="g-consol-persona">
       <Iniciales nombres={p.nombres} rol={rol} />
@@ -166,12 +235,44 @@ function Linea({
         {p.preferencia ? (
           <small class="g-persona-pref">Preferencia: {p.preferencia}</small>
         ) : null}
-        <LineaIdentidad identidad={identidad} />
+        <LineaIdentidad identidad={identidad} verRespuesta={verRespuesta} />
         {p.verificado ? (
           <span class="chip-estado chip-estado-ok">Verificado</span>
         ) : null}
       </div>
       <div class="g-consol-acciones">
+        {verif && decidir ? (
+          <>
+            <BotonIcono
+              icono="check"
+              etiqueta={`Usar el nombre oficial: ${identidad?.oficial ?? ""}`}
+              disabled={verif.ocupado}
+              onClick={() => verif.onUsar(p.cedula)}
+            />
+            <BotonIcono
+              icono="candado"
+              etiqueta={`Mantener el nombre actual de ${p.nombres}`}
+              disabled={verif.ocupado}
+              onClick={() => verif.onMantener(p.cedula)}
+            />
+          </>
+        ) : null}
+        {verif && identidad?.nombreAnterior ? (
+          <BotonIcono
+            icono="deshacer"
+            etiqueta={`Deshacer: volver a ${identidad.nombreAnterior}`}
+            disabled={verif.ocupado}
+            onClick={() => verif.onDeshacer(p.cedula)}
+          />
+        ) : null}
+        {verif && identidad?.respuesta ? (
+          <BotonIcono
+            icono="documento"
+            etiqueta="Ver la respuesta del Registro Civil"
+            presionado={verRespuesta}
+            onClick={() => setVerRespuesta((v) => !v)}
+          />
+        ) : null}
         <BotonIcono
           icono="mover"
           etiqueta={`Mover a ${p.nombres}`}
@@ -192,6 +293,7 @@ function Linea({
 function PuestoLineas({
   busqueda,
   identidad,
+  verif,
   puesto,
   falta,
   clase,
@@ -199,7 +301,8 @@ function PuestoLineas({
   acciones,
 }: {
   busqueda: string;
-  identidad: Record<string, IdentidadConsolidado>;
+  identidad: (p: Persona) => IdentidadVista | undefined;
+  verif: VerifAcciones | null;
   puesto: Puesto<Persona>;
   falta: string;
   clase: Clase;
@@ -212,7 +315,8 @@ function PuestoLineas({
         <Linea
           p={puesto.titular}
           busqueda={busqueda}
-          identidad={identidad[puesto.titular.cedula.trim()]}
+          identidad={identidad(puesto.titular)}
+          verif={verif}
           rol="titular"
           clase={clase}
           nombreLider={nombreLider}
@@ -227,7 +331,8 @@ function PuestoLineas({
           <Linea
             p={s}
             busqueda={busqueda}
-            identidad={identidad[s.cedula.trim()]}
+            identidad={identidad(s)}
+            verif={verif}
             rol="suplente"
             clase={clase}
             nombreLider={nombreLider}
@@ -246,7 +351,10 @@ export default function GestionConsolidado({
   veedores: veedoresIniciales,
   coordinadores: coordinadoresIniciales,
   acreditados: acreditadosIniciales,
-  identidad = {},
+  validaciones: validacionesIniciales = [],
+  puedeVerificar = false,
+  hayClave = false,
+  costoPorConsulta = 0.02,
 }: Props) {
   const [veedores, setVeedores] = useState(veedoresIniciales);
   const [coordinadores, setCoordinadores] = useState(coordinadoresIniciales);
@@ -256,6 +364,21 @@ export default function GestionConsolidado({
   const [ubicacion, setUbicacion] = useState<Ubicacion>("todas");
   const [estado, setEstado] = useState<Estado>("todos");
   const [busqueda, setBusqueda] = useState("");
+  const [validaciones, setValidaciones] = useState(validacionesIniciales);
+  const [filtroIdentidad, setFiltroIdentidad] =
+    useState<FiltroIdentidad>("todas");
+  const [decidiendo, setDecidiendo] = useState(false);
+
+  const validacionDe = useMemo(
+    () => new Map(validaciones.map((v) => [v.cedula, v])),
+    [validaciones],
+  );
+  // Identidad de cada persona, con su nombre actual (cambia al aplicar el
+  // oficial). Sin la tabla de validaciones no se muestra nada.
+  const identidad = (p: PersonaVista): IdentidadVista | undefined =>
+    validaciones.length === 0 && !puedeVerificar
+      ? undefined
+      : vistaIdentidad(p.nombres, p.cedula, validacionDe.get(p.cedula.trim()));
 
   const nombreLider = useMemo(
     () => new Map(lideres.map((l) => [l.id, l.nombres])),
@@ -308,17 +431,35 @@ export default function GestionConsolidado({
   const completos = base.filter((f) => f.completo).length;
   const conExcedente = base.filter((f) => f.excedente > 0).length;
   const casiCompletos = base.filter((f) => f.casiCompleto).length;
-  const visibles = base.filter((f) =>
-    estado === "completos"
-      ? f.completo
-      : estado === "casi"
-        ? f.casiCompleto
-        : estado === "pendientes"
-          ? !f.completo
-          : estado === "excedente"
-            ? f.excedente > 0
-            : true,
-  );
+  const personasDe = (f: (typeof filas)[number]): PersonaVista[] => [
+    ...(f.coordinador.titular ? [f.coordinador.titular] : []),
+    ...f.coordinador.suplentes,
+    ...(f.cda?.titular ? [f.cda.titular] : []),
+    ...(f.cda?.suplentes ?? []),
+    ...f.juntas.flatMap((j) => [
+      ...(j.puesto.titular ? [j.puesto.titular] : []),
+      ...j.puesto.suplentes,
+    ]),
+  ];
+  const coincideIdentidad = (f: (typeof filas)[number]) =>
+    filtroIdentidad === "todas" ||
+    personasDe(f).some((p) => {
+      const i = identidad(p);
+      return i ? enFiltroIdentidad(i.estado, filtroIdentidad) : false;
+    });
+  const visibles = base
+    .filter(coincideIdentidad)
+    .filter((f) =>
+      estado === "completos"
+        ? f.completo
+        : estado === "casi"
+          ? f.casiCompleto
+          : estado === "pendientes"
+            ? !f.completo
+            : estado === "excedente"
+              ? f.excedente > 0
+              : true,
+    );
   const grupos = useMemo(
     () => agruparPorParroquia(visibles, parroquias),
     [visibles, parroquias],
@@ -331,12 +472,39 @@ export default function GestionConsolidado({
   const juntasConTitular = base.reduce((a, f) => a + f.juntasConTitular, 0);
 
   const hayFiltros =
-    ubicacion !== "todas" || estado !== "todos" || busqueda !== "";
+    ubicacion !== "todas" ||
+    estado !== "todos" ||
+    busqueda !== "" ||
+    filtroIdentidad !== "todas";
   const quitarFiltros = () => {
     setUbicacion("todas");
     setEstado("todos");
     setBusqueda("");
+    setFiltroIdentidad("todas");
   };
+
+  // Todas las personas del Consolidado (sin filtros): para Sincronizar y para
+  // aplicar en bloque los nombres que coinciden.
+  const todas = useMemo(
+    () => [...veedores, ...coordinadores, ...acreditados],
+    [veedores, coordinadores, acreditados],
+  );
+  const pendientes = [
+    ...new Set(
+      todas
+        .filter((p) =>
+          sePuedeConsultar(p.cedula, validacionDe.get(p.cedula.trim())),
+        )
+        .map((p) => p.cedula.trim()),
+    ),
+  ];
+  const coinciden = [
+    ...new Set(
+      todas
+        .filter((p) => identidad(p)?.estado === "coincide")
+        .map((p) => p.cedula.trim()),
+    ),
+  ];
   const { estaAbierto, alternar } = useRecintosAbiertos(
     visibles.length <= ABRIR_SI_HAY_HASTA,
   );
@@ -351,6 +519,47 @@ export default function GestionConsolidado({
     setCoordinadores(c);
     setAcreditados(a);
   };
+
+  const refrescarValidaciones = async () => {
+    setValidaciones(await api<ValidacionCedula[]>("/api/gestion/validacion"));
+  };
+
+  // Usar el oficial, mantener el actual o deshacer: cambian nombres, así que
+  // se recargan las personas y las validaciones.
+  const decidirNombre = async (
+    accion: "aplicar" | "mantener" | "deshacer",
+    cedulas: string[],
+  ) => {
+    setDecidiendo(true);
+    try {
+      await api(`/api/gestion/validacion/${accion}`, {
+        method: "POST",
+        body: JSON.stringify({ cedulas }),
+      });
+      await Promise.all([refrescar(), refrescarValidaciones()]);
+      const n = cedulas.length;
+      const personas = `${n} ${n === 1 ? "persona" : "personas"}`;
+      setResultado(
+        accion === "aplicar"
+          ? `Nombre oficial aplicado a ${personas}.`
+          : accion === "mantener"
+            ? `Se mantuvo el nombre actual de ${personas}.`
+            : `Se devolvió el nombre anterior a ${personas}.`,
+      );
+    } catch (err) {
+      setResultado(err instanceof Error ? err.message : "Error inesperado.");
+    } finally {
+      setDecidiendo(false);
+    }
+  };
+  const verif: VerifAcciones | null = puedeVerificar
+    ? {
+        onUsar: (c) => decidirNombre("aplicar", [c]),
+        onMantener: (c) => decidirNombre("mantener", [c]),
+        onDeshacer: (c) => decidirNombre("deshacer", [c]),
+        ocupado: decidiendo,
+      }
+    : null;
 
   const acciones: Acciones = {
     onMover: (clase, p) => setDialogo({ tipo: "mover", clase, p }),
@@ -454,6 +663,20 @@ export default function GestionConsolidado({
         />
       </div>
 
+      {puedeVerificar ? (
+        <SincronizarIdentidad
+          pendientes={pendientes}
+          coinciden={coinciden}
+          costoPorConsulta={costoPorConsulta}
+          hayClave={hayClave}
+          onTerminar={async (mensaje) => {
+            await refrescarValidaciones();
+            setResultado(mensaje);
+          }}
+          onAplicarCoinciden={() => decidirNombre("aplicar", coinciden)}
+        />
+      ) : null}
+
       <FiltrosRecintos
         parroquias={parroquias}
         ubicacion={ubicacion}
@@ -488,6 +711,27 @@ export default function GestionConsolidado({
         hayFiltros={hayFiltros}
         onQuitar={quitarFiltros}
       />
+
+      <div class="g-selects g-consol-filtro-identidad">
+        <label>
+          Identidad
+          <select
+            value={filtroIdentidad}
+            onChange={(e) =>
+              setFiltroIdentidad(
+                (e.currentTarget as HTMLSelectElement).value as FiltroIdentidad,
+              )
+            }
+          >
+            <option value="todas">Todas</option>
+            <option value="sinconsultar">Sin verificar</option>
+            <option value="coincide">Coinciden con el oficial</option>
+            <option value="revisar">Nombre por revisar</option>
+            <option value="verificada">Verificadas</option>
+            <option value="problema">No encontradas o cédula inválida</option>
+          </select>
+        </label>
+      </div>
 
       {resultado ? (
         <p class="g-mil-resultado" role="status">
@@ -591,6 +835,7 @@ export default function GestionConsolidado({
                               clase="coordinador"
                               busqueda={busqueda}
                               identidad={identidad}
+                              verif={verif}
                               acciones={acciones}
                               nombreLider={nombreLider}
                               puesto={f.coordinador}
@@ -604,6 +849,7 @@ export default function GestionConsolidado({
                                 clase="cda"
                                 busqueda={busqueda}
                                 identidad={identidad}
+                                verif={verif}
                                 acciones={acciones}
                                 nombreLider={nombreLider}
                                 puesto={f.cda}
@@ -625,6 +871,7 @@ export default function GestionConsolidado({
                                       clase="veedor"
                                       busqueda={busqueda}
                                       identidad={identidad}
+                                      verif={verif}
                                       acciones={acciones}
                                       nombreLider={nombreLider}
                                       puesto={j.puesto}

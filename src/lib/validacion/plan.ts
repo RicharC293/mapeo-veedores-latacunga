@@ -147,3 +147,28 @@ export function nombreAntesDeAplicar(
   }
   return null;
 }
+
+// Todo lo que el Consolidado muestra de la identidad de una persona.
+export interface IdentidadVista extends Identidad {
+  fechaNacimiento: string | null;
+  genero: "masculino" | "femenino" | null;
+  nombreAnterior: string | null;
+  // Motivo cuando no se encontró o hubo un error.
+  error: string | null;
+  // Respuesta del Registro Civil (solo para administradores).
+  respuesta: unknown;
+}
+
+export function vistaIdentidad(
+  nombre: string,
+  cedula: string,
+  v: ValidacionCedula | undefined,
+): IdentidadVista {
+  return {
+    ...estadoIdentidad(nombre, cedula, v),
+    ...datosPersonales(v),
+    nombreAnterior: v?.nombreAnterior ?? null,
+    error: v && v.estado !== "validada" ? v.error : null,
+    respuesta: v?.respuesta ?? null,
+  };
+}

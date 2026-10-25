@@ -2866,6 +2866,48 @@ select.g-campo-error {
   color: var(--aviso);
   font-weight: 700;
 }
+.g-consol-identidad-mal {
+  color: var(--error);
+  font-weight: 700;
+}
+.g-consol-identidad-sin {
+  color: var(--muted);
+}
+.g-consol-respuesta {
+  max-width: 100%;
+  margin: 6px 0 0;
+  padding: 10px;
+  overflow-x: auto;
+  border-radius: 8px;
+  background: var(--chip);
+  color: var(--ink);
+  font-size: 0.78rem;
+}
+/* Barra del administrador: sincronizar identidades con el Registro Civil. */
+.g-sinc {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+.g-sinc-texto {
+  flex: 1 1 260px;
+  margin: 0;
+  color: var(--muted);
+}
+.g-sinc-confirmar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.g-consol-filtro-identidad select {
+  min-width: 260px;
+}
 
 /* Verificación de identidad: filtros, barra de acciones y la tabla. */
 .g-val-filtros select {
