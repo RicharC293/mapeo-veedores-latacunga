@@ -216,20 +216,30 @@ export default function GestionValidacion({
     }
   };
 
-  const decidir = async (accion: "aplicar" | "mantener", cedulas: string[]) => {
+  const decidir = async (
+    accion: "aplicar" | "mantener" | "deshacer",
+    cedulas: string[],
+  ) => {
     if (cedulas.length === 0) return;
     setOcupado(true);
     setError(null);
     try {
-      const r = await api<{ aplicadas?: number; mantenidas?: number }>(
-        `/api/gestion/validacion/${accion}`,
-        { method: "POST", body: JSON.stringify({ cedulas }) },
-      );
-      const n = r.aplicadas ?? r.mantenidas ?? 0;
+      const r = await api<{
+        aplicadas?: number;
+        mantenidas?: number;
+        deshechas?: number;
+      }>(`/api/gestion/validacion/${accion}`, {
+        method: "POST",
+        body: JSON.stringify({ cedulas }),
+      });
+      const n = r.aplicadas ?? r.mantenidas ?? r.deshechas ?? 0;
+      const personas = `${n} ${n === 1 ? "persona" : "personas"}`;
       setAviso(
         accion === "aplicar"
-          ? `Nombre oficial aplicado a ${n} ${n === 1 ? "persona" : "personas"}.`
-          : `Se mantuvo el nombre del sistema de ${n} ${n === 1 ? "persona" : "personas"}.`,
+          ? `Nombre oficial aplicado a ${personas}.`
+          : accion === "mantener"
+            ? `Se mantuvo el nombre del sistema de ${personas}.`
+            : `Se devolvió el nombre anterior a ${personas}.`,
       );
       await refrescar();
     } catch (err) {
@@ -495,6 +505,11 @@ export default function GestionValidacion({
                             Oficial: {f.oficial}
                           </small>
                         ) : null}
+                        {f.nombreAnterior ? (
+                          <small class="g-val-oficial">
+                            Antes: {f.nombreAnterior}
+                          </small>
+                        ) : null}
                         {f.error &&
                         (f.estado === "no_encontrada" ||
                           f.estado === "error") ? (
@@ -543,6 +558,15 @@ export default function GestionValidacion({
                               Mantener
                             </button>
                           </span>
+                        ) : f.nombreAnterior ? (
+                          <button
+                            type="button"
+                            class="g-btn-ghost"
+                            disabled={ocupado}
+                            onClick={() => decidir("deshacer", [f.cedula])}
+                          >
+                            Deshacer
+                          </button>
                         ) : null}
                       </td>
                     </tr>

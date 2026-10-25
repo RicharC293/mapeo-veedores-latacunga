@@ -16,6 +16,9 @@ export interface ValidacionCedula {
   genero: string | null;
   // El administrador decidió conservar el nombre del sistema.
   nombreMantenido: boolean;
+  // Nombre que tenía antes de aplicar el oficial (para deshacer) y cuándo.
+  nombreAnterior: string | null;
+  nombreAplicadoEn: string | null;
   respuesta: unknown;
   httpStatus: number | null;
   error: string | null;
@@ -130,3 +133,17 @@ export const ETIQUETA_GENERO = {
   masculino: "Masculino",
   femenino: "Femenino",
 } as const;
+
+// Nombre que se guarda como "anterior" al aplicar el oficial: el primero de
+// los lugares donde consta (en orden de prioridad) que sea distinto del
+// oficial. null si en todos ya está el oficial (no hay nada que deshacer).
+export function nombreAntesDeAplicar(
+  nombresEnTablas: (string | null | undefined)[],
+  oficial: string,
+): string | null {
+  for (const n of nombresEnTablas) {
+    const t = n?.trim();
+    if (t && t !== oficial) return t;
+  }
+  return null;
+}

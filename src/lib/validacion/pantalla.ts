@@ -29,6 +29,8 @@ export interface FilaVerificacion {
   fechaNacimiento: string | null;
   genero: "masculino" | "femenino" | null;
   error: string | null;
+  // Nombre que tenía antes de aplicar el oficial (se puede deshacer).
+  nombreAnterior: string | null;
   respuesta: unknown;
 }
 
@@ -74,6 +76,7 @@ export async function datosVerificacion(): Promise<DatosVerificacion> {
       ...identidad,
       ...datosPersonales(v),
       error: v?.estado === "validada" ? null : (v?.error ?? null),
+      nombreAnterior: v?.nombreAnterior ?? null,
       respuesta: v?.respuesta ?? null,
     };
   };

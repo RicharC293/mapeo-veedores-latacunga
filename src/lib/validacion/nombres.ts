@@ -1,6 +1,6 @@
 import { normalizar } from "../format";
 
-// Partículas que van en minúscula dentro de un nombre ("María de los Ángeles").
+// Partículas que no cuentan al comparar nombres ("DE LA CRUZ").
 const PARTICULAS = new Set([
   "de",
   "del",
@@ -14,34 +14,21 @@ const PARTICULAS = new Set([
   "von",
 ]);
 
-// "JUAN ANDRÉS" → "Juan Andrés"; "MARÍA DE LOS ÁNGELES" → "María de los Ángeles".
-export function aTitulo(texto: string): string {
-  return texto
-    .trim()
-    .toLocaleLowerCase("es")
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((palabra, i) =>
-      i > 0 && PARTICULAS.has(palabra)
-        ? palabra
-        : palabra
-            .split("-")
-            .map((p) => p.charAt(0).toLocaleUpperCase("es") + p.slice(1))
-            .join("-"),
-    )
-    .join(" ");
-}
-
-// Formato único del sistema: nombres y luego apellidos, con mayúscula inicial.
+// Formato único del sistema: el nombre completo tal como lo da el Registro
+// Civil, en mayúsculas y con los apellidos primero ("ORTEGA GAETE JAIME
+// HERNAN"). Si la respuesta no trae el nombre completo, se arma con los
+// apellidos y luego los nombres.
 export function nombreOficial(
   nombres: string | null,
   apellidos: string | null,
   nombreCompleto: string | null = null,
 ): string {
-  const partes = [nombres, apellidos].filter((p): p is string => Boolean(p));
-  return partes.length > 0
-    ? aTitulo(partes.join(" "))
-    : aTitulo(nombreCompleto ?? "");
+  const base =
+    nombreCompleto?.trim() ||
+    [apellidos, nombres]
+      .filter((p): p is string => Boolean(p?.trim()))
+      .join(" ");
+  return base.replace(/\s+/g, " ").trim().toLocaleUpperCase("es");
 }
 
 export type Coincidencia = "igual" | "parecido" | "distinto";

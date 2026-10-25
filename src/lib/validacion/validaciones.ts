@@ -10,7 +10,11 @@ import {
   type ResultadoConsulta,
 } from "./ecuadorApi";
 import { nombreOficial } from "./nombres";
-import { sePuedeConsultar, type ValidacionCedula } from "./plan";
+import {
+  nombreAntesDeAplicar,
+  sePuedeConsultar,
+  type ValidacionCedula,
+} from "./plan";
 
 const COLECCION = "validaciones_cedula";
 // Tablas donde vive el nombre de una persona: al aplicar el nombre oficial se
@@ -20,6 +24,14 @@ const TABLAS = [
   "veedores",
   "coordinadores",
   "acreditados_cda",
+  "lideres",
+] as const;
+// Orden para tomar el nombre anterior: primero los puestos del Consolidado.
+const TABLAS_PRIORIDAD = [
+  "coordinadores",
+  "acreditados_cda",
+  "veedores",
+  "militantes",
   "lideres",
 ] as const;
 
@@ -38,6 +50,8 @@ export async function listValidaciones(): Promise<ValidacionCedula[]> {
       fechaNacimiento: r.fecha_nacimiento,
       genero: r.genero,
       nombreMantenido: r.nombre_mantenido,
+      nombreAnterior: r.nombre_anterior,
+      nombreAplicadoEn: r.nombre_aplicado_en,
       respuesta: r.respuesta,
       httpStatus: r.http_status,
       error: r.error,
@@ -51,6 +65,8 @@ export async function listValidaciones(): Promise<ValidacionCedula[]> {
     fechaNacimiento: v.fechaNacimiento ?? null,
     genero: v.genero ?? null,
     nombreMantenido: v.nombreMantenido ?? false,
+    nombreAnterior: v.nombreAnterior ?? null,
+    nombreAplicadoEn: v.nombreAplicadoEn ?? null,
   }));
 }
 
@@ -68,6 +84,8 @@ async function guardarValidacion(
     fechaNacimiento: r.fechaNacimiento,
     genero: r.genero,
     nombreMantenido: false,
+    nombreAnterior: anterior?.nombreAnterior ?? null,
+    nombreAplicadoEn: anterior?.nombreAplicadoEn ?? null,
     respuesta: r.respuesta,
     httpStatus: r.httpStatus,
     error: r.error,
@@ -169,8 +187,75 @@ export async function consultarCedulas(
   return r;
 }
 
+// Nombre de una cédula en cada tabla, en orden de prioridad (primero los
+// puestos del Consolidado), para saber cuál era antes de cambiarlo.
+async function nombresEnTablas(cedula: string): Promise<string[]> {
+  const nombres: string[] = [];
+  for (const tabla of TABLAS_PRIORIDAD) {
+    if (supabaseSecret) {
+      const { data, error } = await supabaseSecret
+        .from(tabla)
+        .select("nombres")
+        .eq("cedula", cedula);
+      if (error) throw new Error(error.message);
+      nombres.push(...data.map((d) => d.nombres));
+    } else {
+      const items = await readCollection<{
+        cedula: string | null;
+        nombres: string;
+      }>(tabla);
+      nombres.push(
+        ...items.filter((i) => i.cedula === cedula).map((i) => i.nombres),
+      );
+    }
+  }
+  return nombres;
+}
+
+async function escribirNombre(cedula: string, nombres: string): Promise<void> {
+  for (const tabla of TABLAS) {
+    if (supabaseSecret) {
+      const { error } = await supabaseSecret
+        .from(tabla)
+        .update({ nombres })
+        .eq("cedula", cedula);
+      if (error) throw new Error(error.message);
+    } else {
+      await mutateCollection<{ cedula: string | null; nombres: string }>(
+        tabla,
+        (items) =>
+          items.map((i) => (i.cedula === cedula ? { ...i, nombres } : i)),
+      );
+    }
+  }
+}
+
+async function guardarNombreAnterior(
+  cedula: string,
+  nombreAnterior: string | null,
+  nombreAplicadoEn: string | null,
+): Promise<void> {
+  if (supabaseSecret) {
+    const { error } = await supabaseSecret
+      .from("validaciones_cedula")
+      .update({
+        nombre_anterior: nombreAnterior,
+        nombre_aplicado_en: nombreAplicadoEn,
+      })
+      .eq("cedula", cedula);
+    if (error) throw new Error(error.message);
+    return;
+  }
+  await mutateCollection<ValidacionCedula>(COLECCION, (items) =>
+    items.map((i) =>
+      i.cedula === cedula ? { ...i, nombreAnterior, nombreAplicadoEn } : i,
+    ),
+  );
+}
+
 // Escribe el nombre oficial (formato del sistema) en todos los lugares donde
-// consta cada cédula validada.
+// consta cada cédula validada, guardando antes el nombre que tenía para poder
+// deshacerlo.
 export async function aplicarNombresOficiales(
   cedulas: string[],
 ): Promise<number> {
@@ -185,26 +270,36 @@ export async function aplicarNombresOficiales(
     if (!v) continue;
     const nombres = nombreOficial(v.nombres, v.apellidos, v.nombreCompleto);
     if (!nombres) continue;
-    if (supabaseSecret) {
-      for (const tabla of TABLAS) {
-        const { error } = await supabaseSecret
-          .from(tabla)
-          .update({ nombres })
-          .eq("cedula", cedula);
-        if (error) throw new Error(error.message);
-      }
-    } else {
-      for (const tabla of TABLAS) {
-        await mutateCollection<{ cedula: string | null; nombres: string }>(
-          tabla,
-          (items) =>
-            items.map((i) => (i.cedula === cedula ? { ...i, nombres } : i)),
-        );
-      }
+    const anterior = nombreAntesDeAplicar(
+      await nombresEnTablas(cedula),
+      nombres,
+    );
+    if (anterior) {
+      await guardarNombreAnterior(cedula, anterior, new Date().toISOString());
     }
+    await escribirNombre(cedula, nombres);
     aplicadas += 1;
   }
   return aplicadas;
+}
+
+// Devuelve el nombre que tenía cada cédula antes de aplicar el oficial, en
+// todos los lugares donde consta.
+export async function deshacerNombres(cedulas: string[]): Promise<number> {
+  const conAnterior = new Map(
+    (await listValidaciones())
+      .filter((v) => v.nombreAnterior)
+      .map((v) => [v.cedula, v.nombreAnterior as string]),
+  );
+  let deshechas = 0;
+  for (const cedula of new Set(cedulas)) {
+    const anterior = conAnterior.get(cedula);
+    if (!anterior) continue;
+    await escribirNombre(cedula, anterior);
+    await guardarNombreAnterior(cedula, null, null);
+    deshechas += 1;
+  }
+  return deshechas;
 }
 
 // Conserva el nombre del sistema aunque difiera del oficial (por ejemplo, un

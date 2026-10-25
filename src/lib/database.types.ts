@@ -339,6 +339,8 @@ export type Database = {
           genero: string | null
           http_status: number | null
           intentos: number
+          nombre_anterior: string | null
+          nombre_aplicado_en: string | null
           nombre_completo: string | null
           nombre_mantenido: boolean
           nombres: string | null
@@ -355,6 +357,8 @@ export type Database = {
           genero?: string | null
           http_status?: number | null
           intentos?: number
+          nombre_anterior?: string | null
+          nombre_aplicado_en?: string | null
           nombre_completo?: string | null
           nombre_mantenido?: boolean
           nombres?: string | null
@@ -371,6 +375,8 @@ export type Database = {
           genero?: string | null
           http_status?: number | null
           intentos?: number
+          nombre_anterior?: string | null
+          nombre_aplicado_en?: string | null
           nombre_completo?: string | null
           nombre_mantenido?: boolean
           nombres?: string | null

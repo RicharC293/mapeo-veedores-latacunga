@@ -2896,6 +2896,10 @@ select.g-campo-error {
 .g-val-tabla td {
   vertical-align: top;
 }
+/* La persona lleva nombre, cédula, oficial y "Antes": que no se apriete. */
+.g-val-tabla td:nth-child(2) {
+  min-width: 220px;
+}
 .g-val-nombre {
   display: block;
   font-weight: 700;

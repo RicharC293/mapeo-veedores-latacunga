@@ -1,14 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { consultarCedula } from "../src/lib/validacion/ecuadorApi";
-import {
-  aTitulo,
-  compararNombres,
-  nombreOficial,
-} from "../src/lib/validacion/nombres";
+import { compararNombres, nombreOficial } from "../src/lib/validacion/nombres";
 import {
   datosPersonales,
   edad,
   estadoIdentidad,
+  nombreAntesDeAplicar,
   sePuedeConsultar,
   type ValidacionCedula,
 } from "../src/lib/validacion/plan";
@@ -110,22 +107,24 @@ describe("consultarCedula", () => {
 });
 
 describe("nombres", () => {
-  it("pone mayúscula inicial y deja las partículas en minúscula", () => {
-    expect(aTitulo("MARÍA DE LOS ÁNGELES")).toBe("María de los Ángeles");
-    expect(aTitulo("  JUAN   ANDRÉS ")).toBe("Juan Andrés");
-  });
-
-  it("el formato del sistema es nombres y luego apellidos", () => {
+  it("el formato del sistema es el nombre completo de la API: apellidos y luego nombres, en mayúsculas", () => {
+    expect(
+      nombreOficial(
+        "JAIME HERNAN",
+        "ORTEGA GAETE",
+        "ORTEGA GAETE JAIME HERNAN",
+      ),
+    ).toBe("ORTEGA GAETE JAIME HERNAN");
     expect(nombreOficial("JUAN ANDRÉS", "PÉREZ GARCÍA")).toBe(
-      "Juan Andrés Pérez García",
+      "PÉREZ GARCÍA JUAN ANDRÉS",
     );
-    expect(nombreOficial(null, null, "PÉREZ GARCÍA JUAN")).toBe(
-      "Pérez García Juan",
+    expect(nombreOficial(null, null, "  pérez   garcía juan ")).toBe(
+      "PÉREZ GARCÍA JUAN",
     );
   });
 
   it("compara sin importar mayúsculas, tildes ni orden", () => {
-    const oficial = "Juan Andrés Pérez García";
+    const oficial = "PÉREZ GARCÍA JUAN ANDRÉS";
     expect(compararNombres("PEREZ GARCIA JUAN ANDRES", oficial)).toBe("igual");
     expect(compararNombres("Juan Pérez García", oficial)).toBe("parecido");
     expect(compararNombres("Ana Lucía Torres", oficial)).toBe("distinto");
@@ -142,6 +141,8 @@ const val = (cedula: string, estado: ValidacionCedula["estado"], extra = {}) =>
     fechaNacimiento: null,
     genero: null,
     nombreMantenido: false,
+    nombreAnterior: null,
+    nombreAplicadoEn: null,
     respuesta: null,
     httpStatus: 200,
     error: null,
@@ -176,17 +177,17 @@ describe("estadoIdentidad", () => {
   it("validada: verificada si ya tiene el nombre oficial, coincide si solo cambia el formato", () => {
     const v = val("0503451163", "validada", JUAN);
     expect(
-      estadoIdentidad("Juan Andrés Pérez García", "0503451163", v),
+      estadoIdentidad("PÉREZ GARCÍA JUAN ANDRÉS", "0503451163", v),
     ).toEqual({
       estado: "verificada",
-      oficial: "Juan Andrés Pérez García",
+      oficial: "PÉREZ GARCÍA JUAN ANDRÉS",
       coincidencia: null,
     });
     expect(
       estadoIdentidad("PEREZ GARCIA JUAN ANDRES", "0503451163", v),
     ).toEqual({
       estado: "coincide",
-      oficial: "Juan Andrés Pérez García",
+      oficial: "PÉREZ GARCÍA JUAN ANDRÉS",
       coincidencia: "igual",
     });
   });
@@ -258,7 +259,7 @@ describe("identidad en el Consolidado", () => {
   it("marca verificada o por revisar y da los datos personales", () => {
     const r = identidadPorCedula(
       [
-        { cedula: "0503451163", nombres: "Juan Andrés Pérez García" },
+        { cedula: "0503451163", nombres: "PÉREZ GARCÍA JUAN ANDRÉS" },
         { cedula: "0502646599", nombres: "Otro Nombre" },
         { cedula: "0550173926", nombres: "Sin consultar" },
       ],
@@ -282,5 +283,26 @@ describe("identidad en el Consolidado", () => {
       porRevisar: true,
     });
     expect(r["0550173926"]).toBeUndefined();
+  });
+});
+
+describe("nombreAntesDeAplicar", () => {
+  const oficial = "ORTEGA GAETE JAIME HERNAN";
+  it("guarda el primer nombre distinto del oficial, en orden de prioridad", () => {
+    expect(
+      nombreAntesDeAplicar(
+        ["Jaime Hernan Ortega Gaete", "Jaime Ortega"],
+        oficial,
+      ),
+    ).toBe("Jaime Hernan Ortega Gaete");
+    expect(nombreAntesDeAplicar([oficial, " Jaime Ortega "], oficial)).toBe(
+      "Jaime Ortega",
+    );
+  });
+
+  it("si ya está el oficial en todos lados no hay nada que deshacer", () => {
+    expect(nombreAntesDeAplicar([oficial, oficial], oficial)).toBeNull();
+    expect(nombreAntesDeAplicar([], oficial)).toBeNull();
+    expect(nombreAntesDeAplicar([null, "  "], oficial)).toBeNull();
   });
 });
