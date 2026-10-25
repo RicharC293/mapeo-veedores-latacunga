@@ -9,7 +9,11 @@ import { cifrasPorRecinto } from "../../lib/gestion/informe";
 import {
   armarInformeSimple,
   type AnalisisSimple,
+  type Faltantes,
+  type PersonaPorReemplazar,
 } from "../../lib/gestion/informeSimple";
+import { listValidaciones } from "../../lib/validacion/validaciones";
+import { motivoNoApto, type ValidacionCedula } from "../../lib/validacion/plan";
 import { fmt, title } from "../../lib/format";
 import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
 
@@ -39,7 +43,58 @@ const analisis: AnalisisSimple =
   Astro.url.searchParams.get("analisis") === "verificado"
     ? "verificado"
     : "noverificado";
-const parroquias = armarInformeSimple(filas, analisis);
+// Titulares registrados que no pueden cubrir el puesto (menores de edad o con
+// la cédula con problemas, según el Registro Civil): cuentan como faltantes.
+// En teoría no deberían existir porque se depuran antes. Si la tabla de
+// validaciones no existe, solo se revisa el dígito verificador.
+async function cargarValidaciones(): Promise<ValidacionCedula[]> {
+  try {
+    return await listValidaciones();
+  } catch {
+    return [];
+  }
+}
+const validacionDe = new Map(
+  (await cargarValidaciones()).map((v) => [v.cedula, v]),
+);
+const hoy = new Date();
+const porReemplazar: PersonaPorReemplazar[] = [
+  ...coordinadores.map((p) => ({
+    p,
+    rol: "coordinador" as const,
+    junta: null,
+  })),
+  ...acreditados.map((p) => ({ p, rol: "cda" as const, junta: null })),
+  ...veedores.map((p) => ({
+    p,
+    rol: "veedor" as const,
+    junta: p.juntaId.slice(p.juntaId.lastIndexOf("-") + 1),
+  })),
+]
+  .filter(({ p }) => p.tipo === "titular")
+  .flatMap(({ p, rol, junta }) => {
+    const motivo = motivoNoApto(
+      p.cedula,
+      validacionDe.get(p.cedula.trim()),
+      hoy,
+    );
+    return motivo
+      ? [
+          {
+            recintoCodigo: p.recintoCodigo,
+            nombres: p.nombres,
+            cedula: p.cedula,
+            rol,
+            junta,
+            motivo,
+            verificado: p.verificado,
+          },
+        ]
+      : [];
+  });
+
+const informe = armarInformeSimple(filas, analisis, porReemplazar);
+const parroquias = informe.parroquias;
 const secciones = [
   {
     id: "urbanas",
@@ -77,6 +132,31 @@ const corte = new Intl.DateTimeFormat("es-EC", {
 const fechaArchivo = `${new Date().toISOString().slice(0, 10)}-${analisis}`;
 
 const sino = (tiene: boolean) => (tiene ? "Sí" : "Falta");
+const ROL = {
+  coordinador: "Coordinador",
+  cda: "Acreditado CDA",
+  veedor: "Veedor",
+};
+const personas = (n: number) => `${fmt(n)} ${n === 1 ? "persona" : "personas"}`;
+// "1 coordinador, 12 veedores y 1 CDA": solo lo que falta.
+function detalleFaltan(f: Faltantes): string {
+  const partes = [
+    f.coordinadores > 0
+      ? `${f.coordinadores} ${f.coordinadores === 1 ? "coordinador" : "coordinadores"}`
+      : null,
+    f.veedores > 0
+      ? `${f.veedores} ${f.veedores === 1 ? "veedor" : "veedores"}`
+      : null,
+    f.cda > 0 ? `${f.cda} CDA` : null,
+  ].filter((x): x is string => x !== null);
+  return partes.length <= 1
+    ? (partes[0] ?? "")
+    : `${partes.slice(0, -1).join(", ")} y ${partes[partes.length - 1]}`;
+}
+const zonas = [
+  { nombre: "Parroquias urbanas", f: informe.urbanas },
+  { nombre: "Parroquias rurales", f: informe.rurales },
+];
 const csvEncabezados = [
   "Tipo de parroquia",
   "Parroquia",
@@ -85,6 +165,8 @@ const csvEncabezados = [
   "Veedores que tenemos",
   "Veedores que faltan",
   "CDA",
+  "Personas que faltan",
+  "Por reemplazar",
 ];
 const csvFilas = parroquias.flatMap((p) =>
   p.recintos.map((r) => [
@@ -95,6 +177,10 @@ const csvFilas = parroquias.flatMap((p) =>
     r.veedoresTenemos,
     r.veedoresFaltan,
     r.cda === null ? "No aplica" : sino(r.cda),
+    r.faltan,
+    r.porReemplazar
+      .map((x) => `${x.nombres} (${x.cedula}, ${x.motivo})`)
+      .join("; "),
   ]),
 );
 ---
@@ -133,12 +219,87 @@ const csvFilas = parroquias.flatMap((p) =>
       </p>
     </nav>
 
+    <section class="g-simple-resumen" aria-labelledby="simple-resumen">
+      <h2 id="simple-resumen">Lo que falta pedir</h2>
+      <p class="g-simple-total">
+        Faltan <strong>{personas(informe.canton.total)}</strong> en el cantón
+        {informe.canton.total > 0 ? `: ${detalleFaltan(informe.canton)}` : ""}.
+      </p>
+      <div class="g-table-scroll">
+        <table class="g-table g-informe-tabla g-simple-zonas">
+          <caption class="g-sr-only">Personas que faltan por zona</caption>
+          <thead>
+            <tr>
+              <th scope="col">Zona</th>
+              <th scope="col" class="g-num">
+                Coordinadores
+              </th>
+              <th scope="col" class="g-num">
+                Veedores
+              </th>
+              <th scope="col" class="g-num">
+                CDA
+              </th>
+              <th scope="col" class="g-num">
+                Faltan
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {zonas.map((z) => (
+              <tr>
+                <td>{z.nombre}</td>
+                <td class="g-num">{fmt(z.f.coordinadores)}</td>
+                <td class="g-num">{fmt(z.f.veedores)}</td>
+                <td class="g-num">{fmt(z.f.cda)}</td>
+                <td class="g-num">
+                  <strong>{fmt(z.f.total)}</strong>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr class="g-informe-subtotal">
+              <td>Cantón</td>
+              <td class="g-num">{fmt(informe.canton.coordinadores)}</td>
+              <td class="g-num">{fmt(informe.canton.veedores)}</td>
+              <td class="g-num">{fmt(informe.canton.cda)}</td>
+              <td class="g-num">{fmt(informe.canton.total)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <ul class="g-simple-notas">
+        <li>
+          Se cuenta un titular por puesto: un coordinador por recinto, un veedor
+          por junta y un acreditado por recinto CDA. Los suplentes no se cuentan
+          en lo que falta; se pueden sumar cuantos se deseen.
+        </li>
+        {informe.porReemplazar > 0 ? (
+          <li>
+            Hay <strong>{personas(informe.porReemplazar)}</strong> registradas
+            que no pueden cubrir su puesto (menores de edad o con la cédula con
+            problemas). En teoría no deberían existir porque se depuran antes;
+            se cuentan como faltantes y aparecen bajo su recinto como "Por
+            reemplazar".
+          </li>
+        ) : null}
+      </ul>
+    </section>
+
     {secciones.map((sec) => (
       <section class="g-simple-seccion" aria-labelledby={`simple-${sec.id}`}>
         <h2 id={`simple-${sec.id}`}>{sec.titulo}</h2>
         {sec.parroquias.map((p) => (
           <section class="g-simple-parroquia">
-            <h3>{p.nombre}</h3>
+            <h3>
+              {p.nombre}
+              <span class="g-simple-faltan-parroquia">
+                {p.faltan.total === 0
+                  ? "Completa"
+                  : `Faltan ${personas(p.faltan.total)}: ${detalleFaltan(p.faltan)}`}
+              </span>
+            </h3>
             <div class="g-table-scroll">
               <table class="g-table g-informe-tabla g-simple-tabla">
                 <caption class="g-sr-only">Recintos de {p.nombre}</caption>
@@ -156,6 +317,9 @@ const csvFilas = parroquias.flatMap((p) =>
                     <th rowspan="2" scope="col" class="g-simple-centro">
                       CDA
                     </th>
+                    <th rowspan="2" scope="col" class="g-num">
+                      Faltan
+                    </th>
                   </tr>
                   <tr>
                     <th scope="col" class="g-num">
@@ -168,35 +332,61 @@ const csvFilas = parroquias.flatMap((p) =>
                 </thead>
                 <tbody>
                   {p.recintos.map((r) => (
-                    <tr>
-                      <td>{title(r.recinto)}</td>
-                      <td class="g-simple-centro">
-                        <span
-                          class={r.coordinador ? undefined : "g-simple-falta"}
-                        >
-                          {sino(r.coordinador)}
-                        </span>
-                      </td>
-                      <td class="g-num">{fmt(r.veedoresTenemos)}</td>
-                      <td class="g-num">
-                        <span
-                          class={
-                            r.veedoresFaltan > 0 ? "g-simple-falta" : undefined
-                          }
-                        >
-                          {fmt(r.veedoresFaltan)}
-                        </span>
-                      </td>
-                      <td class="g-simple-centro">
-                        {r.cda === null ? (
-                          <span class="g-simple-na">—</span>
-                        ) : (
-                          <span class={r.cda ? undefined : "g-simple-falta"}>
-                            {sino(r.cda)}
+                    <>
+                      <tr>
+                        <td>{title(r.recinto)}</td>
+                        <td class="g-simple-centro">
+                          <span
+                            class={r.coordinador ? undefined : "g-simple-falta"}
+                          >
+                            {sino(r.coordinador)}
                           </span>
-                        )}
-                      </td>
-                    </tr>
+                        </td>
+                        <td class="g-num">{fmt(r.veedoresTenemos)}</td>
+                        <td class="g-num">
+                          <span
+                            class={
+                              r.veedoresFaltan > 0
+                                ? "g-simple-falta"
+                                : undefined
+                            }
+                          >
+                            {fmt(r.veedoresFaltan)}
+                          </span>
+                        </td>
+                        <td class="g-simple-centro">
+                          {r.cda === null ? (
+                            <span class="g-simple-na">—</span>
+                          ) : (
+                            <span class={r.cda ? undefined : "g-simple-falta"}>
+                              {sino(r.cda)}
+                            </span>
+                          )}
+                        </td>
+                        <td class="g-num">
+                          <strong
+                            class={
+                              r.faltan > 0 ? "g-simple-falta" : "g-simple-ok"
+                            }
+                          >
+                            {fmt(r.faltan)}
+                          </strong>
+                        </td>
+                      </tr>
+                      {r.porReemplazar.length > 0 ? (
+                        <tr class="g-simple-reemplazo">
+                          <td colspan="6">
+                            <strong>Por reemplazar:</strong>{" "}
+                            {r.porReemplazar
+                              .map(
+                                (x) =>
+                                  `${x.nombres} (${ROL[x.rol]}${x.junta ? ` ${x.junta}` : ""}, CI ${x.cedula}: ${x.motivo})`,
+                              )
+                              .join(" · ")}
+                          </td>
+                        </tr>
+                      ) : null}
+                    </>
                   ))}
                 </tbody>
               </table>

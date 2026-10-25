@@ -172,3 +172,21 @@ export function vistaIdentidad(
     respuesta: v?.respuesta ?? null,
   };
 }
+
+export const MAYORIA_DE_EDAD = 18;
+
+// Por qué un titular no puede cubrir su puesto, según la cédula y lo que dijo
+// el Registro Civil; null si no hay motivo (o aún no se consultó).
+export function motivoNoApto(
+  cedula: string,
+  v: ValidacionCedula | undefined,
+  hoy: Date,
+): string | null {
+  if (!cedulaEcuatorianaValida(cedula.trim())) return "Cédula inválida";
+  if (v?.estado === "no_encontrada") {
+    return "Cédula no encontrada en el Registro Civil";
+  }
+  const e = edad(datosPersonales(v).fechaNacimiento, hoy);
+  if (e !== null && e < MAYORIA_DE_EDAD) return `Menor de edad (${e} años)`;
+  return null;
+}

@@ -2810,16 +2810,64 @@ select.g-campo-error {
   width: 100%;
 }
 .g-simple-tabla thead tr:first-child th:nth-child(1) {
-  width: 46%;
+  width: 40%;
 }
 .g-simple-tabla thead tr:first-child th:nth-child(2) {
-  width: 18%;
+  width: 16%;
 }
 .g-simple-tabla thead tr:first-child th:nth-child(3) {
-  width: 24%;
+  width: 22%;
 }
 .g-simple-tabla thead tr:first-child th:nth-child(4) {
+  width: 10%;
+}
+.g-simple-tabla thead tr:first-child th:nth-child(5) {
   width: 12%;
+}
+.g-simple-resumen {
+  margin-top: 28px;
+}
+.g-simple-resumen > h2 {
+  margin: 0 0 6px;
+  font-size: 1.3rem;
+}
+.g-simple-total {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+.g-simple-zonas {
+  max-width: 560px;
+}
+.g-simple-notas {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 70ch;
+  margin: 12px 0 0;
+  padding-left: 20px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+.g-simple-parroquia h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+.g-simple-faltan-parroquia {
+  color: var(--error);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+.g-simple-ok {
+  color: #2f9e57;
+}
+.g-simple-tabla .g-simple-reemplazo td {
+  padding-top: 0;
+  color: var(--error);
+  font-size: 0.85rem;
 }
 .g-simple-tabla .g-simple-centro {
   text-align: center;
