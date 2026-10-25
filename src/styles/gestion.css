@@ -2899,6 +2899,34 @@ select.g-campo-error {
   margin: 0;
   color: var(--muted);
 }
+.g-sinc-progreso {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+/* Indicador de trabajo en curso: un anillo que gira. Sin animación para
+   quien la desactiva; el texto ya dice que está en progreso. */
+.g-spinner {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border: 2px solid color-mix(in srgb, var(--sel) 25%, transparent);
+  border-top-color: var(--sel);
+  border-radius: 50%;
+  animation: g-girar 0.8s linear infinite;
+}
+@keyframes g-girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .g-spinner {
+    animation: none;
+  }
+}
 .g-sinc-confirmar {
   display: flex;
   flex-wrap: wrap;

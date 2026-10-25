@@ -531,6 +531,13 @@ export default function GestionConsolidado({
     cedulas: string[],
   ) => {
     setDecidiendo(true);
+    setResultado(
+      accion === "aplicar"
+        ? "Aplicando el nombre oficial…"
+        : accion === "mantener"
+          ? "Guardando…"
+          : "Devolviendo el nombre anterior…",
+    );
     try {
       await api(`/api/gestion/validacion/${accion}`, {
         method: "POST",
@@ -673,7 +680,10 @@ export default function GestionConsolidado({
             await refrescarValidaciones();
             setResultado(mensaje);
           }}
-          onAplicarCoinciden={() => decidirNombre("aplicar", coinciden)}
+          onAplicado={async (mensaje) => {
+            await Promise.all([refrescar(), refrescarValidaciones()]);
+            setResultado(mensaje);
+          }}
         />
       ) : null}
 

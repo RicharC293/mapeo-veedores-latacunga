@@ -10,7 +10,8 @@ interface Props {
   hayClave: boolean;
   // Se llama al terminar, con un resumen para mostrar.
   onTerminar: (mensaje: string) => Promise<void>;
-  onAplicarCoinciden: () => Promise<void>;
+  // Se llama al terminar de aplicar los nombres que coinciden.
+  onAplicado: (mensaje: string) => Promise<void>;
 }
 
 interface Lote {
@@ -22,6 +23,7 @@ interface Lote {
 }
 
 const POR_TANDA = 10;
+const POR_TANDA_APLICAR = 20;
 
 const dolares = (n: number) =>
   `US$${n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -35,14 +37,17 @@ export default function SincronizarIdentidad({
   costoPorConsulta,
   hayClave,
   onTerminar,
-  onAplicarCoinciden,
+  onAplicado,
 }: Props) {
   const [confirmando, setConfirmando] = useState(false);
   const [progreso, setProgreso] = useState<{
     hechas: number;
     total: number;
   } | null>(null);
-  const [aplicando, setAplicando] = useState(false);
+  const [aplicando, setAplicando] = useState<{
+    hechas: number;
+    total: number;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const detenerRef = useRef(false);
   const costo = pendientes.length * costoPorConsulta;
@@ -99,15 +104,39 @@ export default function SincronizarIdentidad({
     }
   };
 
+  // Aplica por tandas para mostrar el avance y no pasarse del tiempo máximo
+  // de una llamada al servidor cuando son muchas personas.
   const aplicar = async () => {
-    setAplicando(true);
+    const lista = [...coinciden];
     setError(null);
+    setAplicando({ hechas: 0, total: lista.length });
+    let aplicadas = 0;
     try {
-      await onAplicarCoinciden();
+      for (let i = 0; i < lista.length; i += POR_TANDA_APLICAR) {
+        const tanda = lista.slice(i, i + POR_TANDA_APLICAR);
+        const res = await fetch("/api/gestion/validacion/aplicar", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ cedulas: tanda }),
+        });
+        const r = await res.json();
+        if (!res.ok) throw new Error(r.error ?? "Error inesperado.");
+        aplicadas += (r as { aplicadas: number }).aplicadas;
+        setAplicando({
+          hechas: Math.min(i + tanda.length, lista.length),
+          total: lista.length,
+        });
+      }
+      await onAplicado(
+        `Nombre oficial aplicado a ${aplicadas} ${aplicadas === 1 ? "persona" : "personas"}.`,
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado.");
+      await onAplicado(
+        `Se alcanzó a aplicar el nombre oficial a ${aplicadas} ${aplicadas === 1 ? "persona" : "personas"}.`,
+      );
     } finally {
-      setAplicando(false);
+      setAplicando(null);
     }
   };
 
@@ -118,9 +147,15 @@ export default function SincronizarIdentidad({
           La verificación de identidad necesita la clave ECUADORAPI_KEY en el
           servidor.
         </p>
+      ) : aplicando ? (
+        <p class="g-sinc-texto g-sinc-progreso" role="status">
+          <span class="g-spinner" aria-hidden="true" />
+          Aplicando el nombre oficial: {aplicando.hechas} de {aplicando.total}…
+        </p>
       ) : progreso ? (
         <>
-          <p class="g-sinc-texto" role="status">
+          <p class="g-sinc-texto g-sinc-progreso" role="status">
+            <span class="g-spinner" aria-hidden="true" />
             Verificando identidades: {progreso.hechas} de {progreso.total}…
           </p>
           <button
@@ -172,7 +207,7 @@ export default function SincronizarIdentidad({
             <button
               type="button"
               class="g-btn-ghost"
-              disabled={aplicando}
+              disabled={aplicando !== null}
               onClick={aplicar}
             >
               Aplicar nombre oficial a{" "}
