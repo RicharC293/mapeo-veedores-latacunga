@@ -2893,12 +2893,23 @@ select.g-campo-error {
 .g-val-aviso {
   margin: 0;
 }
-.g-val-tabla td {
-  vertical-align: top;
+/* Persona en la verificación: casilla, iniciales, datos y decisiones. */
+.g-val-persona {
+  padding: 4px 0;
 }
-/* La persona lleva nombre, cédula, oficial y "Antes": que no se apriete. */
-.g-val-tabla td:nth-child(2) {
-  min-width: 220px;
+.g-val-check {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 8px;
+  accent-color: var(--sel);
+}
+.g-val-linea {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-top: 2px;
 }
 .g-val-nombre {
   display: block;
@@ -2915,8 +2926,15 @@ select.g-campo-error {
 }
 .g-val-decision {
   display: flex;
+  flex-shrink: 0;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 6px;
+}
+@media (max-width: 600px) {
+  .g-val-decision {
+    flex-direction: column;
+  }
 }
 .g-val-json summary {
   width: fit-content;
@@ -2932,9 +2950,6 @@ select.g-campo-error {
   border-radius: 8px;
   background: var(--chip);
   font-size: 0.78rem;
-}
-.g-val-mas {
-  align-self: center;
 }
 
 /* Descargas: una tarjeta por archivo. */

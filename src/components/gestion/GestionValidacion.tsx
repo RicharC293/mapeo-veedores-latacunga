@@ -1,8 +1,15 @@
 import { useMemo, useRef, useState } from "preact/hooks";
 import FiltrosRecintos, { VacioFiltros } from "./FiltrosRecintos";
+import GrupoParroquia from "./GrupoParroquia";
+import Iniciales from "./Iniciales";
+import { useRecintosAbiertos } from "./useRecintosAbiertos";
 import Resaltado from "./Resaltado";
 import { normalizar, title } from "../../lib/format";
-import { coincideUbicacion, type Ubicacion } from "../../lib/gestion/ubicacion";
+import {
+  agruparPorParroquia,
+  coincideUbicacion,
+  type Ubicacion,
+} from "../../lib/gestion/ubicacion";
 import {
   ETIQUETA_GENERO,
   edad,
@@ -43,13 +50,11 @@ const ESTADO: Record<EstadoIdentidad, { etiqueta: string; clase: string }> = {
   revisar: { etiqueta: "Por revisar", clase: "chip-estado-pendiente" },
   no_encontrada: { etiqueta: "No encontrada", clase: "chip-estado-pendiente" },
 };
-const ROL: Record<FilaVerificacion["rol"], string> = {
-  veedor: "Veedor",
-  coordinador: "Coordinador",
-  cda: "Acreditado CDA",
-};
 const POR_TANDA = 10;
-const PAGINA = 100;
+// Con pocos recintos a la vista, su detalle se muestra abierto.
+const ABRIR_SI_HAY_HASTA = 2;
+// Orden de las personas dentro del recinto, como en el Consolidado.
+const ORDEN_ROL = { coordinador: 0, cda: 1, veedor: 2 } as const;
 
 const consultable = (f: FilaVerificacion) =>
   f.estado === "sin_consultar" || f.estado === "error";
@@ -93,7 +98,6 @@ export default function GestionValidacion({
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [visibles, setVisibles] = useState(PAGINA);
   const detenerRef = useRef(false);
   const hoy = useMemo(() => new Date(), []);
 
@@ -135,16 +139,40 @@ export default function GestionValidacion({
 
   const conteo = (fl: Filtro) => base.filter((f) => enFiltro(f, fl)).length;
   const filas = useMemo(
-    () =>
-      base
-        .filter((f) => enFiltro(f, filtro))
-        .sort(
+    () => base.filter((f) => enFiltro(f, filtro)),
+    [base, filtro],
+  );
+
+  // Como en el Consolidado: parroquia, recinto y, dentro, coordinador, CDA y
+  // veedores por junta.
+  const grupos = useMemo(() => {
+    const porRecinto = new Map<number, FilaVerificacion[]>();
+    for (const f of filas) {
+      porRecinto.set(f.recintoCodigo, [
+        ...(porRecinto.get(f.recintoCodigo) ?? []),
+        f,
+      ]);
+    }
+    const items = [...porRecinto.entries()]
+      .map(([cod, personas]) => ({
+        recinto: recintoDe.get(cod),
+        personas: personas.sort(
           (a, b) =>
-            (recintoDe.get(a.recintoCodigo)?.nombre ?? "").localeCompare(
-              recintoDe.get(b.recintoCodigo)?.nombre ?? "",
-            ) || a.nombres.localeCompare(b.nombres),
+            ORDEN_ROL[a.rol] - ORDEN_ROL[b.rol] ||
+            (a.junta ?? "").localeCompare(b.junta ?? "", "es", {
+              numeric: true,
+            }) ||
+            (a.tipo === b.tipo ? 0 : a.tipo === "titular" ? -1 : 1),
         ),
-    [base, filtro, recintoDe],
+      }))
+      .filter((i): i is { recinto: Recinto; personas: FilaVerificacion[] } =>
+        Boolean(i.recinto),
+      );
+    return agruparPorParroquia(items, parroquias);
+  }, [filas, recintoDe, parroquias]);
+  const totalRecintos = grupos.reduce((a, g) => a + g.items.length, 0);
+  const { estaAbierto, alternar: alternarRecinto } = useRecintosAbiertos(
+    totalRecintos <= ABRIR_SI_HAY_HASTA,
   );
 
   const consultablesDelFiltro = filas.filter(consultable).map((f) => f.cedula);
@@ -249,6 +277,94 @@ export default function GestionValidacion({
     }
   };
 
+  // Una persona: casilla para consultarla, iniciales, nombre, estado, edad,
+  // género y las decisiones sobre su nombre.
+  const persona = (f: FilaVerificacion) => {
+    const e = edad(f.fechaNacimiento, hoy);
+    const personales = [
+      e !== null ? `${e} años` : null,
+      f.genero ? ETIQUETA_GENERO[f.genero] : null,
+    ].filter(Boolean);
+    return (
+      <div class="g-consol-persona g-val-persona">
+        {consultable(f) ? (
+          <input
+            type="checkbox"
+            class="g-val-check"
+            aria-label={`Seleccionar a ${f.nombres} para consultar`}
+            checked={seleccion.has(f.cedula)}
+            disabled={consultando || !hayClave}
+            onChange={() => alternar(f.cedula)}
+          />
+        ) : null}
+        <Iniciales nombres={f.nombres} rol={f.tipo} />
+        <div class="g-consol-persona-texto">
+          <strong>
+            <Resaltado texto={f.nombres} consulta={busqueda} />
+          </strong>
+          <small>
+            CI <Resaltado texto={f.cedula} consulta={busqueda} />
+            {f.tipo === "suplente" ? " · Suplente" : ""}
+          </small>
+          <span class="g-val-linea">
+            <span class={`chip-estado ${ESTADO[f.estado].clase}`}>
+              {ESTADO[f.estado].etiqueta}
+            </span>
+            {personales.length > 0 ? (
+              <small>{personales.join(" · ")}</small>
+            ) : null}
+          </span>
+          {f.oficial && f.estado !== "verificada" ? (
+            <small class="g-val-oficial">Oficial: {f.oficial}</small>
+          ) : null}
+          {f.nombreAnterior ? (
+            <small class="g-val-oficial">Antes: {f.nombreAnterior}</small>
+          ) : null}
+          {f.error && (f.estado === "no_encontrada" || f.estado === "error") ? (
+            <small class="g-val-oficial">{f.error}</small>
+          ) : null}
+          {f.respuesta ? (
+            <details class="g-val-json">
+              <summary>Ver respuesta</summary>
+              <pre>{JSON.stringify(f.respuesta, null, 2)}</pre>
+            </details>
+          ) : null}
+        </div>
+        {f.estado === "coincide" || f.estado === "revisar" ? (
+          <span class="g-val-decision">
+            <button
+              type="button"
+              class="g-btn-ghost"
+              disabled={ocupado}
+              onClick={() => decidir("aplicar", [f.cedula])}
+            >
+              Usar oficial
+            </button>
+            <button
+              type="button"
+              class="g-btn-ghost"
+              disabled={ocupado}
+              onClick={() => decidir("mantener", [f.cedula])}
+            >
+              Mantener
+            </button>
+          </span>
+        ) : f.nombreAnterior ? (
+          <span class="g-val-decision">
+            <button
+              type="button"
+              class="g-btn-ghost"
+              disabled={ocupado}
+              onClick={() => decidir("deshacer", [f.cedula])}
+            >
+              Deshacer
+            </button>
+          </span>
+        ) : null}
+      </div>
+    );
+  };
+
   const quitarFiltros = () => {
     setUbicacion("todas");
     setRecintoCod("");
@@ -271,7 +387,6 @@ export default function GestionValidacion({
         onUbicacion={(u) => {
           setUbicacion(u);
           setRecintoCod("");
-          setVisibles(PAGINA);
         }}
         estados={[
           { clave: "todos", etiqueta: "Todos", n: base.length },
@@ -311,14 +426,11 @@ export default function GestionValidacion({
           },
         ]}
         estado={filtro}
-        onEstado={(f) => {
-          setFiltro(f);
-          setVisibles(PAGINA);
-        }}
+        onEstado={setFiltro}
         busqueda={busqueda}
         onBusqueda={setBusqueda}
         placeholder="Nombre o cédula…"
-        contador={`Mostrando ${Math.min(visibles, filas.length)} de ${filas.length} personas`}
+        contador={`${filas.length} ${filas.length === 1 ? "persona" : "personas"} en ${totalRecintos} ${totalRecintos === 1 ? "recinto" : "recintos"}`}
         hayFiltros={hayFiltros}
         onQuitar={quitarFiltros}
       />
@@ -416,8 +528,9 @@ export default function GestionValidacion({
               disabled={consultablesDelFiltro.length === 0}
               onClick={() => setSeleccion(new Set(consultablesDelFiltro))}
             >
-              Seleccionar las {consultablesDelFiltro.length} por consultar del
-              filtro
+              {consultablesDelFiltro.length === 1
+                ? "Seleccionar la que falta consultar del filtro"
+                : `Seleccionar las ${consultablesDelFiltro.length} por consultar del filtro`}
             </button>
             {seleccion.size > 0 ? (
               <button
@@ -449,142 +562,150 @@ export default function GestionValidacion({
       ) : null}
       {error ? <p class="g-error">{error}</p> : null}
 
-      {filas.length === 0 ? (
+      {grupos.length === 0 ? (
         <VacioFiltros
           mensaje="Nadie coincide con estos filtros."
           onQuitar={quitarFiltros}
         />
       ) : (
-        <>
-          <div class="g-table-scroll">
-            <table class="g-table g-val-tabla">
-              <caption class="g-sr-only">
-                Personas del Consolidado y su verificación
-              </caption>
-              <thead>
-                <tr>
-                  <th>
-                    <span class="g-sr-only">Seleccionar</span>
-                  </th>
-                  <th>Persona</th>
-                  <th>Responsabilidad</th>
-                  <th>Estado</th>
-                  <th class="g-num">Edad</th>
-                  <th>Género</th>
-                  <th>
-                    <span class="g-sr-only">Acciones</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filas.slice(0, visibles).map((f) => {
-                  const recinto = recintoDe.get(f.recintoCodigo);
-                  const e = edad(f.fechaNacimiento, hoy);
+        grupos.map((g) => {
+          const delGrupo = g.items.flatMap((i) => i.personas);
+          const verificadas = delGrupo.filter(
+            (f) => f.estado === "verificada",
+          ).length;
+          return (
+            <GrupoParroquia
+              key={g.parroquia?.properties.code ?? "sin-parroquia"}
+              parroquia={g.parroquia}
+              cuenta={`${verificadas} de ${delGrupo.length} verificadas`}
+            >
+              <div class="g-grupo-cuerpo">
+                {g.items.map(({ recinto, personas }) => {
+                  const abierto = estaAbierto(recinto.cod);
+                  const ver = personas.filter(
+                    (f) => f.estado === "verificada",
+                  ).length;
+                  const revisar = personas.filter(
+                    (f) => f.estado === "revisar" || f.estado === "coincide",
+                  ).length;
+                  const porConsultar = personas.filter(consultable);
+                  const problemas = personas.filter(
+                    (f) =>
+                      f.estado === "no_encontrada" || f.estado === "invalida",
+                  ).length;
+                  const secciones = [
+                    {
+                      titulo: "Coordinador",
+                      lista: personas.filter((f) => f.rol === "coordinador"),
+                    },
+                    {
+                      titulo: "Acreditado CDA",
+                      lista: personas.filter((f) => f.rol === "cda"),
+                    },
+                    {
+                      titulo: "Veedores por junta",
+                      lista: personas.filter((f) => f.rol === "veedor"),
+                    },
+                  ].filter((sec) => sec.lista.length > 0);
                   return (
-                    <tr key={f.id}>
-                      <td>
-                        {consultable(f) ? (
-                          <input
-                            type="checkbox"
-                            aria-label={`Seleccionar a ${f.nombres}`}
-                            checked={seleccion.has(f.cedula)}
-                            disabled={consultando}
-                            onChange={() => alternar(f.cedula)}
-                          />
-                        ) : null}
-                      </td>
-                      <td>
-                        <span class="g-val-nombre">
-                          <Resaltado texto={f.nombres} consulta={busqueda} />
+                    <details
+                      class="g-recinto"
+                      key={recinto.cod}
+                      open={abierto}
+                      onToggle={(e) =>
+                        alternarRecinto(
+                          recinto.cod,
+                          (e.currentTarget as HTMLDetailsElement).open,
+                        )
+                      }
+                    >
+                      <summary>
+                        <span class="g-grupo-nombre">
+                          {title(recinto.nombre)}
                         </span>
-                        <small class="g-val-cedula">
-                          CI <Resaltado texto={f.cedula} consulta={busqueda} />
-                        </small>
-                        {f.oficial && f.estado !== "verificada" ? (
-                          <small class="g-val-oficial">
-                            Oficial: {f.oficial}
-                          </small>
-                        ) : null}
-                        {f.nombreAnterior ? (
-                          <small class="g-val-oficial">
-                            Antes: {f.nombreAnterior}
-                          </small>
-                        ) : null}
-                        {f.error &&
-                        (f.estado === "no_encontrada" ||
-                          f.estado === "error") ? (
-                          <small class="g-val-oficial">{f.error}</small>
-                        ) : null}
-                        {f.respuesta ? (
-                          <details class="g-val-json">
-                            <summary>Ver respuesta</summary>
-                            <pre>{JSON.stringify(f.respuesta, null, 2)}</pre>
-                          </details>
-                        ) : null}
-                      </td>
-                      <td>
-                        {ROL[f.rol]} {f.tipo}
-                        {f.junta ? ` · ${f.junta}` : ""}
-                        <small class="g-val-cedula">
-                          {recinto
-                            ? title(recinto.nombre)
-                            : `Recinto ${f.recintoCodigo}`}
-                        </small>
-                      </td>
-                      <td>
-                        <span class={`chip-estado ${ESTADO[f.estado].clase}`}>
-                          {ESTADO[f.estado].etiqueta}
-                        </span>
-                      </td>
-                      <td class="g-num">{e ?? "—"}</td>
-                      <td>{f.genero ? ETIQUETA_GENERO[f.genero] : "—"}</td>
-                      <td>
-                        {f.estado === "coincide" || f.estado === "revisar" ? (
-                          <span class="g-val-decision">
-                            <button
-                              type="button"
-                              class="g-btn-ghost"
-                              disabled={ocupado}
-                              onClick={() => decidir("aplicar", [f.cedula])}
-                            >
-                              Usar oficial
-                            </button>
-                            <button
-                              type="button"
-                              class="g-btn-ghost"
-                              disabled={ocupado}
-                              onClick={() => decidir("mantener", [f.cedula])}
-                            >
-                              Mantener
-                            </button>
-                          </span>
-                        ) : f.nombreAnterior ? (
-                          <button
-                            type="button"
-                            class="g-btn-ghost"
-                            disabled={ocupado}
-                            onClick={() => decidir("deshacer", [f.cedula])}
+                        <span class="g-consol-estados">
+                          <span
+                            class={`chip-estado ${ver === personas.length ? "chip-estado-ok" : "chip-estado-sin"}`}
                           >
-                            Deshacer
-                          </button>
-                        ) : null}
-                      </td>
-                    </tr>
+                            Verificadas {ver}/{personas.length}
+                          </span>
+                          {revisar > 0 ? (
+                            <span class="chip-estado chip-estado-casi">
+                              Por revisar {revisar}
+                            </span>
+                          ) : null}
+                          {porConsultar.length > 0 ? (
+                            <span class="chip-estado chip-estado-sin">
+                              Sin consultar {porConsultar.length}
+                            </span>
+                          ) : null}
+                          {problemas > 0 ? (
+                            <span class="chip-estado chip-estado-pendiente">
+                              Con problema {problemas}
+                            </span>
+                          ) : null}
+                        </span>
+                      </summary>
+                      {abierto ? (
+                        <div class="g-consol-detalle">
+                          {secciones.map((sec, i) => (
+                            <section key={sec.titulo}>
+                              <h4>
+                                {sec.titulo}
+                                {i === 0 &&
+                                porConsultar.length > 0 &&
+                                hayClave &&
+                                !consultando ? (
+                                  <button
+                                    type="button"
+                                    class="g-btn-link"
+                                    onClick={() =>
+                                      setSeleccion(
+                                        (prev) =>
+                                          new Set([
+                                            ...prev,
+                                            ...porConsultar.map(
+                                              (f) => f.cedula,
+                                            ),
+                                          ]),
+                                      )
+                                    }
+                                  >
+                                    {porConsultar.length === 1
+                                      ? "Seleccionar la que falta consultar"
+                                      : `Seleccionar las ${porConsultar.length} por consultar del recinto`}
+                                  </button>
+                                ) : null}
+                              </h4>
+                              {sec.titulo === "Veedores por junta" ? (
+                                <ul class="g-consol-juntas">
+                                  {sec.lista.map((f) => (
+                                    <li key={f.id}>
+                                      <span class="g-consol-junta">
+                                        {f.junta}
+                                      </span>
+                                      <div class="g-consol-junta-cuerpo">
+                                        {persona(f)}
+                                      </div>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                sec.lista.map((f) => (
+                                  <div key={f.id}>{persona(f)}</div>
+                                ))
+                              )}
+                            </section>
+                          ))}
+                        </div>
+                      ) : null}
+                    </details>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
-          {filas.length > visibles ? (
-            <button
-              type="button"
-              class="g-btn-ghost g-val-mas"
-              onClick={() => setVisibles((v) => v + PAGINA)}
-            >
-              Mostrar {Math.min(PAGINA, filas.length - visibles)} más
-            </button>
-          ) : null}
-        </>
+              </div>
+            </GrupoParroquia>
+          );
+        })
       )}
     </div>
   );
