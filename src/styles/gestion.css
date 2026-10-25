@@ -2866,6 +2866,10 @@ select.g-campo-error {
   color: var(--aviso);
   font-weight: 700;
 }
+.g-consol-menor {
+  color: var(--error);
+  font-weight: 700;
+}
 .g-consol-identidad-mal {
   color: var(--error);
   font-weight: 700;

@@ -149,6 +149,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 // Registro Civil. El nombre anterior no se muestra: queda en el ícono de
 // deshacer ("Deshacer: volver a …").
 const HOY = new Date();
+const MAYORIA_DE_EDAD = 18;
 function LineaIdentidad({
   identidad,
   verRespuesta,
@@ -158,16 +159,28 @@ function LineaIdentidad({
 }) {
   if (!identidad) return null;
   const e = edad(identidad.fechaNacimiento, HOY);
-  const partes = [
-    e !== null ? `${e} años` : null,
-    identidad.genero ? ETIQUETA_GENERO[identidad.genero] : null,
-  ].filter(Boolean);
+  // Menores de 18 años se marcan en rojo: no pueden ejercer el puesto.
+  const menor = e !== null && e < MAYORIA_DE_EDAD;
+  const genero = identidad.genero ? ETIQUETA_GENERO[identidad.genero] : null;
   const estado = IDENTIDAD[identidad.estado];
   return (
     <>
       <small class="g-consol-identidad">
         <span class={estado.clase}>{estado.texto}</span>
-        {partes.length > 0 ? <span>{partes.join(" · ")}</span> : null}
+        {e !== null || genero ? (
+          <span>
+            {e !== null ? (
+              <span
+                class={menor ? "g-consol-menor" : undefined}
+                title={menor ? "Menor de 18 años" : undefined}
+              >
+                {e} años
+              </span>
+            ) : null}
+            {e !== null && genero ? " · " : null}
+            {genero}
+          </span>
+        ) : null}
       </small>
       {identidad.oficial &&
       (identidad.estado === "coincide" || identidad.estado === "revisar") ? (
