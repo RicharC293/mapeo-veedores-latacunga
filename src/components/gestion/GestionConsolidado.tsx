@@ -145,8 +145,9 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 // Estado de identidad bajo el nombre: "Identidad verificada · 34 años ·
-// Masculino", el nombre oficial cuando difiere, el anterior si se cambió y, a
-// pedido, la respuesta del Registro Civil.
+// Masculino", el nombre oficial cuando difiere y, a pedido, la respuesta del
+// Registro Civil. El nombre anterior no se muestra: queda en el ícono de
+// deshacer ("Deshacer: volver a …").
 const HOY = new Date();
 function LineaIdentidad({
   identidad,
@@ -171,9 +172,6 @@ function LineaIdentidad({
       {identidad.oficial &&
       (identidad.estado === "coincide" || identidad.estado === "revisar") ? (
         <small class="g-persona-pref">Oficial: {identidad.oficial}</small>
-      ) : null}
-      {identidad.nombreAnterior ? (
-        <small>Antes: {identidad.nombreAnterior}</small>
       ) : null}
       {identidad.error && identidad.estado !== "sin_consultar" ? (
         <small>{identidad.error}</small>
