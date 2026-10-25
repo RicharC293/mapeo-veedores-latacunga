@@ -24,6 +24,8 @@ export const PAGINAS_GESTION: Record<string, Rol[]> = {
   organigrama: ["militante", "gestor", "administrador"],
   estructura: ["militante", "gestor", "administrador"],
   accesos: ["administrador"],
+  // Consulta una API de pago y guarda datos del Registro Civil.
+  validacion: ["administrador"],
 };
 
 export function tienePermiso(rol: Rol, permitido: Rol[]): boolean {

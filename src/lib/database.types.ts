@@ -328,6 +328,48 @@ export type Database = {
         }
         Relationships: []
       }
+      validaciones_cedula: {
+        Row: {
+          apellidos: string | null
+          cedula: string
+          consultado_en: string
+          error: string | null
+          estado: string
+          http_status: number | null
+          intentos: number
+          nombre_completo: string | null
+          nombres: string | null
+          proveedor: string
+          respuesta: Json | null
+        }
+        Insert: {
+          apellidos?: string | null
+          cedula: string
+          consultado_en?: string
+          error?: string | null
+          estado: string
+          http_status?: number | null
+          intentos?: number
+          nombre_completo?: string | null
+          nombres?: string | null
+          proveedor?: string
+          respuesta?: Json | null
+        }
+        Update: {
+          apellidos?: string | null
+          cedula?: string
+          consultado_en?: string
+          error?: string | null
+          estado?: string
+          http_status?: number | null
+          intentos?: number
+          nombre_completo?: string | null
+          nombres?: string | null
+          proveedor?: string
+          respuesta?: Json | null
+        }
+        Relationships: []
+      }
       militantes_historial: {
         Row: {
           cambios: Json

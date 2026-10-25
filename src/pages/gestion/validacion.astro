@@ -1,0 +1,24 @@
+---
+import GestionLayout from "../../layouts/GestionLayout.astro";
+import GestionValidacion from "../../components/gestion/GestionValidacion";
+import { datosPantallaValidacion } from "../../lib/validacion/pantalla";
+import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
+
+if (!PAGINAS_GESTION.validacion.includes(Astro.locals.rol)) {
+  return Astro.redirect(rutaPorDefecto(Astro.locals.rol));
+}
+
+const datos = await datosPantallaValidacion();
+const hayClave = Boolean(import.meta.env.ECUADORAPI_KEY);
+---
+
+<GestionLayout title="Validación de cédulas" activo="validacion">
+  <h1>Validación de cédulas</h1>
+  <p class="g-sub">
+    Consulta cada cédula una sola vez en el Registro Civil (ecuadorapi.com) y
+    guarda la respuesta completa. Las cédulas ya consultadas no se vuelven a
+    pagar, aunque la persona cambie de lugar. Con el nombre oficial puedes dejar
+    todos los nombres en un mismo formato.
+  </p>
+  <GestionValidacion client:load datosIniciales={datos} hayClave={hayClave} />
+</GestionLayout>
