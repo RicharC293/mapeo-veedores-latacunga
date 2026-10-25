@@ -1,10 +1,8 @@
 import { supabaseSecret } from "../supabase";
 import { mutateCollection, readCollection } from "../gestion/jsonStore";
-import { listMilitantes } from "../gestion/militancia";
 import { listVeedores } from "../gestion/veedores";
 import { listCoordinadores } from "../gestion/coordinadores";
 import { listAcreditadosCda } from "../gestion/acreditadosCda";
-import { listLideres } from "../gestion/lideres";
 import type { Json } from "../database.types";
 import {
   PROVEEDOR,
@@ -12,15 +10,11 @@ import {
   type ResultadoConsulta,
 } from "./ecuadorApi";
 import { nombreOficial } from "./nombres";
-import {
-  agruparPersonas,
-  resumirValidacion,
-  type PersonaRegistrada,
-  type ValidacionCedula,
-} from "./plan";
+import { sePuedeConsultar, type ValidacionCedula } from "./plan";
 
 const COLECCION = "validaciones_cedula";
-// Tablas donde vive el nombre de una persona (la lista negra se deja tal cual).
+// Tablas donde vive el nombre de una persona: al aplicar el nombre oficial se
+// corrige en todas (la lista negra se deja tal cual).
 const TABLAS = [
   "militantes",
   "veedores",
@@ -41,6 +35,9 @@ export async function listValidaciones(): Promise<ValidacionCedula[]> {
       nombres: r.nombres,
       apellidos: r.apellidos,
       nombreCompleto: r.nombre_completo,
+      fechaNacimiento: r.fecha_nacimiento,
+      genero: r.genero,
+      nombreMantenido: r.nombre_mantenido,
       respuesta: r.respuesta,
       httpStatus: r.http_status,
       error: r.error,
@@ -49,7 +46,12 @@ export async function listValidaciones(): Promise<ValidacionCedula[]> {
       consultadoEn: r.consultado_en,
     }));
   }
-  return readCollection<ValidacionCedula>(COLECCION);
+  return (await readCollection<ValidacionCedula>(COLECCION)).map((v) => ({
+    ...v,
+    fechaNacimiento: v.fechaNacimiento ?? null,
+    genero: v.genero ?? null,
+    nombreMantenido: v.nombreMantenido ?? false,
+  }));
 }
 
 async function guardarValidacion(
@@ -63,6 +65,9 @@ async function guardarValidacion(
     nombres: r.nombres,
     apellidos: r.apellidos,
     nombreCompleto: r.nombreCompleto,
+    fechaNacimiento: r.fechaNacimiento,
+    genero: r.genero,
+    nombreMantenido: false,
     respuesta: r.respuesta,
     httpStatus: r.httpStatus,
     error: r.error,
@@ -78,6 +83,9 @@ async function guardarValidacion(
         nombres: v.nombres,
         apellidos: v.apellidos,
         nombre_completo: v.nombreCompleto,
+        fecha_nacimiento: v.fechaNacimiento,
+        genero: v.genero,
+        nombre_mantenido: v.nombreMantenido,
         respuesta: (v.respuesta ?? null) as Json,
         http_status: v.httpStatus,
         error: v.error,
@@ -96,33 +104,15 @@ async function guardarValidacion(
   ]);
 }
 
-// Todas las personas del sistema, una por cédula, con dónde constan.
-export async function listarPersonasRegistradas(): Promise<
-  PersonaRegistrada[]
-> {
-  const [militantes, veedores, coordinadores, acreditados, lideres] =
-    await Promise.all([
-      listMilitantes(),
-      listVeedores(),
-      listCoordinadores(),
-      listAcreditadosCda(),
-      listLideres(),
-    ]);
-  return agruparPersonas([
-    { donde: "Coordinador", personas: coordinadores },
-    { donde: "Acreditado CDA", personas: acreditados },
-    { donde: "Veedor", personas: veedores },
-    { donde: "Líder", personas: lideres },
-    { donde: "Militancia", personas: militantes },
+// Cédulas de quienes están en el Consolidado (veedores, coordinadores y
+// acreditados CDA): el módulo solo consulta a esas personas.
+export async function cedulasDelConsolidado(): Promise<Set<string>> {
+  const [v, c, a] = await Promise.all([
+    listVeedores(),
+    listCoordinadores(),
+    listAcreditadosCda(),
   ]);
-}
-
-export async function resumenValidacion() {
-  const [personas, validaciones] = await Promise.all([
-    listarPersonasRegistradas(),
-    listValidaciones(),
-  ]);
-  return { resumen: resumirValidacion(personas, validaciones), validaciones };
+  return new Set([...v, ...c, ...a].map((p) => p.cedula.trim()));
 }
 
 export interface ResultadoLote {
@@ -130,45 +120,52 @@ export interface ResultadoLote {
   validadas: number;
   noEncontradas: number;
   conError: number;
-  // Motivo por el que se cortó el lote antes de tiempo (clave, saldo, límite).
+  // Cédulas pedidas que no se consultaron: ya validadas, inválidas o fuera
+  // del Consolidado (no se pagan).
+  omitidas: number;
+  // Motivo por el que se cortó el lote (clave, saldo, límite de la API).
   detenido: string | null;
-  pendientes: number;
 }
 
-// Consulta, de una en una, hasta `limite` cédulas pendientes. Nunca repite una
-// cédula ya validada o no encontrada, así que se puede llamar varias veces sin
-// pagar dos veces lo mismo.
-export async function consultarPendientes(
-  limite: number,
+// Consulta, de una en una, las cédulas pedidas que valga la pena consultar.
+// Nunca repite una ya validada o no encontrada, así que se puede llamar varias
+// veces sin pagar dos veces lo mismo.
+export async function consultarCedulas(
+  cedulas: string[],
   apiKey: string,
   urlBase?: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<ResultadoLote> {
-  const { resumen, validaciones } = await resumenValidacion();
+  const [consolidado, validaciones] = await Promise.all([
+    cedulasDelConsolidado(),
+    listValidaciones(),
+  ]);
   const anteriores = new Map(validaciones.map((v) => [v.cedula, v]));
-  const lote = resumen.pendientes.slice(0, Math.max(0, limite));
+  const unicas = [...new Set(cedulas.map((c) => c.trim()))];
+  const aConsultar = unicas.filter(
+    (c) => consolidado.has(c) && sePuedeConsultar(c, anteriores.get(c)),
+  );
   const r: ResultadoLote = {
     consultadas: 0,
     validadas: 0,
     noEncontradas: 0,
     conError: 0,
+    omitidas: unicas.length - aConsultar.length,
     detenido: null,
-    pendientes: resumen.pendientes.length,
   };
-  for (const p of lote) {
-    const resultado = await consultarCedula(p.cedula, apiKey, fetchFn, urlBase);
+  for (const cedula of aConsultar) {
+    const resultado = await consultarCedula(cedula, apiKey, fetchFn, urlBase);
     if (resultado.detener) {
       // No se guarda: la consulta no llegó a responder sobre la cédula.
       r.detenido = resultado.error;
       break;
     }
-    await guardarValidacion(p.cedula, resultado, anteriores.get(p.cedula));
+    await guardarValidacion(cedula, resultado, anteriores.get(cedula));
     r.consultadas += 1;
     if (resultado.estado === "validada") r.validadas += 1;
     else if (resultado.estado === "no_encontrada") r.noEncontradas += 1;
     else r.conError += 1;
   }
-  r.pendientes = Math.max(0, r.pendientes - r.validadas - r.noEncontradas);
   return r;
 }
 
@@ -208,4 +205,30 @@ export async function aplicarNombresOficiales(
     aplicadas += 1;
   }
   return aplicadas;
+}
+
+// Conserva el nombre del sistema aunque difiera del oficial (por ejemplo, un
+// nombre de uso habitual): la persona pasa a contar como verificada.
+export async function mantenerNombres(cedulas: string[]): Promise<number> {
+  const validadas = new Set(
+    (await listValidaciones())
+      .filter((v) => v.estado === "validada")
+      .map((v) => v.cedula),
+  );
+  const lista = [...new Set(cedulas)].filter((c) => validadas.has(c));
+  if (lista.length === 0) return 0;
+  if (supabaseSecret) {
+    const { error } = await supabaseSecret
+      .from("validaciones_cedula")
+      .update({ nombre_mantenido: true })
+      .in("cedula", lista);
+    if (error) throw new Error(error.message);
+  } else {
+    await mutateCollection<ValidacionCedula>(COLECCION, (items) =>
+      items.map((i) =>
+        lista.includes(i.cedula) ? { ...i, nombreMantenido: true } : i,
+      ),
+    );
+  }
+  return lista.length;
 }

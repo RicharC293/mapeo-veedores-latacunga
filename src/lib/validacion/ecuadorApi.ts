@@ -17,6 +17,9 @@ export interface ResultadoConsulta {
   nombres: string | null;
   apellidos: string | null;
   nombreCompleto: string | null;
+  // Fecha de nacimiento (AAAA-MM-DD) y género tal como los da la API.
+  fechaNacimiento: string | null;
+  genero: string | null;
   error: string | null;
   // true si no tiene sentido seguir consultando en esta corrida (clave
   // inválida, sin saldo o demasiadas consultas): seguir solo gastaría.
@@ -29,6 +32,8 @@ interface CuerpoApi {
     full_name?: string;
     first_name?: string;
     last_name?: string;
+    birth_date?: string;
+    gender?: string;
   } | null;
   error?: unknown;
   message?: unknown;
@@ -55,6 +60,8 @@ export async function consultarCedula(
     nombres: null,
     apellidos: null,
     nombreCompleto: null,
+    fechaNacimiento: null,
+    genero: null,
   };
   let res: Response;
   try {
@@ -109,6 +116,8 @@ export async function consultarCedula(
       nombres: texto(datos.first_name),
       apellidos: texto(datos.last_name),
       nombreCompleto: texto(datos.full_name),
+      fechaNacimiento: texto(datos.birth_date),
+      genero: texto(datos.gender),
       error: null,
       detener: false,
     };

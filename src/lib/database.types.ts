@@ -335,9 +335,12 @@ export type Database = {
           consultado_en: string
           error: string | null
           estado: string
+          fecha_nacimiento: string | null
+          genero: string | null
           http_status: number | null
           intentos: number
           nombre_completo: string | null
+          nombre_mantenido: boolean
           nombres: string | null
           proveedor: string
           respuesta: Json | null
@@ -348,9 +351,12 @@ export type Database = {
           consultado_en?: string
           error?: string | null
           estado: string
+          fecha_nacimiento?: string | null
+          genero?: string | null
           http_status?: number | null
           intentos?: number
           nombre_completo?: string | null
+          nombre_mantenido?: boolean
           nombres?: string | null
           proveedor?: string
           respuesta?: Json | null
@@ -361,9 +367,12 @@ export type Database = {
           consultado_en?: string
           error?: string | null
           estado?: string
+          fecha_nacimiento?: string | null
+          genero?: string | null
           http_status?: number | null
           intentos?: number
           nombre_completo?: string | null
+          nombre_mantenido?: boolean
           nombres?: string | null
           proveedor?: string
           respuesta?: Json | null

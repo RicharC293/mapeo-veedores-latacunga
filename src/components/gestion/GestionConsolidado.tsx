@@ -11,6 +11,8 @@ import Resaltado from "./Resaltado";
 import AlertaMesasInexistentes from "./AlertaMesasInexistentes";
 import { veedoresEnMesaInexistente } from "../../lib/gestion/mesasInexistentes";
 import Iniciales from "./Iniciales";
+import type { IdentidadConsolidado } from "../../lib/validacion/pantalla";
+import { ETIQUETA_GENERO, edad } from "../../lib/validacion/plan";
 import { useRecintosAbiertos } from "./useRecintosAbiertos";
 import { normalizar, title } from "../../lib/format";
 import {
@@ -57,6 +59,8 @@ interface Props {
   veedores: Veedor[];
   coordinadores: Coordinador[];
   acreditados: AcreditadoCda[];
+  // Por cédula: verificación en el Registro Civil, fecha de nacimiento y género.
+  identidad?: Record<string, IdentidadConsolidado>;
 }
 
 type Estado = "todos" | "completos" | "casi" | "pendientes" | "excedente";
@@ -93,9 +97,36 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+// "Identidad verificada · 34 años · Masculino" bajo el nombre, con lo que
+// trae el Registro Civil; "Nombre por revisar" si difiere del oficial.
+const HOY = new Date();
+function LineaIdentidad({
+  identidad,
+}: {
+  identidad: IdentidadConsolidado | undefined;
+}) {
+  if (!identidad) return null;
+  const e = edad(identidad.fechaNacimiento, HOY);
+  const partes = [
+    e !== null ? `${e} años` : null,
+    identidad.genero ? ETIQUETA_GENERO[identidad.genero] : null,
+  ].filter(Boolean);
+  return (
+    <small class="g-consol-identidad">
+      {identidad.verificada ? (
+        <span class="g-consol-identidad-ok">Identidad verificada</span>
+      ) : identidad.porRevisar ? (
+        <span class="g-consol-identidad-revisar">Nombre por revisar</span>
+      ) : null}
+      {partes.length > 0 ? <span>{partes.join(" · ")}</span> : null}
+    </small>
+  );
+}
+
 function Linea({
   p,
   busqueda,
+  identidad,
   rol,
   clase,
   nombreLider,
@@ -103,6 +134,7 @@ function Linea({
 }: {
   p: Persona;
   busqueda: string;
+  identidad: IdentidadConsolidado | undefined;
   rol: "titular" | "suplente";
   clase: Clase;
   nombreLider: Map<string, string>;
@@ -134,6 +166,7 @@ function Linea({
         {p.preferencia ? (
           <small class="g-persona-pref">Preferencia: {p.preferencia}</small>
         ) : null}
+        <LineaIdentidad identidad={identidad} />
         {p.verificado ? (
           <span class="chip-estado chip-estado-ok">Verificado</span>
         ) : null}
@@ -158,6 +191,7 @@ function Linea({
 // Titular de un puesto (o aviso de que falta) y sus suplentes.
 function PuestoLineas({
   busqueda,
+  identidad,
   puesto,
   falta,
   clase,
@@ -165,6 +199,7 @@ function PuestoLineas({
   acciones,
 }: {
   busqueda: string;
+  identidad: Record<string, IdentidadConsolidado>;
   puesto: Puesto<Persona>;
   falta: string;
   clase: Clase;
@@ -177,6 +212,7 @@ function PuestoLineas({
         <Linea
           p={puesto.titular}
           busqueda={busqueda}
+          identidad={identidad[puesto.titular.cedula.trim()]}
           rol="titular"
           clase={clase}
           nombreLider={nombreLider}
@@ -191,6 +227,7 @@ function PuestoLineas({
           <Linea
             p={s}
             busqueda={busqueda}
+            identidad={identidad[s.cedula.trim()]}
             rol="suplente"
             clase={clase}
             nombreLider={nombreLider}
@@ -209,6 +246,7 @@ export default function GestionConsolidado({
   veedores: veedoresIniciales,
   coordinadores: coordinadoresIniciales,
   acreditados: acreditadosIniciales,
+  identidad = {},
 }: Props) {
   const [veedores, setVeedores] = useState(veedoresIniciales);
   const [coordinadores, setCoordinadores] = useState(coordinadoresIniciales);
@@ -552,6 +590,7 @@ export default function GestionConsolidado({
                             <PuestoLineas
                               clase="coordinador"
                               busqueda={busqueda}
+                              identidad={identidad}
                               acciones={acciones}
                               nombreLider={nombreLider}
                               puesto={f.coordinador}
@@ -564,6 +603,7 @@ export default function GestionConsolidado({
                               <PuestoLineas
                                 clase="cda"
                                 busqueda={busqueda}
+                                identidad={identidad}
                                 acciones={acciones}
                                 nombreLider={nombreLider}
                                 puesto={f.cda}
@@ -584,6 +624,7 @@ export default function GestionConsolidado({
                                     <PuestoLineas
                                       clase="veedor"
                                       busqueda={busqueda}
+                                      identidad={identidad}
                                       acciones={acciones}
                                       nombreLider={nombreLider}
                                       puesto={j.puesto}

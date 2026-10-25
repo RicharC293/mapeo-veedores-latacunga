@@ -6,10 +6,13 @@ import {
   nombreOficial,
 } from "../src/lib/validacion/nombres";
 import {
-  agruparPersonas,
-  resumirValidacion,
+  datosPersonales,
+  edad,
+  estadoIdentidad,
+  sePuedeConsultar,
   type ValidacionCedula,
 } from "../src/lib/validacion/plan";
+import { identidadPorCedula } from "../src/lib/validacion/pantalla";
 
 // fetch simulado: no se hace ninguna consulta real (cada una cuesta dinero).
 const respuesta = (status: number, cuerpo: unknown) =>
@@ -136,6 +139,9 @@ const val = (cedula: string, estado: ValidacionCedula["estado"], extra = {}) =>
     nombres: null,
     apellidos: null,
     nombreCompleto: null,
+    fechaNacimiento: null,
+    genero: null,
+    nombreMantenido: false,
     respuesta: null,
     httpStatus: 200,
     error: null,
@@ -145,87 +151,136 @@ const val = (cedula: string, estado: ValidacionCedula["estado"], extra = {}) =>
     ...extra,
   }) as ValidacionCedula;
 
-describe("plan de validación", () => {
-  const personas = agruparPersonas([
-    {
-      donde: "Veedor",
-      personas: [{ cedula: "0503451163", nombres: "PEREZ GARCIA JUAN ANDRES" }],
-    },
-    {
-      donde: "Militancia",
-      personas: [
-        { cedula: "0503451163", nombres: "Juan Pérez" },
-        { cedula: "0502646599", nombres: "Ana Torres" },
-        { cedula: "0550173926", nombres: "Luis Vaca" },
-        { cedula: "0504724395", nombres: "Diego Chávez" }, // dígito verificador mal
-        { cedula: null, nombres: "Sin cédula" },
-      ],
-    },
-  ]);
+const JUAN = { nombres: "JUAN ANDRÉS", apellidos: "PÉREZ GARCÍA" };
 
-  it("agrupa por cédula, junta los nombres y pone primero a los asignados", () => {
-    expect(personas.map((p) => p.cedula)).toEqual([
-      "0503451163",
-      "0502646599",
-      "0504724395",
-      "0550173926",
-    ]);
-    expect(personas[0]).toEqual({
-      cedula: "0503451163",
-      nombres: ["PEREZ GARCIA JUAN ANDRES", "Juan Pérez"],
-      donde: ["Veedor", "Militancia"],
+describe("estadoIdentidad", () => {
+  it("sin consulta: sin consultar, o cédula inválida si falla el dígito verificador", () => {
+    expect(estadoIdentidad("Ana", "0503451163", undefined).estado).toBe(
+      "sin_consultar",
+    );
+    expect(estadoIdentidad("Diego", "0504724395", undefined).estado).toBe(
+      "invalida",
+    );
+  });
+
+  it("un error técnico se puede volver a consultar; no encontrada no", () => {
+    expect(
+      estadoIdentidad("Ana", "0503451163", val("0503451163", "error")).estado,
+    ).toBe("error");
+    expect(
+      estadoIdentidad("Ana", "0503451163", val("0503451163", "no_encontrada"))
+        .estado,
+    ).toBe("no_encontrada");
+  });
+
+  it("validada: verificada si ya tiene el nombre oficial, coincide si solo cambia el formato", () => {
+    const v = val("0503451163", "validada", JUAN);
+    expect(
+      estadoIdentidad("Juan Andrés Pérez García", "0503451163", v),
+    ).toEqual({
+      estado: "verificada",
+      oficial: "Juan Andrés Pérez García",
+      coincidencia: null,
+    });
+    expect(
+      estadoIdentidad("PEREZ GARCIA JUAN ANDRES", "0503451163", v),
+    ).toEqual({
+      estado: "coincide",
+      oficial: "Juan Andrés Pérez García",
+      coincidencia: "igual",
     });
   });
 
-  it("excluye las ya consultadas, reintenta los errores y no consulta las inválidas", () => {
-    const r = resumirValidacion(personas, [
-      val("0503451163", "validada", {
-        nombres: "JUAN ANDRÉS",
-        apellidos: "PÉREZ GARCÍA",
-      }),
-      val("0502646599", "no_encontrada"),
-      val("0550173926", "error"),
-    ]);
-    expect(r.validadas).toBe(1);
-    expect(r.noEncontradas).toBe(1);
-    expect(r.conError).toBe(1);
-    expect(r.pendientes.map((p) => p.cedula)).toEqual(["0550173926"]);
-    expect(r.invalidas.map((p) => p.cedula)).toEqual(["0504724395"]);
+  it("un nombre parecido o distinto queda por revisar, salvo que se haya mantenido", () => {
+    const v = val("0503451163", "validada", JUAN);
+    expect(estadoIdentidad("Juan Pérez", "0503451163", v)).toMatchObject({
+      estado: "revisar",
+      coincidencia: "parecido",
+    });
+    expect(estadoIdentidad("Ana Torres", "0503451163", v)).toMatchObject({
+      estado: "revisar",
+      coincidencia: "distinto",
+    });
+    expect(
+      estadoIdentidad(
+        "Juan Pérez",
+        "0503451163",
+        val("0503451163", "validada", { ...JUAN, nombreMantenido: true }),
+      ).estado,
+    ).toBe("verificada");
+  });
+});
+
+describe("sePuedeConsultar", () => {
+  it("solo las válidas sin consulta previa o con error técnico", () => {
+    expect(sePuedeConsultar("0503451163", undefined)).toBe(true);
+    expect(sePuedeConsultar("0503451163", val("0503451163", "error"))).toBe(
+      true,
+    );
+    expect(sePuedeConsultar("0503451163", val("0503451163", "validada"))).toBe(
+      false,
+    );
+    expect(
+      sePuedeConsultar("0503451163", val("0503451163", "no_encontrada")),
+    ).toBe(false);
+    expect(sePuedeConsultar("0504724395", undefined)).toBe(false);
+  });
+});
+
+describe("datos personales", () => {
+  it("toma fecha y género de las columnas o, si faltan, del JSON guardado", () => {
+    expect(
+      datosPersonales(
+        val("1", "validada", {
+          fechaNacimiento: "1990-04-18",
+          genero: "female",
+        }),
+      ),
+    ).toEqual({ fechaNacimiento: "1990-04-18", genero: "femenino" });
+    expect(datosPersonales(val("1", "validada", { respuesta: EXITO }))).toEqual(
+      { fechaNacimiento: "1990-04-18", genero: "masculino" },
+    );
+    expect(datosPersonales(val("1", "no_encontrada"))).toEqual({
+      fechaNacimiento: null,
+      genero: null,
+    });
   });
 
-  it("propone corregir los nombres que no están en el formato oficial", () => {
-    const r = resumirValidacion(personas, [
-      val("0503451163", "validada", {
-        nombres: "JUAN ANDRÉS",
-        apellidos: "PÉREZ GARCÍA",
-      }),
-    ]);
-    expect(r.revision).toEqual([
-      {
-        cedula: "0503451163",
-        registrados: ["PEREZ GARCIA JUAN ANDRES", "Juan Pérez"],
-        oficial: "Juan Andrés Pérez García",
-        coincidencia: "parecido",
-        donde: ["Veedor", "Militancia"],
-      },
-    ]);
+  it("la edad se calcula al día, contando si ya cumplió años", () => {
+    expect(edad("1990-04-18", new Date(2026, 3, 17))).toBe(35);
+    expect(edad("1990-04-18", new Date(2026, 3, 18))).toBe(36);
+    expect(edad(null, new Date())).toBeNull();
+    expect(edad("basura", new Date())).toBeNull();
   });
+});
 
-  it("un nombre ya en el formato oficial no aparece para revisar", () => {
-    const solo = agruparPersonas([
-      {
-        donde: "Veedor",
-        personas: [
-          { cedula: "0503451163", nombres: "Juan Andrés Pérez García" },
-        ],
-      },
-    ]);
-    const r = resumirValidacion(solo, [
-      val("0503451163", "validada", {
-        nombres: "JUAN ANDRÉS",
-        apellidos: "PÉREZ GARCÍA",
-      }),
-    ]);
-    expect(r.revision).toEqual([]);
+describe("identidad en el Consolidado", () => {
+  it("marca verificada o por revisar y da los datos personales", () => {
+    const r = identidadPorCedula(
+      [
+        { cedula: "0503451163", nombres: "Juan Andrés Pérez García" },
+        { cedula: "0502646599", nombres: "Otro Nombre" },
+        { cedula: "0550173926", nombres: "Sin consultar" },
+      ],
+      [
+        val("0503451163", "validada", {
+          ...JUAN,
+          fechaNacimiento: "1990-04-18",
+          genero: "male",
+        }),
+        val("0502646599", "validada", JUAN),
+      ],
+    );
+    expect(r["0503451163"]).toEqual({
+      verificada: true,
+      porRevisar: false,
+      fechaNacimiento: "1990-04-18",
+      genero: "masculino",
+    });
+    expect(r["0502646599"]).toMatchObject({
+      verificada: false,
+      porRevisar: true,
+    });
+    expect(r["0550173926"]).toBeUndefined();
   });
 });

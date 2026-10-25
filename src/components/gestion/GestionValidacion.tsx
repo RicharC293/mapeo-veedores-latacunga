@@ -1,25 +1,62 @@
 import { useMemo, useRef, useState } from "preact/hooks";
-import type { DatosValidacion } from "../../lib/validacion/pantalla";
-import type { Coincidencia } from "../../lib/validacion/nombres";
+import FiltrosRecintos, { VacioFiltros } from "./FiltrosRecintos";
+import Resaltado from "./Resaltado";
+import { normalizar, title } from "../../lib/format";
+import { coincideUbicacion, type Ubicacion } from "../../lib/gestion/ubicacion";
+import {
+  ETIQUETA_GENERO,
+  edad,
+  type EstadoIdentidad,
+} from "../../lib/validacion/plan";
+import type {
+  DatosVerificacion,
+  FilaVerificacion,
+} from "../../lib/validacion/pantalla";
 import type { ResultadoLote } from "../../lib/validacion/validaciones";
+import type { ParroquiaBasica, Recinto } from "../../lib/types";
 
 interface Props {
-  datosIniciales: DatosValidacion;
+  parroquias: ParroquiaBasica[];
+  recintos: Recinto[];
+  datosIniciales: DatosVerificacion;
   hayClave: boolean;
 }
 
-type Filtro = "todos" | Coincidencia;
+// "sinconsultar" junta las nunca consultadas y las que dieron error técnico:
+// son las que se pueden consultar.
+type Filtro =
+  | "todos"
+  | "sinconsultar"
+  | "coincide"
+  | "revisar"
+  | "verificada"
+  | "no_encontrada"
+  | "invalida";
+type Rol = "todos" | FilaVerificacion["rol"];
 
-const ETIQUETA: Record<Coincidencia, string> = {
-  igual: "Solo formato",
-  parecido: "Parecido",
-  distinto: "Distinto",
+const ESTADO: Record<EstadoIdentidad, { etiqueta: string; clase: string }> = {
+  sin_consultar: { etiqueta: "Sin consultar", clase: "chip-estado-sin" },
+  error: { etiqueta: "Error, reintentar", clase: "chip-estado-pendiente" },
+  invalida: { etiqueta: "Cédula inválida", clase: "chip-estado-pendiente" },
+  verificada: { etiqueta: "Verificada", clase: "chip-estado-ok" },
+  coincide: { etiqueta: "Coincide", clase: "chip-estado-casi" },
+  revisar: { etiqueta: "Por revisar", clase: "chip-estado-pendiente" },
+  no_encontrada: { etiqueta: "No encontrada", clase: "chip-estado-pendiente" },
 };
-const CLASE: Record<Coincidencia, string> = {
-  igual: "chip-estado-ok",
-  parecido: "chip-estado-casi",
-  distinto: "chip-estado-pendiente",
+const ROL: Record<FilaVerificacion["rol"], string> = {
+  veedor: "Veedor",
+  coordinador: "Coordinador",
+  cda: "Acreditado CDA",
 };
+const POR_TANDA = 10;
+const PAGINA = 100;
+
+const consultable = (f: FilaVerificacion) =>
+  f.estado === "sin_consultar" || f.estado === "error";
+
+const enFiltro = (f: FilaVerificacion, filtro: Filtro) =>
+  filtro === "todos" ||
+  (filtro === "sinconsultar" ? consultable(f) : f.estado === filtro);
 
 const dolares = (n: number) =>
   `US$${n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -34,101 +71,91 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-function VerRespuesta({ respuesta }: { respuesta: unknown }) {
-  if (respuesta == null) return null;
-  return (
-    <details class="g-val-json">
-      <summary>Ver respuesta</summary>
-      <pre>{JSON.stringify(respuesta, null, 2)}</pre>
-    </details>
-  );
-}
-
-export default function GestionValidacion({ datosIniciales, hayClave }: Props) {
+export default function GestionValidacion({
+  parroquias,
+  recintos,
+  datosIniciales,
+  hayClave,
+}: Props) {
   const [datos, setDatos] = useState(datosIniciales);
-  const [tope, setTope] = useState(Math.min(50, datosIniciales.pendientes));
+  const [ubicacion, setUbicacion] = useState<Ubicacion>("todas");
+  const [recintoCod, setRecintoCod] = useState<number | "">("");
+  const [rol, setRol] = useState<Rol>("todos");
+  const [filtro, setFiltro] = useState<Filtro>("todos");
+  const [busqueda, setBusqueda] = useState("");
+  const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
   const [confirmando, setConfirmando] = useState(false);
   const [consultando, setConsultando] = useState(false);
-  const [progreso, setProgreso] = useState<ResultadoLote | null>(null);
+  const [progreso, setProgreso] = useState<{
+    hechas: number;
+    total: number;
+  } | null>(null);
+  const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [filtro, setFiltro] = useState<Filtro>("todos");
-  const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
-  const [aplicando, setAplicando] = useState(false);
+  const [visibles, setVisibles] = useState(PAGINA);
   const detenerRef = useRef(false);
+  const hoy = useMemo(() => new Date(), []);
+
+  const parroquiaDe = useMemo(
+    () => new Map(parroquias.map((p) => [p.properties.code, p])),
+    [parroquias],
+  );
+  const recintoDe = useMemo(
+    () => new Map(recintos.map((r) => [r.cod, r])),
+    [recintos],
+  );
+  const recintosOpciones = useMemo(
+    () =>
+      typeof ubicacion === "number"
+        ? recintos
+            .filter((r) => r.par === ubicacion)
+            .sort((a, b) => a.nombre.localeCompare(b.nombre))
+        : [],
+    [recintos, ubicacion],
+  );
+
+  // Filas tras ubicación, recinto, rol y búsqueda (los conteos de estado
+  // salen de aquí).
+  const base = useMemo(() => {
+    const q = normalizar(busqueda);
+    return datos.filas.filter((f) => {
+      if (!coincideUbicacion(ubicacion, parroquiaDe.get(f.parroquiaCodigo)))
+        return false;
+      if (recintoCod !== "" && f.recintoCodigo !== recintoCod) return false;
+      if (rol !== "todos" && f.rol !== rol) return false;
+      if (
+        q &&
+        !normalizar(`${f.nombres} ${f.cedula} ${f.oficial ?? ""}`).includes(q)
+      )
+        return false;
+      return true;
+    });
+  }, [datos.filas, ubicacion, recintoCod, rol, busqueda, parroquiaDe]);
+
+  const conteo = (fl: Filtro) => base.filter((f) => enFiltro(f, fl)).length;
+  const filas = useMemo(
+    () =>
+      base
+        .filter((f) => enFiltro(f, filtro))
+        .sort(
+          (a, b) =>
+            (recintoDe.get(a.recintoCodigo)?.nombre ?? "").localeCompare(
+              recintoDe.get(b.recintoCodigo)?.nombre ?? "",
+            ) || a.nombres.localeCompare(b.nombres),
+        ),
+    [base, filtro, recintoDe],
+  );
+
+  const consultablesDelFiltro = filas.filter(consultable).map((f) => f.cedula);
+  const coincidenDelFiltro = filas
+    .filter((f) => f.estado === "coincide")
+    .map((f) => f.cedula);
+  const costo = seleccion.size * datos.costoPorConsulta;
 
   const refrescar = async () => {
-    const d = await api<DatosValidacion>("/api/gestion/validacion");
-    setDatos(d);
-    setTope((t) => Math.min(Math.max(t, 1), d.pendientes));
-    setSeleccion(new Set());
+    setDatos(await api<DatosVerificacion>("/api/gestion/validacion"));
   };
-
-  const topeValido = Math.max(0, Math.min(tope || 0, datos.pendientes));
-  const costoTope = topeValido * datos.costoPorConsulta;
-
-  const consultar = async () => {
-    setConfirmando(false);
-    setConsultando(true);
-    setError(null);
-    setAviso(null);
-    detenerRef.current = false;
-    const total: ResultadoLote = {
-      consultadas: 0,
-      validadas: 0,
-      noEncontradas: 0,
-      conError: 0,
-      detenido: null,
-      pendientes: datos.pendientes,
-    };
-    setProgreso(total);
-    try {
-      while (total.consultadas < topeValido && !detenerRef.current) {
-        const r = await api<ResultadoLote>(
-          "/api/gestion/validacion/consultar",
-          {
-            method: "POST",
-            body: JSON.stringify({ limite: topeValido - total.consultadas }),
-          },
-        );
-        total.consultadas += r.consultadas;
-        total.validadas += r.validadas;
-        total.noEncontradas += r.noEncontradas;
-        total.conError += r.conError;
-        total.pendientes = r.pendientes;
-        total.detenido = r.detenido;
-        setProgreso({ ...total });
-        if (r.detenido || r.consultadas === 0) break;
-      }
-      setAviso(
-        total.detenido
-          ? `Se detuvo: ${total.detenido}`
-          : detenerRef.current
-            ? "Consulta detenida."
-            : "Consulta terminada.",
-      );
-      await refrescar();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error inesperado.");
-    } finally {
-      setConsultando(false);
-    }
-  };
-
-  const conteos = useMemo(
-    () => ({
-      todos: datos.revision.length,
-      igual: datos.revision.filter((f) => f.coincidencia === "igual").length,
-      parecido: datos.revision.filter((f) => f.coincidencia === "parecido")
-        .length,
-      distinto: datos.revision.filter((f) => f.coincidencia === "distinto")
-        .length,
-    }),
-    [datos.revision],
-  );
-  const filas = datos.revision.filter(
-    (f) => filtro === "todos" || f.coincidencia === filtro,
-  );
 
   const alternar = (cedula: string) =>
     setSeleccion((prev) => {
@@ -138,297 +165,403 @@ export default function GestionValidacion({ datosIniciales, hayClave }: Props) {
       return s;
     });
 
-  const aplicar = async (cedulas: string[]) => {
+  const consultar = async () => {
+    setConfirmando(false);
+    setConsultando(true);
+    setError(null);
+    setAviso(null);
+    detenerRef.current = false;
+    const lista = [...seleccion];
+    const total = {
+      consultadas: 0,
+      validadas: 0,
+      noEncontradas: 0,
+      conError: 0,
+    };
+    let detenido: string | null = null;
+    setProgreso({ hechas: 0, total: lista.length });
+    try {
+      for (let i = 0; i < lista.length && !detenerRef.current; i += POR_TANDA) {
+        const tanda = lista.slice(i, i + POR_TANDA);
+        const r = await api<ResultadoLote>(
+          "/api/gestion/validacion/consultar",
+          {
+            method: "POST",
+            body: JSON.stringify({ cedulas: tanda }),
+          },
+        );
+        total.consultadas += r.consultadas;
+        total.validadas += r.validadas;
+        total.noEncontradas += r.noEncontradas;
+        total.conError += r.conError;
+        setProgreso({
+          hechas: Math.min(i + tanda.length, lista.length),
+          total: lista.length,
+        });
+        if (r.detenido) {
+          detenido = r.detenido;
+          break;
+        }
+      }
+      setAviso(
+        `${detenido ? `Se detuvo: ${detenido} ` : detenerRef.current ? "Consulta detenida. " : ""}Consultadas ${total.consultadas}: ${total.validadas} con datos, ${total.noEncontradas} no encontradas, ${total.conError} con error.`,
+      );
+      setSeleccion(new Set());
+      await refrescar();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error inesperado.");
+    } finally {
+      setConsultando(false);
+      setProgreso(null);
+    }
+  };
+
+  const decidir = async (accion: "aplicar" | "mantener", cedulas: string[]) => {
     if (cedulas.length === 0) return;
-    setAplicando(true);
+    setOcupado(true);
     setError(null);
     try {
-      const r = await api<{ aplicadas: number }>(
-        "/api/gestion/validacion/aplicar",
-        {
-          method: "POST",
-          body: JSON.stringify({ cedulas }),
-        },
+      const r = await api<{ aplicadas?: number; mantenidas?: number }>(
+        `/api/gestion/validacion/${accion}`,
+        { method: "POST", body: JSON.stringify({ cedulas }) },
       );
+      const n = r.aplicadas ?? r.mantenidas ?? 0;
       setAviso(
-        `Se aplicó el nombre oficial a ${r.aplicadas} ${r.aplicadas === 1 ? "persona" : "personas"}.`,
+        accion === "aplicar"
+          ? `Nombre oficial aplicado a ${n} ${n === 1 ? "persona" : "personas"}.`
+          : `Se mantuvo el nombre del sistema de ${n} ${n === 1 ? "persona" : "personas"}.`,
       );
       await refrescar();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado.");
     } finally {
-      setAplicando(false);
+      setOcupado(false);
     }
   };
 
+  const quitarFiltros = () => {
+    setUbicacion("todas");
+    setRecintoCod("");
+    setRol("todos");
+    setFiltro("todos");
+    setBusqueda("");
+  };
+  const hayFiltros =
+    ubicacion !== "todas" ||
+    recintoCod !== "" ||
+    rol !== "todos" ||
+    filtro !== "todos" ||
+    busqueda !== "";
+
   return (
     <div class="g-panel g-val">
-      <dl class="g-val-cifras">
-        <div>
-          <dt>Personas en el sistema</dt>
-          <dd>{datos.personas}</dd>
-        </div>
-        <div>
-          <dt>Validadas</dt>
-          <dd>{datos.validadas}</dd>
-        </div>
-        <div>
-          <dt>No encontradas</dt>
-          <dd>{datos.noEncontradas}</dd>
-        </div>
-        <div>
-          <dt>Por consultar</dt>
-          <dd>
-            {datos.pendientes}{" "}
-            <small>
-              ≈ {dolares(datos.pendientes * datos.costoPorConsulta)}
-            </small>
-          </dd>
-        </div>
-        <div>
-          <dt>Cédula inválida (no se consultan)</dt>
-          <dd>{datos.invalidas.length}</dd>
-        </div>
-      </dl>
+      <FiltrosRecintos
+        parroquias={parroquias}
+        ubicacion={ubicacion}
+        onUbicacion={(u) => {
+          setUbicacion(u);
+          setRecintoCod("");
+          setVisibles(PAGINA);
+        }}
+        estados={[
+          { clave: "todos", etiqueta: "Todos", n: base.length },
+          {
+            clave: "sinconsultar",
+            etiqueta: "Sin consultar",
+            n: conteo("sinconsultar"),
+          },
+          {
+            clave: "coincide",
+            etiqueta: "Coinciden",
+            n: conteo("coincide"),
+            aviso: true,
+          },
+          {
+            clave: "revisar",
+            etiqueta: "Por revisar",
+            n: conteo("revisar"),
+            alerta: true,
+          },
+          {
+            clave: "verificada",
+            etiqueta: "Verificadas",
+            n: conteo("verificada"),
+          },
+          {
+            clave: "no_encontrada",
+            etiqueta: "No encontradas",
+            n: conteo("no_encontrada"),
+            alerta: true,
+          },
+          {
+            clave: "invalida",
+            etiqueta: "Cédula inválida",
+            n: conteo("invalida"),
+            alerta: true,
+          },
+        ]}
+        estado={filtro}
+        onEstado={(f) => {
+          setFiltro(f);
+          setVisibles(PAGINA);
+        }}
+        busqueda={busqueda}
+        onBusqueda={setBusqueda}
+        placeholder="Nombre o cédula…"
+        contador={`Mostrando ${Math.min(visibles, filas.length)} de ${filas.length} personas`}
+        hayFiltros={hayFiltros}
+        onQuitar={quitarFiltros}
+      />
 
-      <section class="g-val-seccion" aria-labelledby="val-consultar">
-        <h2 id="val-consultar">Consultar cédulas</h2>
+      <div class="g-selects g-val-filtros">
+        {typeof ubicacion === "number" ? (
+          <label>
+            Recinto
+            <select
+              value={recintoCod}
+              onChange={(e) =>
+                setRecintoCod(
+                  Number((e.currentTarget as HTMLSelectElement).value) || "",
+                )
+              }
+            >
+              <option value="">Todos los recintos</option>
+              {recintosOpciones.map((r) => (
+                <option key={r.cod} value={r.cod}>
+                  {title(r.nombre)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+        <label>
+          Responsabilidad
+          <select
+            value={rol}
+            onChange={(e) =>
+              setRol((e.currentTarget as HTMLSelectElement).value as Rol)
+            }
+          >
+            <option value="todos">Todas</option>
+            <option value="veedor">Veedores</option>
+            <option value="coordinador">Coordinadores</option>
+            <option value="cda">Acreditados CDA</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="g-val-barra" role="region" aria-label="Acciones">
         {!hayClave ? (
           <p class="g-error">
-            Falta configurar la clave ECUADORAPI_KEY en el servidor. Sin ella no
-            se puede consultar.
+            Falta configurar la clave ECUADORAPI_KEY en el servidor: no se puede
+            consultar.
           </p>
-        ) : datos.pendientes === 0 ? (
-          <p class="g-sub">Todas las cédulas válidas ya fueron consultadas.</p>
-        ) : (
+        ) : consultando ? (
           <>
-            <p class="g-sub">
-              Se consultan primero coordinadores, CDA y veedores, y luego
-              Militancia. Las que dan error técnico se reintentan en la
-              siguiente consulta; las demás no se repiten.
-            </p>
-            <div class="g-val-consulta">
-              <label>
-                Cuántas consultar ahora
-                <input
-                  type="number"
-                  min={1}
-                  max={datos.pendientes}
-                  value={tope}
-                  disabled={consultando}
-                  onInput={(e) =>
-                    setTope(Number((e.currentTarget as HTMLInputElement).value))
-                  }
-                />
-              </label>
-              {consultando ? (
-                <button
-                  type="button"
-                  class="g-btn-ghost"
-                  onClick={() => (detenerRef.current = true)}
-                >
-                  Detener
-                </button>
-              ) : confirmando ? (
-                <div
-                  class="g-val-confirmar"
-                  role="alertdialog"
-                  aria-label="Confirmar consulta"
-                >
-                  <span>
-                    Se cobrarán hasta <strong>{dolares(costoTope)}</strong> por{" "}
-                    {topeValido} consultas.
-                  </span>
-                  <button
-                    type="button"
-                    class="g-btn-accion"
-                    onClick={consultar}
-                  >
-                    Sí, consultar
-                  </button>
-                  <button
-                    type="button"
-                    class="g-btn-ghost"
-                    onClick={() => setConfirmando(false)}
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  class="g-btn-accion"
-                  disabled={topeValido === 0}
-                  onClick={() => setConfirmando(true)}
-                >
-                  Consultar {topeValido} (≈ {dolares(costoTope)})
-                </button>
-              )}
-            </div>
+            <span role="status">
+              Consultando {progreso?.hechas ?? 0} de {progreso?.total ?? 0}…
+            </span>
+            <button
+              type="button"
+              class="g-btn-ghost"
+              onClick={() => (detenerRef.current = true)}
+            >
+              Detener
+            </button>
           </>
-        )}
-        {progreso ? (
-          <p class="g-val-progreso" role="status">
-            {progreso.consultadas} de {topeValido || progreso.consultadas}{" "}
-            consultadas · {progreso.validadas} validadas ·{" "}
-            {progreso.noEncontradas} no encontradas · {progreso.conError} con
-            error
-          </p>
-        ) : null}
-        {aviso ? <p role="status">{aviso}</p> : null}
-        {error ? <p class="g-error">{error}</p> : null}
-      </section>
-
-      <section class="g-val-seccion" aria-labelledby="val-revision">
-        <h2 id="val-revision">Nombres por corregir</h2>
-        {datos.revision.length === 0 ? (
-          <p class="g-sub">
-            Todos los nombres validados ya están en el formato oficial.
-          </p>
+        ) : confirmando ? (
+          <div
+            class="g-val-confirmar"
+            role="alertdialog"
+            aria-label="Confirmar consulta"
+          >
+            <span>
+              Se consultarán <strong>{seleccion.size}</strong> cédulas: hasta{" "}
+              <strong>{dolares(costo)}</strong>.
+            </span>
+            <button type="button" class="g-btn-accion" onClick={consultar}>
+              Sí, consultar
+            </button>
+            <button
+              type="button"
+              class="g-btn-ghost"
+              onClick={() => setConfirmando(false)}
+            >
+              Cancelar
+            </button>
+          </div>
         ) : (
           <>
-            <p class="g-sub">
-              Nombre en el sistema frente al oficial, en formato "Nombres
-              Apellidos". "Solo formato" cambia mayúsculas, tildes u orden;
-              "Distinto" puede ser otra persona o una cédula mal digitada:
-              revísalo antes de aplicar.
-            </p>
-            <div class="g-mil-chips" role="group" aria-label="Filtrar">
-              {(["todos", "igual", "parecido", "distinto"] as const).map(
-                (c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    class="g-chip-filtro"
-                    aria-pressed={filtro === c}
-                    onClick={() => setFiltro(c)}
-                  >
-                    {c === "todos" ? "Todos" : ETIQUETA[c]}
-                    <span class="g-chip-filtro-n">{conteos[c]}</span>
-                  </button>
-                ),
-              )}
-            </div>
-            <div class="g-val-acciones">
+            <button
+              type="button"
+              class="g-btn-accion"
+              disabled={seleccion.size === 0}
+              onClick={() => setConfirmando(true)}
+            >
+              Consultar seleccionadas ({seleccion.size} · ≈ {dolares(costo)})
+            </button>
+            <button
+              type="button"
+              class="g-btn-ghost"
+              disabled={consultablesDelFiltro.length === 0}
+              onClick={() => setSeleccion(new Set(consultablesDelFiltro))}
+            >
+              Seleccionar las {consultablesDelFiltro.length} por consultar del
+              filtro
+            </button>
+            {seleccion.size > 0 ? (
               <button
                 type="button"
-                class="g-btn-accion"
-                disabled={aplicando || seleccion.size === 0}
-                onClick={() => aplicar([...seleccion])}
+                class="g-btn-ghost"
+                onClick={() => setSeleccion(new Set())}
               >
-                Aplicar a los seleccionados ({seleccion.size})
+                Quitar selección
               </button>
-              {conteos.igual > 0 ? (
-                <button
-                  type="button"
-                  class="g-btn-ghost"
-                  disabled={aplicando}
-                  onClick={() =>
-                    aplicar(
-                      datos.revision
-                        .filter((f) => f.coincidencia === "igual")
-                        .map((f) => f.cedula),
-                    )
-                  }
-                >
-                  Aplicar todos los de solo formato ({conteos.igual})
-                </button>
-              ) : null}
-            </div>
-            <div class="g-table-scroll">
-              <table class="g-table g-val-tabla">
-                <thead>
-                  <tr>
-                    <th>
-                      <span class="g-sr-only">Seleccionar</span>
-                    </th>
-                    <th>Cédula</th>
-                    <th>En el sistema</th>
-                    <th>Oficial</th>
-                    <th>Coincidencia</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filas.map((f) => (
-                    <tr key={f.cedula}>
-                      <td>
-                        <input
-                          type="checkbox"
-                          aria-label={`Seleccionar ${f.oficial}`}
-                          checked={seleccion.has(f.cedula)}
-                          onChange={() => alternar(f.cedula)}
-                        />
-                      </td>
-                      <td class="g-val-cedula">
-                        {f.cedula}
-                        <small>{f.donde.join(" · ")}</small>
-                      </td>
-                      <td>
-                        {f.registrados.map((n) => (
-                          <span key={n} class="g-val-nombre">
-                            {n}
-                          </span>
-                        ))}
-                      </td>
-                      <td>
-                        <strong>{f.oficial}</strong>
-                        <VerRespuesta respuesta={f.respuesta} />
-                      </td>
-                      <td>
-                        <span class={`chip-estado ${CLASE[f.coincidencia]}`}>
-                          {ETIQUETA[f.coincidencia]}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            ) : null}
+            {coincidenDelFiltro.length > 0 ? (
+              <button
+                type="button"
+                class="g-btn-ghost"
+                disabled={ocupado}
+                onClick={() => decidir("aplicar", coincidenDelFiltro)}
+              >
+                Aplicar nombre oficial a las {coincidenDelFiltro.length} que
+                coinciden
+              </button>
+            ) : null}
           </>
         )}
-      </section>
-
-      {datos.noEncontradasDetalle.length > 0 ? (
-        <section class="g-val-seccion" aria-labelledby="val-noencontradas">
-          <h2 id="val-noencontradas">No encontradas en el Registro Civil</h2>
-          <p class="g-sub">
-            La API no devolvió datos de estas cédulas. Revisa si están mal
-            digitadas y corrígelas donde consten.
-          </p>
-          <ul class="g-val-lista">
-            {datos.noEncontradasDetalle.map((d) => (
-              <li key={d.persona.cedula}>
-                <strong>{d.persona.nombres.join(" / ")}</strong>
-                <small>
-                  CI {d.persona.cedula} · {d.persona.donde.join(" · ")}
-                  {d.error ? ` · ${d.error}` : ""}
-                </small>
-                <VerRespuesta respuesta={d.respuesta} />
-              </li>
-            ))}
-          </ul>
-        </section>
+      </div>
+      {aviso ? (
+        <p role="status" class="g-val-aviso">
+          {aviso}
+        </p>
       ) : null}
+      {error ? <p class="g-error">{error}</p> : null}
 
-      {datos.invalidas.length > 0 ? (
-        <section class="g-val-seccion" aria-labelledby="val-invalidas">
-          <h2 id="val-invalidas">Cédulas inválidas (no se consultan)</h2>
-          <p class="g-sub">
-            No pasan el dígito verificador: la API las rechazaría y se cobraría
-            igual. Corrígelas primero donde consten.
-          </p>
-          <ul class="g-val-lista">
-            {datos.invalidas.map((p) => (
-              <li key={p.cedula}>
-                <strong>{p.nombres.join(" / ")}</strong>
-                <small>
-                  CI {p.cedula} · {p.donde.join(" · ")}
-                </small>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+      {filas.length === 0 ? (
+        <VacioFiltros
+          mensaje="Nadie coincide con estos filtros."
+          onQuitar={quitarFiltros}
+        />
+      ) : (
+        <>
+          <div class="g-table-scroll">
+            <table class="g-table g-val-tabla">
+              <caption class="g-sr-only">
+                Personas del Consolidado y su verificación
+              </caption>
+              <thead>
+                <tr>
+                  <th>
+                    <span class="g-sr-only">Seleccionar</span>
+                  </th>
+                  <th>Persona</th>
+                  <th>Responsabilidad</th>
+                  <th>Estado</th>
+                  <th class="g-num">Edad</th>
+                  <th>Género</th>
+                  <th>
+                    <span class="g-sr-only">Acciones</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filas.slice(0, visibles).map((f) => {
+                  const recinto = recintoDe.get(f.recintoCodigo);
+                  const e = edad(f.fechaNacimiento, hoy);
+                  return (
+                    <tr key={f.id}>
+                      <td>
+                        {consultable(f) ? (
+                          <input
+                            type="checkbox"
+                            aria-label={`Seleccionar a ${f.nombres}`}
+                            checked={seleccion.has(f.cedula)}
+                            disabled={consultando}
+                            onChange={() => alternar(f.cedula)}
+                          />
+                        ) : null}
+                      </td>
+                      <td>
+                        <span class="g-val-nombre">
+                          <Resaltado texto={f.nombres} consulta={busqueda} />
+                        </span>
+                        <small class="g-val-cedula">
+                          CI <Resaltado texto={f.cedula} consulta={busqueda} />
+                        </small>
+                        {f.oficial && f.estado !== "verificada" ? (
+                          <small class="g-val-oficial">
+                            Oficial: {f.oficial}
+                          </small>
+                        ) : null}
+                        {f.error &&
+                        (f.estado === "no_encontrada" ||
+                          f.estado === "error") ? (
+                          <small class="g-val-oficial">{f.error}</small>
+                        ) : null}
+                        {f.respuesta ? (
+                          <details class="g-val-json">
+                            <summary>Ver respuesta</summary>
+                            <pre>{JSON.stringify(f.respuesta, null, 2)}</pre>
+                          </details>
+                        ) : null}
+                      </td>
+                      <td>
+                        {ROL[f.rol]} {f.tipo}
+                        {f.junta ? ` · ${f.junta}` : ""}
+                        <small class="g-val-cedula">
+                          {recinto
+                            ? title(recinto.nombre)
+                            : `Recinto ${f.recintoCodigo}`}
+                        </small>
+                      </td>
+                      <td>
+                        <span class={`chip-estado ${ESTADO[f.estado].clase}`}>
+                          {ESTADO[f.estado].etiqueta}
+                        </span>
+                      </td>
+                      <td class="g-num">{e ?? "—"}</td>
+                      <td>{f.genero ? ETIQUETA_GENERO[f.genero] : "—"}</td>
+                      <td>
+                        {f.estado === "coincide" || f.estado === "revisar" ? (
+                          <span class="g-val-decision">
+                            <button
+                              type="button"
+                              class="g-btn-ghost"
+                              disabled={ocupado}
+                              onClick={() => decidir("aplicar", [f.cedula])}
+                            >
+                              Usar oficial
+                            </button>
+                            <button
+                              type="button"
+                              class="g-btn-ghost"
+                              disabled={ocupado}
+                              onClick={() => decidir("mantener", [f.cedula])}
+                            >
+                              Mantener
+                            </button>
+                          </span>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {filas.length > visibles ? (
+            <button
+              type="button"
+              class="g-btn-ghost g-val-mas"
+              onClick={() => setVisibles((v) => v + PAGINA)}
+            >
+              Mostrar {Math.min(PAGINA, filas.length - visibles)} más
+            </button>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }
