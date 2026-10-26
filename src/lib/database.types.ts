@@ -140,6 +140,39 @@ export type Database = {
         }
         Relationships: []
       }
+      contactos: {
+        Row: {
+          actualizado_en: string
+          actualizado_por: string | null
+          cedula: string
+          cedula_recibida: boolean
+          estado: string
+          intentos: number
+          puesto_enviado: string | null
+          ultimo_envio: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          actualizado_por?: string | null
+          cedula: string
+          cedula_recibida?: boolean
+          estado: string
+          intentos?: number
+          puesto_enviado?: string | null
+          ultimo_envio?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          actualizado_por?: string | null
+          cedula?: string
+          cedula_recibida?: boolean
+          estado?: string
+          intentos?: number
+          puesto_enviado?: string | null
+          ultimo_envio?: string | null
+        }
+        Relationships: []
+      }
       coordinadores: {
         Row: {
           cedula: string

@@ -1,0 +1,70 @@
+---
+import GestionLayout from "../../layouts/GestionLayout.astro";
+import GestionContacto from "../../components/gestion/GestionContacto";
+import { getMapData } from "../../lib/data";
+import { listVeedores } from "../../lib/gestion/veedores";
+import { listCoordinadores } from "../../lib/gestion/coordinadores";
+import { listAcreditadosCda } from "../../lib/gestion/acreditadosCda";
+import { listLideres } from "../../lib/gestion/lideres";
+import { listValidaciones } from "../../lib/validacion/validaciones";
+import { validacionesParaVista } from "../../lib/validacion/pantalla";
+import { listContactos } from "../../lib/contacto/contactos";
+import type { Contacto } from "../../lib/contacto/plan";
+import type { ValidacionCedula } from "../../lib/validacion/plan";
+import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
+
+if (!PAGINAS_GESTION.contacto.includes(Astro.locals.rol)) {
+  return Astro.redirect(rutaPorDefecto(Astro.locals.rol));
+}
+
+const data = await getMapData();
+const [veedores, coordinadores, acreditados, lideres] = await Promise.all([
+  listVeedores(),
+  listCoordinadores(),
+  listAcreditadosCda(),
+  listLideres(),
+]);
+async function cargarValidaciones(): Promise<ValidacionCedula[]> {
+  try {
+    // Aquí basta el estado, la edad y el género, no la respuesta completa.
+    return validacionesParaVista(await listValidaciones(), false);
+  } catch {
+    return [];
+  }
+}
+// Si la tabla aún no existe, la pantalla pide aplicar la migración.
+async function cargarContactos(): Promise<Contacto[] | null> {
+  try {
+    return await listContactos();
+  } catch {
+    return null;
+  }
+}
+const [validaciones, contactos] = await Promise.all([
+  cargarValidaciones(),
+  cargarContactos(),
+]);
+---
+
+<GestionLayout title="Contacto" activo="contacto">
+  <h1>Contacto por WhatsApp</h1>
+  <p class="g-sub">
+    Último paso de la verificación: escribe a cada persona del Consolidado con
+    su puesto y marca su respuesta. Quien confirma queda verificado; quien no
+    participa pasa a la lista negra con el motivo.
+  </p>
+  <GestionContacto
+    client:load
+    parroquias={data.parroquias.features.map(({ properties }) => ({
+      properties,
+    }))}
+    recintos={data.recintos}
+    lideres={lideres.map(({ id, nombres }) => ({ id, nombres }))}
+    veedores={veedores}
+    coordinadores={coordinadores}
+    acreditados={acreditados}
+    validaciones={validaciones}
+    contactos={contactos ?? []}
+    tablaLista={contactos !== null}
+  />
+</GestionLayout>

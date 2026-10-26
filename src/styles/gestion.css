@@ -3143,3 +3143,107 @@ a.g-btn-accion {
   font-size: 0.88rem;
   line-height: 1.5;
 }
+
+/* Contacto por WhatsApp: una fila por persona con su estado y, a la derecha
+   (abajo en el teléfono), el botón de WhatsApp y su respuesta. */
+.g-contacto-nota {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+.g-contacto-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.g-contacto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 12px 14px;
+}
+.g-contacto + .g-contacto {
+  border-top: 1px solid var(--line);
+}
+.g-contacto > .g-consol-persona {
+  flex: 1 1 320px;
+}
+.g-contacto-estado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 4px;
+}
+.g-consol-persona-texto .g-contacto-aviso {
+  color: var(--aviso);
+  font-weight: 700;
+}
+.g-contacto-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px 8px;
+  flex: 0 1 360px;
+}
+.g-btn-whatsapp {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: #0f7a55;
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .g-btn-whatsapp:hover {
+    background: #0b6646;
+  }
+}
+.g-btn-whatsapp:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.g-btn-whatsapp[aria-disabled="true"] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.g-contacto-acciones .g-btn-ghost,
+.g-contacto-acciones .g-btn-danger-ghost {
+  min-height: 36px;
+}
+.g-contacto-sin-numero {
+  color: var(--error);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.g-contacto-cedula {
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.g-contacto-acciones .g-btn-link {
+  margin: 0;
+}
+@media (max-width: 640px) {
+  .g-contacto-acciones {
+    justify-content: flex-start;
+    flex-basis: 100%;
+  }
+}
+.g-dialogo-no-participa textarea {
+  font-weight: 400;
+}
+.g-dialogo-no-participa .g-form-actions button[type="submit"] {
+  background: var(--error-solid);
+  color: #fff;
+}
+.g-dialogo-no-participa .g-form-actions button[type="submit"]:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
