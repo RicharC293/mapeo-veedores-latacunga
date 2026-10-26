@@ -2792,6 +2792,17 @@ select.g-campo-error {
   border-bottom: 2px solid var(--sel);
   font-size: 1.3rem;
 }
+.g-simple-zona-detalle {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+  font-size: 0.95rem;
+}
+.g-simple-zona-exceso {
+  color: var(--muted);
+}
 .g-simple-parroquia {
   margin-top: 22px;
 }
@@ -2896,6 +2907,7 @@ select.g-campo-error {
     break-inside: avoid;
   }
   .g-simple-seccion > h2,
+  .g-simple-zona-detalle,
   .g-simple-parroquia h3 {
     break-after: avoid;
   }

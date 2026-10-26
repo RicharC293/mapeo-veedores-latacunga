@@ -8,6 +8,7 @@ import { listAcreditadosCda } from "../../lib/gestion/acreditadosCda";
 import { cifrasPorRecinto } from "../../lib/gestion/informe";
 import {
   armarInformeSimple,
+  sumarFaltantes,
   type AnalisisSimple,
   type Faltantes,
   type PersonaPorReemplazar,
@@ -103,18 +104,29 @@ const porReemplazar: PersonaPorReemplazar[] = registrados
 
 const informe = armarInformeSimple(filas, analisis, porReemplazar, suplentes);
 const parroquias = informe.parroquias;
+// Cada sección resume, como bajo cada recinto, lo que falta, el exceso y a
+// quiénes hay que reemplazar en toda la zona.
 const secciones = [
   {
     id: "urbanas",
     titulo: "Parroquias urbanas",
+    faltan: informe.urbanas,
     parroquias: parroquias.filter((p) => p.urbana),
   },
   {
     id: "rurales",
     titulo: "Parroquias rurales",
+    faltan: informe.rurales,
     parroquias: parroquias.filter((p) => !p.urbana),
   },
-];
+].map((s) => {
+  const recintos = s.parroquias.flatMap((p) => p.recintos);
+  return {
+    ...s,
+    exceso: sumarFaltantes(recintos.map((r) => r.exceso)),
+    porReemplazar: recintos.reduce((n, r) => n + r.porReemplazar.length, 0),
+  };
+});
 const opciones = [
   {
     clave: "noverificado",
@@ -303,11 +315,34 @@ const csvFilas = parroquias.flatMap((p) =>
     {secciones.map((sec) => (
       <section class="g-simple-seccion" aria-labelledby={`simple-${sec.id}`}>
         <h2 id={`simple-${sec.id}`}>{sec.titulo}</h2>
+        <ul class="g-simple-zona-detalle">
+          <li class={sec.faltan.total > 0 ? "g-simple-falta" : "g-simple-ok"}>
+            {sec.faltan.total === 0
+              ? "Completa: no falta nadie."
+              : `Faltan ${personas(sec.faltan.total)}: ${detalleFaltan(sec.faltan)}.`}
+          </li>
+          {sec.porReemplazar > 0 ? (
+            <li class="g-simple-falta">
+              Por reemplazar: {personas(sec.porReemplazar)} (incluidas en lo que
+              falta).
+            </li>
+          ) : null}
+          {sec.exceso.total > 0 ? (
+            <li class="g-simple-zona-exceso">
+              <strong>Exceso (suplentes):</strong> {detalleFaltan(sec.exceso)}.
+            </li>
+          ) : null}
+        </ul>
         {sec.parroquias.map((p) => (
           <section class="g-simple-parroquia">
             <h3>
               {p.nombre}
-              <span class="g-simple-faltan-parroquia">
+              <span
+                class:list={[
+                  "g-simple-faltan-parroquia",
+                  { "g-simple-ok": p.faltan.total === 0 },
+                ]}
+              >
                 {p.faltan.total === 0
                   ? "Completa"
                   : `Faltan ${personas(p.faltan.total)}: ${detalleFaltan(p.faltan)}`}

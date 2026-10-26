@@ -72,7 +72,7 @@ const sinFaltantes = (): Faltantes => ({
   total: 0,
 });
 
-function sumarFaltantes(lista: Faltantes[]): Faltantes {
+export function sumarFaltantes(lista: Faltantes[]): Faltantes {
   const t = sinFaltantes();
   for (const f of lista) {
     t.coordinadores += f.coordinadores;
