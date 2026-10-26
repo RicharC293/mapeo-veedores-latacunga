@@ -3,6 +3,7 @@ import FiltrosRecintos, {
   ResumenAvance,
   VacioFiltros,
 } from "./FiltrosRecintos";
+import BotonIcono, { TrazosIcono } from "./BotonIcono";
 import GrupoParroquia from "./GrupoParroquia";
 import Iniciales from "./Iniciales";
 import Resaltado from "./Resaltado";
@@ -290,81 +291,74 @@ function Persona({
       <div class="g-contacto-acciones">
         {f.numero ? (
           <a
-            class="g-btn-whatsapp"
+            class="g-btn-icono g-btn-icono-whatsapp"
             href={enlaceWhatsapp(f.numero, f.mensaje)}
             target="_blank"
             rel="noopener noreferrer"
+            aria-label={
+              estado === "pendiente" ? "Enviar WhatsApp" : "Reenviar WhatsApp"
+            }
+            title={
+              estado === "pendiente" ? "Enviar WhatsApp" : "Reenviar WhatsApp"
+            }
             aria-disabled={ocupado ? "true" : undefined}
             onClick={() => onAccion(f, "enviado")}
           >
-            {estado === "pendiente" ? "Enviar WhatsApp" : "Reenviar"}
+            <TrazosIcono icono="whatsapp" />
           </a>
         ) : (
           <span class="g-contacto-sin-numero">Celular inválido</span>
         )}
-        <button
-          type="button"
-          class="g-btn-ghost"
-          aria-live="polite"
+        <BotonIcono
+          icono={copiado ? "check" : "copiar"}
+          etiqueta={copiado ? "¡Copiado!" : "Copiar mensaje"}
           onClick={copiar}
-        >
-          {copiado ? "¡Copiado!" : "Copiar mensaje"}
-        </button>
+        />
         {estado !== "confirmado" ? (
-          <button
-            type="button"
-            class="g-btn-ghost"
+          <BotonIcono
+            icono="check"
+            exito
+            etiqueta="Confirmó su participación"
             disabled={ocupado}
             onClick={() => onAccion(f, "confirmado")}
-          >
-            Confirmó
-          </button>
+          />
         ) : null}
         {estado === "enviado" ? (
-          <button
-            type="button"
-            class="g-btn-ghost"
+          <BotonIcono
+            icono="celularMal"
+            etiqueta="Número equivocado"
             disabled={ocupado}
             onClick={() => onAccion(f, "numero_equivocado")}
-          >
-            Número equivocado
-          </button>
+          />
         ) : null}
-        <button
-          type="button"
-          class="g-btn-danger-ghost"
-          disabled={ocupado}
-          onClick={() => onNoParticipa(f)}
-        >
-          No participa
-        </button>
         {estado !== "pendiente" ? (
-          <label class="g-check g-contacto-cedula">
-            <input
-              type="checkbox"
-              checked={c?.cedulaRecibida ?? false}
-              disabled={ocupado}
-              onChange={(e) =>
-                onAccion(
-                  f,
-                  "cedula",
-                  (e.currentTarget as HTMLInputElement).checked,
-                )
-              }
-            />
-            Cédula recibida
-          </label>
+          <BotonIcono
+            icono="cedula"
+            etiqueta={
+              c?.cedulaRecibida
+                ? "Cédula recibida (tocar para quitar)"
+                : "Marcar la cédula como recibida"
+            }
+            presionado={c?.cedulaRecibida ?? false}
+            disabled={ocupado}
+            onClick={() => onAccion(f, "cedula", !c?.cedulaRecibida)}
+          />
         ) : null}
         {estado !== "pendiente" && !verificadoAntes ? (
-          <button
-            type="button"
-            class="g-btn-link"
+          <BotonIcono
+            icono="deshacer"
+            etiqueta="Volver a por contactar"
             disabled={ocupado}
             onClick={() => onAccion(f, "pendiente")}
-          >
-            Volver a por contactar
-          </button>
+          />
         ) : null}
+        <BotonIcono
+          icono="noParticipa"
+          peligro
+          etiqueta="No participa: enviar a la lista negra"
+          disabled={ocupado}
+          onClick={() => onNoParticipa(f)}
+        />
       </div>
     </li>
   );

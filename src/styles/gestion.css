@@ -3186,49 +3186,37 @@ a.g-btn-accion {
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 6px 8px;
-  flex: 0 1 360px;
+  gap: 6px;
+  flex: 0 0 auto;
 }
-.g-btn-whatsapp {
-  display: inline-flex;
-  align-items: center;
-  min-height: 36px;
-  padding: 6px 14px;
-  border-radius: 8px;
+.g-btn-icono-whatsapp {
+  border-color: #0f7a55;
   background: #0f7a55;
   color: #fff;
-  font-size: 0.88rem;
-  font-weight: 700;
-  text-decoration: none;
 }
-@media (hover: hover) and (pointer: fine) {
-  .g-btn-whatsapp:hover {
-    background: #0b6646;
-  }
+.g-btn-icono-whatsapp:hover {
+  background: #0b6646;
 }
-.g-btn-whatsapp:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-}
-.g-btn-whatsapp[aria-disabled="true"] {
+.g-btn-icono-whatsapp[aria-disabled="true"] {
   opacity: 0.5;
   pointer-events: none;
 }
-.g-contacto-acciones .g-btn-ghost,
-.g-contacto-acciones .g-btn-danger-ghost {
-  min-height: 36px;
+.g-btn-icono-exito {
+  border-color: #2f9e57;
+  color: #2f9e57;
+}
+.g-btn-icono-exito:hover {
+  background: color-mix(in srgb, #2f9e57 14%, transparent);
+}
+.g-contacto-acciones .g-btn-icono[aria-pressed="true"] {
+  border-color: #2f9e57;
+  background: #2f9e57;
+  color: #fff;
 }
 .g-contacto-sin-numero {
   color: var(--error);
   font-size: 0.85rem;
   font-weight: 700;
-}
-.g-contacto-cedula {
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-.g-contacto-acciones .g-btn-link {
-  margin: 0;
 }
 @media (max-width: 640px) {
   .g-contacto-acciones {

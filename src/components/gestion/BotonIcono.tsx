@@ -1,9 +1,24 @@
+export type Icono =
+  | "mover"
+  | "basura"
+  | "check"
+  | "candado"
+  | "deshacer"
+  | "documento"
+  | "whatsapp"
+  | "copiar"
+  | "celularMal"
+  | "noParticipa"
+  | "cedula";
+
 interface Props {
-  icono: "mover" | "basura" | "check" | "candado" | "deshacer" | "documento";
+  icono: Icono;
   // Nombre de la acción: lo leen los lectores de pantalla y aparece como
   // sugerencia al pasar el cursor, porque el botón no lleva texto.
   etiqueta: string;
   peligro?: boolean;
+  // Acción positiva (confirmar): en verde.
+  exito?: boolean;
   disabled?: boolean;
   // Botón que abre o cierra algo (la respuesta del Registro Civil).
   presionado?: boolean;
@@ -11,7 +26,7 @@ interface Props {
 }
 
 // Trazos de 24×24 con un mismo grosor y extremos redondeados.
-const TRAZOS: Record<Props["icono"], string[]> = {
+const TRAZOS: Record<Icono, string[]> = {
   // Flechas en las cuatro direcciones.
   mover: [
     "M5 9l-3 3 3 3",
@@ -45,12 +60,58 @@ const TRAZOS: Record<Props["icono"], string[]> = {
     "M9 13h6",
     "M9 17h6",
   ],
+  // Globo de conversación: escribir por WhatsApp.
+  whatsapp: [
+    "M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.4A8.5 8.5 0 1 1 21 11.5z",
+    "M8.5 11.5h.01",
+    "M12 11.5h.01",
+    "M15.5 11.5h.01",
+  ],
+  // Dos hojas superpuestas: copiar.
+  copiar: [
+    "M9 9h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1z",
+    "M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1",
+  ],
+  // Celular tachado: número equivocado.
+  celularMal: [
+    "M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z",
+    "M11 18h2",
+    "M10 8l4 4",
+    "M14 8l-4 4",
+  ],
+  // Persona con una equis: no participa.
+  noParticipa: [
+    "M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+    "M3 21a7 7 0 0 1 11.5-5.4",
+    "M17 15l4 4",
+    "M21 15l-4 4",
+  ],
+  // Credencial con foto: cédula recibida.
+  cedula: [
+    "M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z",
+    "M8.5 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z",
+    "M5.5 16a3 3 0 0 1 6 0",
+    "M14 10h4",
+    "M14 14h3",
+  ],
 };
+
+// Solo el dibujo, para usarlo dentro de un enlace (el de WhatsApp).
+export function TrazosIcono({ icono }: { icono: Icono }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      {TRAZOS[icono].map((d) => (
+        <path key={d} d={d} />
+      ))}
+    </svg>
+  );
+}
 
 export default function BotonIcono({
   icono,
   etiqueta,
   peligro,
+  exito,
   disabled,
   presionado,
   onClick,
@@ -58,18 +119,14 @@ export default function BotonIcono({
   return (
     <button
       type="button"
-      class={`g-btn-icono${peligro ? " g-btn-icono-peligro" : ""}`}
+      class={`g-btn-icono${peligro ? " g-btn-icono-peligro" : ""}${exito ? " g-btn-icono-exito" : ""}`}
       aria-label={etiqueta}
       title={etiqueta}
       disabled={disabled}
       aria-pressed={presionado}
       onClick={onClick}
     >
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        {TRAZOS[icono].map((d) => (
-          <path key={d} d={d} />
-        ))}
-      </svg>
+      <TrazosIcono icono={icono} />
     </button>
   );
 }
