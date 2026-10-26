@@ -227,6 +227,18 @@ function Persona({
   const { estado, cambioDePuesto, verificadoAntes } = f.situacion;
   const c = f.contacto;
   const chip = ESTADO[estado];
+  const [copiado, setCopiado] = useState(false);
+  // Para enviarlo por otro medio o pegarlo en WhatsApp a mano: copiar no
+  // cuenta como enviado.
+  const copiar = async () => {
+    try {
+      await navigator.clipboard.writeText(f.mensaje);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch {
+      window.prompt("Copia el mensaje:", f.mensaje);
+    }
+  };
   return (
     <li class="g-contacto">
       <div class="g-consol-persona">
@@ -290,6 +302,14 @@ function Persona({
         ) : (
           <span class="g-contacto-sin-numero">Celular inválido</span>
         )}
+        <button
+          type="button"
+          class="g-btn-ghost"
+          aria-live="polite"
+          onClick={copiar}
+        >
+          {copiado ? "¡Copiado!" : "Copiar mensaje"}
+        </button>
         {estado !== "confirmado" ? (
           <button
             type="button"
