@@ -3247,3 +3247,15 @@ a.g-btn-accion {
   opacity: 0.45;
   cursor: not-allowed;
 }
+/* Estado del contacto por WhatsApp bajo la persona en Consolidado. */
+.g-consol-contacto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin-top: 2px;
+}
+.g-consol-persona-texto .g-consol-contacto-aviso {
+  color: var(--aviso);
+  font-weight: 700;
+}

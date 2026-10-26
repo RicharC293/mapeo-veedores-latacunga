@@ -213,16 +213,6 @@ export default function GestionAcreditadosCda({
                       );
                       await refrescar();
                     }}
-                    onVerificar={async (id, verificado) => {
-                      await api(
-                        `/api/gestion/acreditados-cda/${id}/verificar`,
-                        {
-                          method: "POST",
-                          body: JSON.stringify({ verificado }),
-                        },
-                      );
-                      await refrescar();
-                    }}
                   />
                 ))}
               </div>

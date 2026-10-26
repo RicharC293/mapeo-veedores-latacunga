@@ -9,6 +9,8 @@ import { listLideres } from "../../lib/gestion/lideres";
 import { listValidaciones } from "../../lib/validacion/validaciones";
 import { validacionesParaVista } from "../../lib/validacion/pantalla";
 import { COSTO_POR_CONSULTA } from "../../lib/validacion/ecuadorApi";
+import { listContactos } from "../../lib/contacto/contactos";
+import type { Contacto } from "../../lib/contacto/plan";
 import type { ValidacionCedula } from "../../lib/validacion/plan";
 import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
 
@@ -35,7 +37,18 @@ async function cargarValidaciones(): Promise<ValidacionCedula[]> {
     return [];
   }
 }
-const validaciones = await cargarValidaciones();
+// Estado del contacto por WhatsApp; sin la tabla, solo se ve "Verificado".
+async function cargarContactos(): Promise<Contacto[]> {
+  try {
+    return await listContactos();
+  } catch {
+    return [];
+  }
+}
+const [validaciones, contactos] = await Promise.all([
+  cargarValidaciones(),
+  cargarContactos(),
+]);
 const hayClave = Boolean(import.meta.env.ECUADORAPI_KEY);
 ---
 
@@ -60,5 +73,6 @@ const hayClave = Boolean(import.meta.env.ECUADORAPI_KEY);
     puedeVerificar={puedeVerificar}
     hayClave={hayClave}
     costoPorConsulta={COSTO_POR_CONSULTA}
+    contactos={contactos}
   />
 </GestionLayout>

@@ -21,6 +21,7 @@ import {
   type IdentidadVista,
   type ValidacionCedula,
 } from "../../lib/validacion/plan";
+import { situacionContacto, type Contacto } from "../../lib/contacto/plan";
 import { useRecintosAbiertos } from "./useRecintosAbiertos";
 import { normalizar, title } from "../../lib/format";
 import {
@@ -73,6 +74,8 @@ interface Props {
   puedeVerificar?: boolean;
   hayClave?: boolean;
   costoPorConsulta?: number;
+  // Contacto por WhatsApp (verificación 3), por cédula.
+  contactos?: Contacto[];
 }
 
 // Decisiones sobre el nombre de una persona frente al oficial.
@@ -198,10 +201,55 @@ function LineaIdentidad({
   );
 }
 
+// Estado del contacto por WhatsApp: "Verificado" cuando confirmó y, mientras
+// tanto, si se espera su respuesta o el número está mal. Se gestiona desde
+// Contacto; aquí solo se lee.
+function LineaContacto({
+  p,
+  clase,
+  contacto,
+}: {
+  p: Persona;
+  clase: Clase;
+  contacto: Contacto | undefined;
+}) {
+  const { estado, cambioDePuesto } = situacionContacto(
+    {
+      clase,
+      tipo: p.tipo,
+      recintoCodigo: p.recintoCodigo,
+      juntaId: p.juntaId ?? null,
+    },
+    p.verificado,
+    contacto,
+  );
+  if (estado === "pendiente") return null;
+  return (
+    <span class="g-consol-contacto">
+      {estado === "confirmado" ? (
+        <span class="chip-estado chip-estado-ok">Verificado</span>
+      ) : estado === "enviado" ? (
+        <span class="chip-estado chip-estado-casi">Esperando respuesta</span>
+      ) : (
+        <span class="chip-estado chip-estado-pendiente">Número equivocado</span>
+      )}
+      {contacto?.cedulaRecibida ? (
+        <span class="chip-estado chip-estado-ok">Cédula recibida</span>
+      ) : null}
+      {cambioDePuesto ? (
+        <small class="g-consol-contacto-aviso">
+          Cambió de puesto: reenviar el WhatsApp
+        </small>
+      ) : null}
+    </span>
+  );
+}
+
 function Linea({
   p,
   busqueda,
   identidad,
+  contacto,
   verif,
   rol,
   clase,
@@ -211,6 +259,7 @@ function Linea({
   p: Persona;
   busqueda: string;
   identidad: IdentidadVista | undefined;
+  contacto: Contacto | undefined;
   verif: VerifAcciones | null;
   rol: "titular" | "suplente";
   clase: Clase;
@@ -247,9 +296,7 @@ function Linea({
           <small class="g-persona-pref">Preferencia: {p.preferencia}</small>
         ) : null}
         <LineaIdentidad identidad={identidad} verRespuesta={verRespuesta} />
-        {p.verificado ? (
-          <span class="chip-estado chip-estado-ok">Verificado</span>
-        ) : null}
+        <LineaContacto p={p} clase={clase} contacto={contacto} />
       </div>
       <div class="g-consol-acciones">
         {verif && decidir ? (
@@ -304,6 +351,7 @@ function Linea({
 function PuestoLineas({
   busqueda,
   identidad,
+  contacto,
   verif,
   puesto,
   falta,
@@ -313,6 +361,7 @@ function PuestoLineas({
 }: {
   busqueda: string;
   identidad: (p: Persona) => IdentidadVista | undefined;
+  contacto: (p: Persona) => Contacto | undefined;
   verif: VerifAcciones | null;
   puesto: Puesto<Persona>;
   falta: string;
@@ -327,6 +376,7 @@ function PuestoLineas({
           p={puesto.titular}
           busqueda={busqueda}
           identidad={identidad(puesto.titular)}
+          contacto={contacto(puesto.titular)}
           verif={verif}
           rol="titular"
           clase={clase}
@@ -343,6 +393,7 @@ function PuestoLineas({
             p={s}
             busqueda={busqueda}
             identidad={identidad(s)}
+            contacto={contacto(s)}
             verif={verif}
             rol="suplente"
             clase={clase}
@@ -366,6 +417,7 @@ export default function GestionConsolidado({
   puedeVerificar = false,
   hayClave = false,
   costoPorConsulta = 0.02,
+  contactos = [],
 }: Props) {
   const [veedores, setVeedores] = useState(veedoresIniciales);
   const [coordinadores, setCoordinadores] = useState(coordinadoresIniciales);
@@ -390,6 +442,12 @@ export default function GestionConsolidado({
     validaciones.length === 0 && !puedeVerificar
       ? undefined
       : vistaIdentidad(p.nombres, p.cedula, validacionDe.get(p.cedula.trim()));
+
+  const contactoDe = useMemo(
+    () => new Map(contactos.map((c) => [c.cedula, c])),
+    [contactos],
+  );
+  const contacto = (p: PersonaVista) => contactoDe.get(p.cedula.trim());
 
   const nombreLider = useMemo(
     () => new Map(lideres.map((l) => [l.id, l.nombres])),
@@ -856,6 +914,7 @@ export default function GestionConsolidado({
                               clase="coordinador"
                               busqueda={busqueda}
                               identidad={identidad}
+                              contacto={contacto}
                               verif={verif}
                               acciones={acciones}
                               nombreLider={nombreLider}
@@ -870,6 +929,7 @@ export default function GestionConsolidado({
                                 clase="cda"
                                 busqueda={busqueda}
                                 identidad={identidad}
+                                contacto={contacto}
                                 verif={verif}
                                 acciones={acciones}
                                 nombreLider={nombreLider}
@@ -892,6 +952,7 @@ export default function GestionConsolidado({
                                       clase="veedor"
                                       busqueda={busqueda}
                                       identidad={identidad}
+                                      contacto={contacto}
                                       verif={verif}
                                       acciones={acciones}
                                       nombreLider={nombreLider}

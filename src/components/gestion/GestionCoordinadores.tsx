@@ -206,13 +206,6 @@ export default function GestionCoordinadores({
                       );
                       await refrescar();
                     }}
-                    onVerificar={async (id, verificado) => {
-                      await api(`/api/gestion/coordinadores/${id}/verificar`, {
-                        method: "POST",
-                        body: JSON.stringify({ verificado }),
-                      });
-                      await refrescar();
-                    }}
                   />
                 ))}
               </div>

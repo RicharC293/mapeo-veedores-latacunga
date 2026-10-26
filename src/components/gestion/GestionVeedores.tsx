@@ -290,16 +290,6 @@ export default function GestionVeedores({
                                   );
                                   await refrescar();
                                 }}
-                                onVerificar={async (id, verificado) => {
-                                  await api(
-                                    `/api/gestion/veedores/${id}/verificar`,
-                                    {
-                                      method: "POST",
-                                      body: JSON.stringify({ verificado }),
-                                    },
-                                  );
-                                  await refrescar();
-                                }}
                               />
                             );
                           })}

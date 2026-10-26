@@ -46,7 +46,6 @@ interface Props {
     motivo: string | null,
     listaNegra: boolean,
   ) => Promise<void>;
-  onVerificar: (id: string, verificado: boolean) => Promise<void>;
 }
 
 type Abierto = null | "titular" | "suplente" | { desvincular: string };
@@ -60,7 +59,6 @@ export default function AsignacionCard({
   onAgregarTitular,
   onAgregarSuplente,
   onDesvincular,
-  onVerificar,
 }: Props) {
   const [abierto, setAbierto] = useState<Abierto>(null);
 
@@ -77,7 +75,6 @@ export default function AsignacionCard({
             persona={titular}
             lideres={lideres}
             onDesvincular={() => setAbierto({ desvincular: titular.id })}
-            onVerificar={(v) => onVerificar(titular.id, v)}
           />
         ) : abierto === "titular" ? (
           <PersonaForm
@@ -118,7 +115,6 @@ export default function AsignacionCard({
                 persona={s}
                 lideres={lideres}
                 onDesvincular={() => setAbierto({ desvincular: s.id })}
-                onVerificar={(v) => onVerificar(s.id, v)}
               />
               {abierto !== null &&
               typeof abierto === "object" &&
@@ -160,16 +156,13 @@ function PersonaRow({
   persona,
   lideres,
   onDesvincular,
-  onVerificar,
 }: {
   rol: "titular" | "suplente";
   busqueda: string;
   persona: PersonaAsignada;
   lideres: Lider[];
   onDesvincular: () => void;
-  onVerificar: (verificado: boolean) => Promise<void>;
 }) {
-  const [enviando, setEnviando] = useState(false);
   const responsable = lideres.find((l) => l.id === persona.responsableLiderId);
 
   return (
@@ -190,23 +183,10 @@ function PersonaRow({
             Preferencia: {persona.preferencia}
           </small>
         ) : null}
-        <label class="g-check g-check-verificado">
-          <input
-            type="checkbox"
-            checked={persona.verificado}
-            disabled={enviando}
-            onChange={async (e) => {
-              const checked = (e.currentTarget as HTMLInputElement).checked;
-              setEnviando(true);
-              try {
-                await onVerificar(checked);
-              } finally {
-                setEnviando(false);
-              }
-            }}
-          />
-          Verificado
-        </label>
+        {/* Solo se lee: se verifica desde Contacto, al confirmar por WhatsApp. */}
+        {persona.verificado ? (
+          <span class="chip-estado chip-estado-ok">Verificado</span>
+        ) : null}
       </div>
       <BotonIcono
         icono="basura"

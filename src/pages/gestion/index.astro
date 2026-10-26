@@ -83,11 +83,11 @@ const faltanPersonas = Math.max(0, universoPuestos - cedulasUnicas.size);
   />
 
   <div class="g-summary">
-    <a href="/gestion/veedores">
+    <a href="/gestion/consolidado">
       <b>{veedoresTitulares}</b>
       <small>veedores titulares</small>
     </a>
-    <a href="/gestion/coordinadores">
+    <a href="/gestion/consolidado">
       <b>{coordinadoresTitulares}</b>
       <small>coordinadores titulares</small>
     </a>
@@ -145,18 +145,18 @@ const faltanPersonas = Math.max(0, universoPuestos - cedulasUnicas.size);
   </section>
 
   <p>
-    Usa el menú de la izquierda para gestionar{" "}
-    <a href="/gestion/veedores">veedores</a>,{" "}
-    <a href="/gestion/coordinadores">coordinadores</a>
+    Usa el menú de la izquierda: carga a la gente en{" "}
+    <a href="/gestion/militancia">Militancia</a>, asígnala y revísala en el{" "}
+    <a href="/gestion/consolidado">Consolidado</a> y confirma su participación
+    en <a href="/gestion/contacto">Contacto</a>. También puedes revisar la{" "}
+    <a href="/gestion/cobertura">cobertura</a>, el{" "}
+    <a href="/gestion/crecimiento">crecimiento diario</a>, el{" "}
+    <a href="/gestion/organigrama">organigrama</a>
     {esAdmin ? (
       <>
-        , <a href="/gestion/lideres">líderes</a>
+        , los <a href="/gestion/lideres">líderes</a>
       </>
     ) : null}{" "}
-    y la <a href="/gestion/lista-negra">lista negra</a>, o revisar la{" "}
-    <a href="/gestion/cobertura">cobertura</a>, el{" "}
-    <a href="/gestion/consolidado">consolidado</a> por recinto, el{" "}
-    <a href="/gestion/crecimiento">crecimiento diario</a> y el{" "}
-    <a href="/gestion/organigrama">organigrama</a>.
+    y la <a href="/gestion/lista-negra">lista negra</a>.
   </p>
 </GestionLayout>
