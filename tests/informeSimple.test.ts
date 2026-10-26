@@ -161,6 +161,38 @@ describe("personas por reemplazar", () => {
   });
 });
 
+describe("exceso de suplentes", () => {
+  const f = fila(1, "La Matriz", true, "R-E", 2, 2, true, true, undefined, 901);
+  const suplentes = [
+    { recintoCodigo: 901, rol: "veedor" as const, verificado: true },
+    { recintoCodigo: 901, rol: "veedor" as const, verificado: false },
+    { recintoCodigo: 901, rol: "coordinador" as const, verificado: false },
+  ];
+
+  it("se anota por rol en su recinto y en el cantón, sin cambiar lo que falta", () => {
+    const r = armarInformeSimple([f], "noverificado", [], suplentes);
+    const rec = r.parroquias[0].recintos[0];
+    expect(rec.faltan).toBe(0);
+    expect(rec.exceso).toEqual({
+      coordinadores: 1,
+      veedores: 2,
+      cda: 0,
+      total: 3,
+    });
+    expect(r.exceso.total).toBe(3);
+  });
+
+  it("en el análisis verificado solo cuenta a los suplentes verificados", () => {
+    const r = armarInformeSimple([f], "verificado", [], suplentes);
+    expect(r.parroquias[0].recintos[0].exceso).toEqual({
+      coordinadores: 0,
+      veedores: 1,
+      cda: 0,
+      total: 1,
+    });
+  });
+});
+
 describe("motivoNoApto", () => {
   const hoy = new Date(2026, 9, 25);
   const v = (extra: Partial<ValidacionCedula>) =>

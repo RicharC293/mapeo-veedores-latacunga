@@ -11,6 +11,7 @@ import {
   type AnalisisSimple,
   type Faltantes,
   type PersonaPorReemplazar,
+  type PersonaSuplente,
 } from "../../lib/gestion/informeSimple";
 import { listValidaciones } from "../../lib/validacion/validaciones";
 import { motivoNoApto, type ValidacionCedula } from "../../lib/validacion/plan";
@@ -58,7 +59,7 @@ const validacionDe = new Map(
   (await cargarValidaciones()).map((v) => [v.cedula, v]),
 );
 const hoy = new Date();
-const porReemplazar: PersonaPorReemplazar[] = [
+const registrados = [
   ...coordinadores.map((p) => ({
     p,
     rol: "coordinador" as const,
@@ -70,14 +71,21 @@ const porReemplazar: PersonaPorReemplazar[] = [
     rol: "veedor" as const,
     junta: p.juntaId.slice(p.juntaId.lastIndexOf("-") + 1),
   })),
-]
+].map((x) => ({
+  ...x,
+  motivo: motivoNoApto(x.p.cedula, validacionDe.get(x.p.cedula.trim()), hoy),
+}));
+// El exceso: suplentes aptos, gente de más con la que ya se cuenta.
+const suplentes: PersonaSuplente[] = registrados
+  .filter(({ p, motivo }) => p.tipo === "suplente" && !motivo)
+  .map(({ p, rol }) => ({
+    recintoCodigo: p.recintoCodigo,
+    rol,
+    verificado: p.verificado,
+  }));
+const porReemplazar: PersonaPorReemplazar[] = registrados
   .filter(({ p }) => p.tipo === "titular")
-  .flatMap(({ p, rol, junta }) => {
-    const motivo = motivoNoApto(
-      p.cedula,
-      validacionDe.get(p.cedula.trim()),
-      hoy,
-    );
+  .flatMap(({ p, rol, junta, motivo }) => {
     return motivo
       ? [
           {
@@ -93,7 +101,7 @@ const porReemplazar: PersonaPorReemplazar[] = [
       : [];
   });
 
-const informe = armarInformeSimple(filas, analisis, porReemplazar);
+const informe = armarInformeSimple(filas, analisis, porReemplazar, suplentes);
 const parroquias = informe.parroquias;
 const secciones = [
   {
@@ -166,6 +174,7 @@ const csvEncabezados = [
   "Veedores que faltan",
   "CDA",
   "Personas que faltan",
+  "Exceso (suplentes)",
   "Por reemplazar",
 ];
 const csvFilas = parroquias.flatMap((p) =>
@@ -178,6 +187,7 @@ const csvFilas = parroquias.flatMap((p) =>
     r.veedoresFaltan,
     r.cda === null ? "No aplica" : sino(r.cda),
     r.faltan,
+    r.exceso.total > 0 ? detalleFaltan(r.exceso) : "",
     r.porReemplazar
       .map((x) => `${x.nombres} (${x.cedula}, ${x.motivo})`)
       .join("; "),
@@ -274,6 +284,9 @@ const csvFilas = parroquias.flatMap((p) =>
           Se cuenta un titular por puesto: un coordinador por recinto, un veedor
           por junta y un acreditado por recinto CDA. Los suplentes no se cuentan
           en lo que falta; se pueden sumar cuantos se deseen.
+          {informe.exceso.total > 0
+            ? ` Hoy hay ${personas(informe.exceso.total)} de exceso en el cantón (${detalleFaltan(informe.exceso)}); se anotan bajo su recinto.`
+            : ""}
         </li>
         {informe.porReemplazar > 0 ? (
           <li>
@@ -383,6 +396,14 @@ const csvFilas = parroquias.flatMap((p) =>
                                   `${x.nombres} (${ROL[x.rol]}${x.junta ? ` ${x.junta}` : ""}, CI ${x.cedula}: ${x.motivo})`,
                               )
                               .join(" · ")}
+                          </td>
+                        </tr>
+                      ) : null}
+                      {r.exceso.total > 0 ? (
+                        <tr class="g-simple-exceso">
+                          <td colspan="6">
+                            <strong>Exceso (suplentes):</strong>{" "}
+                            {detalleFaltan(r.exceso)}
                           </td>
                         </tr>
                       ) : null}

@@ -19,8 +19,17 @@ export interface PersonaPorReemplazar {
   verificado: boolean;
 }
 
+// Un suplente: no cubre ningún puesto, pero es gente de más con la que ya se
+// cuenta en el recinto (el exceso).
+export interface PersonaSuplente {
+  recintoCodigo: number;
+  rol: PersonaPorReemplazar["rol"];
+  verificado: boolean;
+}
+
 // Personas titulares que faltan pedir: un coordinador por recinto, un veedor
-// por junta y un acreditado por recinto CDA. Los suplentes no cuentan.
+// por junta y un acreditado por recinto CDA. Los suplentes no cuentan. La
+// misma forma sirve para contar el exceso (suplentes) por rol.
 export interface Faltantes {
   coordinadores: number;
   veedores: number;
@@ -37,6 +46,7 @@ export interface RecintoSimple {
   cda: boolean | null;
   faltan: number;
   porReemplazar: PersonaPorReemplazar[];
+  exceso: Faltantes;
 }
 
 export interface ParroquiaSimple {
@@ -52,6 +62,7 @@ export interface InformeSimple {
   rurales: Faltantes;
   canton: Faltantes;
   porReemplazar: number;
+  exceso: Faltantes;
 }
 
 const sinFaltantes = (): Faltantes => ({
@@ -79,6 +90,7 @@ export function armarInformeSimple(
   filas: FilaRecinto[],
   analisis: AnalisisSimple = "noverificado",
   porReemplazar: PersonaPorReemplazar[] = [],
+  suplentes: PersonaSuplente[] = [],
 ): InformeSimple {
   const verificado = analisis === "verificado";
   const tiene = (c: { ingresados: number; verificados: number }) =>
@@ -91,6 +103,17 @@ export function armarInformeSimple(
       ...(reemplazosDe.get(p.recintoCodigo) ?? []),
       p,
     ]);
+  }
+  // En el análisis verificado, el exceso también cuenta solo a los verificados.
+  const excesoDe = new Map<number, Faltantes>();
+  for (const s of suplentes) {
+    if (verificado && !s.verificado) continue;
+    const e = excesoDe.get(s.recintoCodigo) ?? sinFaltantes();
+    if (s.rol === "coordinador") e.coordinadores += 1;
+    else if (s.rol === "veedor") e.veedores += 1;
+    else e.cda += 1;
+    e.total += 1;
+    excesoDe.set(s.recintoCodigo, e);
   }
 
   const porParroquia = new Map<
@@ -131,6 +154,7 @@ export function armarInformeSimple(
       cda,
       faltan: faltantes.total,
       porReemplazar: reemplazos,
+      exceso: excesoDe.get(f.codigo) ?? sinFaltantes(),
       f: faltantes,
     });
   }
@@ -165,5 +189,8 @@ export function armarInformeSimple(
     rurales,
     canton: sumarFaltantes([urbanas, rurales]),
     porReemplazar: porReemplazar.length,
+    exceso: sumarFaltantes(
+      parroquias.flatMap((p) => p.recintos.map((r) => r.exceso)),
+    ),
   };
 }

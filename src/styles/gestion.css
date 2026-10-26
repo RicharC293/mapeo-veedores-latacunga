@@ -2869,6 +2869,11 @@ select.g-campo-error {
   color: var(--error);
   font-size: 0.85rem;
 }
+.g-simple-tabla .g-simple-exceso td {
+  padding-top: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
 .g-simple-tabla .g-simple-centro {
   text-align: center;
 }
