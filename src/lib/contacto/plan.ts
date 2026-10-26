@@ -80,16 +80,32 @@ export interface DatosMensaje {
   clase: Clase;
   tipo: "titular" | "suplente";
   recinto: string;
+  parroquia: string;
+  direccion: string;
   juntaId: string | null;
 }
 
+// Los datos del puesto (rol, junta, recinto, parroquia, dirección y fecha) van
+// en MAYÚSCULAS para que se lean de un vistazo.
 export function mensajeWhatsapp(d: DatosMensaje): string {
-  const rol = `${ROL[d.clase][d.femenino ? "f" : "m"]}${d.tipo === "suplente" ? " suplente" : ""}`;
-  const lugar = `el recinto electoral ${title(d.recinto)}${d.juntaId ? `, ${textoJunta(d.juntaId)}` : ""}`;
+  const M = (s: string) => s.trim().toUpperCase();
+  const rol = M(
+    `${ROL[d.clase][d.femenino ? "f" : "m"]}${d.tipo === "suplente" ? " suplente" : ""}`,
+  );
+  const recinto = `recinto electoral ${M(d.recinto)}`;
+  const lugar = [
+    d.juntaId
+      ? `en la ${M(textoJunta(d.juntaId))} del ${recinto}`
+      : `en el ${recinto}`,
+    d.parroquia.trim() ? `de la parroquia ${M(d.parroquia)}` : null,
+    d.direccion.trim() ? `ubicado en ${M(d.direccion)}` : null,
+  ]
+    .filter((x): x is string => x !== null)
+    .join(", ");
   return [
     `¡Hola, ${d.nombre}! 👋`,
     "Recibe un cordial saludo de parte del Arq. Rodrigo Espín y de la alianza Campo Ciudad, Una Sola Fuerza.",
-    `Nos complace informarte que has sido ${d.femenino ? "asignada" : "asignado"} como ${rol} en ${lugar}, para la jornada electoral del domingo 29 de noviembre.`,
+    `Nos complace informarte que has sido ${d.femenino ? "asignada" : "asignado"} como ${rol} ${lugar}, para la jornada electoral del DOMINGO 29 DE NOVIEMBRE.`,
     `Para facilitar tu proceso de acreditación, te solicitamos amablemente que nos envíes una foto de tu cédula de identidad por ambos lados. También puedes entregar una copia física en nuestra sede cantonal, ubicada frente al colegio Victoria Vásconez Cuvi, o hacerla llegar a través de los candidatos de nuestra alianza en las diferentes parroquias. No olvides indicar a qué ${d.juntaId ? "junta" : "recinto"} perteneces.`,
     "🤝 Tu participación es muy importante para nosotros y para el desarrollo de esta jornada.",
     "Por favor, confírmanos tu participación respondiendo a este mensaje.",

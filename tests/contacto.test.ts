@@ -45,15 +45,17 @@ describe("mensajeWhatsapp", () => {
     femenino: false,
     clase: "veedor" as const,
     tipo: "titular" as const,
-    recinto: "UNIDAD EDUCATIVA ISIDRO AYORA",
+    recinto: "U.E. Isidro Ayora",
+    parroquia: "Eloy Alfaro (San Felipe)",
+    direccion: "Av. Amazonas y Quito",
     juntaId: "354-M3",
   };
 
-  it("arma el mensaje con el puesto y la junta", () => {
+  it("arma el mensaje con el puesto, la parroquia y la dirección en mayúsculas", () => {
     const m = mensajeWhatsapp(base);
     expect(m.startsWith("¡Hola, Juan! 👋")).toBe(true);
     expect(m).toContain(
-      "has sido asignado como veedor en el recinto electoral Unidad Educativa Isidro Ayora, junta 3 masculina, para la jornada electoral del domingo 29 de noviembre.",
+      "has sido asignado como VEEDOR en la JUNTA 3 MASCULINA del recinto electoral U.E. ISIDRO AYORA, de la parroquia ELOY ALFARO (SAN FELIPE), ubicado en AV. AMAZONAS Y QUITO, para la jornada electoral del DOMINGO 29 DE NOVIEMBRE.",
     );
     expect(m).toContain("No olvides indicar a qué junta perteneces.");
     expect(m.endsWith("Campo Ciudad, Una Sola Fuerza")).toBe(true);
@@ -68,11 +70,17 @@ describe("mensajeWhatsapp", () => {
       juntaId: null,
     });
     expect(m).toContain(
-      "has sido asignada como coordinadora suplente en el recinto electoral Unidad Educativa Isidro Ayora, para",
+      "has sido asignada como COORDINADORA SUPLENTE en el recinto electoral U.E. ISIDRO AYORA, de la parroquia",
     );
     expect(m).toContain("No olvides indicar a qué recinto perteneces.");
     expect(mensajeWhatsapp({ ...base, clase: "cda", juntaId: null })).toContain(
-      "como acreditado del CDA en",
+      "como ACREDITADO DEL CDA en",
+    );
+  });
+
+  it("sin dirección no la menciona", () => {
+    expect(mensajeWhatsapp({ ...base, direccion: " " })).toContain(
+      "(SAN FELIPE), para la jornada",
     );
   });
 

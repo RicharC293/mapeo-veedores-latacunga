@@ -469,6 +469,8 @@ export default function GestionContacto({
           clase,
           tipo: p.tipo,
           recinto: recinto.nombre,
+          parroquia: parroquiaDe.get(recinto.par)?.properties.name ?? "",
+          direccion: recinto.dir,
           juntaId,
         }),
         contacto,
