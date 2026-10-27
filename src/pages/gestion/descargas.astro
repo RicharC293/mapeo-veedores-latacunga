@@ -24,6 +24,9 @@ const suplentes = (l: { tipo: string }[]) =>
   l.filter((p) => p.tipo === "suplente").length;
 const juntas = mapa.recintos.reduce((a, r) => a + r.jt, 0);
 const recintosCda = mapa.recintos.filter((r) => r.cda).length;
+const personasUnicas = new Set(
+  [...veedores, ...coordinadores, ...acreditados].map((p) => p.cedula.trim()),
+).size;
 
 // Qué lleva cada archivo, con las cifras de hoy.
 const contenido: Record<string, string[]> = {
@@ -82,6 +85,20 @@ const sup = {
         </a>
       </li>
     ))}
+    <li class="g-descarga">
+      <h2>Listado de personas</h2>
+      <p>
+        Todas las personas del Consolidado en una sola lista, en orden
+        alfabético, lista para imprimir o guardar en PDF.
+      </p>
+      <ul class="g-descarga-datos">
+        <li>{fmt(personasUnicas)} personas, una vez por cédula</li>
+        <li>Cédula, nombres y teléfono</li>
+      </ul>
+      <a class="g-btn-accion" href="/gestion/listado">
+        Ver e imprimir
+      </a>
+    </li>
   </ul>
 
   <p class="g-descargas-nota">

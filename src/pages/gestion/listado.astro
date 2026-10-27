@@ -1,0 +1,92 @@
+---
+import GestionLayout from "../../layouts/GestionLayout.astro";
+import InformeAcciones from "../../components/gestion/InformeAcciones";
+import { listVeedores } from "../../lib/gestion/veedores";
+import { listCoordinadores } from "../../lib/gestion/coordinadores";
+import { listAcreditadosCda } from "../../lib/gestion/acreditadosCda";
+import { fmt } from "../../lib/format";
+import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
+
+// Trae cédulas y celulares: el mismo permiso que Descargas.
+if (!PAGINAS_GESTION.descargas.includes(Astro.locals.rol)) {
+  return Astro.redirect(rutaPorDefecto(Astro.locals.rol));
+}
+
+const [veedores, coordinadores, acreditados] = await Promise.all([
+  listVeedores(),
+  listCoordinadores(),
+  listAcreditadosCda(),
+]);
+
+// Todas las personas del Consolidado en una sola lista, una vez por cédula
+// (alguien con dos puestos sale una vez), en orden alfabético.
+const porCedula = new Map<
+  string,
+  { cedula: string; nombres: string; telefono: string }
+>();
+for (const p of [...coordinadores, ...acreditados, ...veedores]) {
+  const cedula = p.cedula.trim();
+  if (!porCedula.has(cedula)) {
+    porCedula.set(cedula, {
+      cedula,
+      nombres: p.nombres.trim(),
+      telefono: p.telefono.trim(),
+    });
+  }
+}
+const personas = [...porCedula.values()].sort((a, b) =>
+  a.nombres.localeCompare(b.nombres, "es"),
+);
+
+const corte = new Intl.DateTimeFormat("es-EC", {
+  dateStyle: "long",
+  timeStyle: "short",
+  timeZone: "America/Guayaquil",
+}).format(new Date());
+const fechaArchivo = new Date().toISOString().slice(0, 10);
+---
+
+<GestionLayout title="Listado de personas" activo="descargas">
+  <article class="g-informe g-listado">
+    <header class="g-informe-cabecera">
+      <div>
+        <h1>Listado de personas</h1>
+        <p class="g-informe-corte">
+          {`${fmt(personas.length)} ${personas.length === 1 ? "persona" : "personas"} del Consolidado · datos al ${corte} (hora de Ecuador)`}
+        </p>
+      </div>
+      <InformeAcciones
+        client:load
+        encabezados={["N.º", "Cédula", "Nombres", "Teléfono"]}
+        filas={personas.map((p, i) => [i + 1, p.cedula, p.nombres, p.telefono])}
+        nombreArchivo={`listado-personas-latacunga-${fechaArchivo}.csv`}
+      />
+    </header>
+
+    <div class="g-table-scroll">
+      <table class="g-table g-informe-tabla g-listado-tabla">
+        <caption class="g-sr-only">Listado completo de personas</caption>
+        <thead>
+          <tr>
+            <th scope="col" class="g-num">
+              N.º
+            </th>
+            <th scope="col">Cédula</th>
+            <th scope="col">Nombres</th>
+            <th scope="col">Teléfono</th>
+          </tr>
+        </thead>
+        <tbody>
+          {personas.map((p, i) => (
+            <tr>
+              <td class="g-num">{i + 1}</td>
+              <td class="g-listado-dato">{p.cedula}</td>
+              <td>{p.nombres}</td>
+              <td class="g-listado-dato">{p.telefono}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </article>
+</GestionLayout>

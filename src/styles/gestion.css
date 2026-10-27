@@ -3247,3 +3247,23 @@ a.g-btn-accion {
   color: var(--aviso);
   font-weight: 700;
 }
+
+/* Listado de personas para imprimir: una sola tabla de cuatro columnas. La
+   cédula y el teléfono nunca se parten; en el teléfono la tabla se desliza. */
+.g-listado-dato,
+.g-listado-tabla td:first-child {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.g-listado-tabla td:nth-child(3) {
+  width: 100%;
+}
+/* El N.º no necesita el ancho de la primera columna de los informes. */
+.g-informe .g-listado-tabla td:first-child {
+  min-width: 0;
+}
+@media print {
+  .g-listado-tabla thead {
+    display: table-header-group;
+  }
+}
