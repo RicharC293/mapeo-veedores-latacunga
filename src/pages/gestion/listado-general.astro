@@ -75,6 +75,12 @@ const PLURAL: Record<Dignidad, string> = {
   "Acreditado CDA": "Acreditados CDA",
   Veedor: "Veedores",
 };
+// Cada grupo tiene su color de franja, para ubicarse en la hoja.
+const CLAVE: Record<Dignidad, string> = {
+  Coordinador: "coordinador",
+  "Acreditado CDA": "cda",
+  Veedor: "veedor",
+};
 
 // Los titulares (y los puestos por cubrir) por dignidad; los suplentes, todos
 // juntos al final del recinto y por nombre, sin dignidad ni junta: solo su
@@ -86,11 +92,13 @@ const recintos = agruparPorRecinto(filas).map((r) => {
     grupos: [
       ...(["Coordinador", "Acreditado CDA", "Veedor"] as Dignidad[]).map(
         (d) => ({
+          clave: CLAVE[d],
           nombre: PLURAL[d],
           filas: titulares.filter((f) => f.dignidad === d),
         }),
       ),
       {
+        clave: "suplente",
         nombre: "Suplentes",
         filas: r.filas
           .filter((f) => f.tipo === "suplente")
@@ -193,7 +201,7 @@ const fechaArchivo = new Date().toISOString().slice(0, 10);
               </tr>
             </thead>
             {r.grupos.map((g) => (
-              <tbody>
+              <tbody class={`g-listado-grupo-${g.clave}`}>
                 <tr class="g-informe-grupo">
                   <th scope="colgroup" colspan="4">
                     {`${g.nombre} · ${resumen(g.filas)}`}

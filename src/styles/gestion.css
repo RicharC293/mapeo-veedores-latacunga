@@ -3262,10 +3262,45 @@ a.g-btn-accion {
 .g-listado-tabla .g-informe-grupo th {
   padding-top: 10px;
 }
-/* Filas alternadas en dos tonos suaves, para no saltar de renglón al leer
-   o escribir sobre el papel. */
-.g-listado-tabla tbody tr:nth-child(even):not(.g-informe-grupo) td {
-  background: color-mix(in srgb, var(--chip) 55%, transparent);
+/* Filas alternadas en gris neutro, para no saltar de renglón al leer o
+   escribir sobre el papel. La primera fila de cada grupo va en blanco, así
+   nunca se confunde con la franja del grupo. */
+.g-listado-tabla tbody tr:nth-child(odd):not(.g-informe-grupo) td {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+/* Listado general: cada grupo con su color de franja (Coordinadores azul,
+   Acreditados CDA verde, Veedores violeta, Suplentes ámbar). El rojo queda
+   solo para los menores de edad. */
+:root {
+  --grupo-cda: #2e6e57;
+  --grupo-veedor: #5a4a8c;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --grupo-cda: #7fc8ab;
+    --grupo-veedor: #b4a5e6;
+  }
+}
+:root[data-theme="dark"] {
+  --grupo-cda: #7fc8ab;
+  --grupo-veedor: #b4a5e6;
+}
+.g-listado-grupo-coordinador {
+  --grupo: var(--sel);
+}
+.g-listado-grupo-cda {
+  --grupo: var(--grupo-cda);
+}
+.g-listado-grupo-veedor {
+  --grupo: var(--grupo-veedor);
+}
+.g-listado-grupo-suplente {
+  --grupo: var(--aviso);
+}
+.g-listado-tabla [class^="g-listado-grupo-"] .g-informe-grupo th {
+  border-top: 2px solid var(--grupo);
+  background: color-mix(in srgb, var(--grupo) 13%, var(--panel));
+  color: var(--grupo);
 }
 /* Listado general: un bloque por recinto. */
 .g-listado-recinto {
@@ -3323,8 +3358,12 @@ a.g-btn-accion {
     print-color-adjust: exact;
   }
   /* En papel el tono se pierde: un poco más marcado que en pantalla. */
-  .g-listado-tabla tbody tr:nth-child(even):not(.g-informe-grupo) td {
-    background: color-mix(in srgb, var(--chip) 85%, transparent);
+  .g-listado-tabla tbody tr:nth-child(odd):not(.g-informe-grupo) td {
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+  :root:root:root {
+    --grupo-cda: #2e6e57;
+    --grupo-veedor: #5a4a8c;
   }
   /* Alto suficiente para escribir nombre, cédula y teléfono. */
   .g-listado-vacio td {
