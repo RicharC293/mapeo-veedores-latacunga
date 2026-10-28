@@ -1,0 +1,145 @@
+---
+import GestionLayout from "../../layouts/GestionLayout.astro";
+import InformeAcciones from "../../components/gestion/InformeAcciones";
+import { getMapData } from "../../lib/data";
+import { listVeedores } from "../../lib/gestion/veedores";
+import { listCoordinadores } from "../../lib/gestion/coordinadores";
+import { listAcreditadosCda } from "../../lib/gestion/acreditadosCda";
+import {
+  agruparPorRecinto,
+  filasListado,
+  type Dignidad,
+} from "../../lib/gestion/listado";
+import { fmt, title } from "../../lib/format";
+import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
+
+// Trae cédulas y celulares: el mismo permiso que Descargas.
+if (!PAGINAS_GESTION.descargas.includes(Astro.locals.rol)) {
+  return Astro.redirect(rutaPorDefecto(Astro.locals.rol));
+}
+
+const [mapa, veedores, coordinadores, acreditados] = await Promise.all([
+  getMapData(),
+  listVeedores(),
+  listCoordinadores(),
+  listAcreditadosCda(),
+]);
+
+// Cada recinto en su hoja, con sus personas separadas por dignidad y, los
+// veedores, por junta.
+const filas = filasListado({
+  recintos: mapa.recintos,
+  parroquias: mapa.parroquias.features.map(({ properties }) => ({
+    properties,
+  })),
+  veedores,
+  coordinadores,
+  acreditados,
+});
+const recintos = agruparPorRecinto(filas).map((r) => ({
+  ...r,
+  dignidades: (["Coordinador", "Acreditado CDA", "Veedor"] as Dignidad[])
+    .map((d) => ({
+      dignidad: d,
+      filas: r.filas.filter((f) => f.dignidad === d),
+    }))
+    .filter((d) => d.filas.length > 0),
+}));
+const PLURAL: Record<Dignidad, string> = {
+  Coordinador: "Coordinadores",
+  "Acreditado CDA": "Acreditados CDA",
+  Veedor: "Veedores",
+};
+const personas = (n: number) => `${fmt(n)} ${n === 1 ? "persona" : "personas"}`;
+
+const corte = new Intl.DateTimeFormat("es-EC", {
+  dateStyle: "long",
+  timeStyle: "short",
+  timeZone: "America/Guayaquil",
+}).format(new Date());
+const fechaArchivo = new Date().toISOString().slice(0, 10);
+---
+
+<GestionLayout title="Listado general" activo="descargas">
+  <article class="g-informe g-listado g-listado-general">
+    <header class="g-informe-cabecera">
+      <div>
+        <h1>Listado general</h1>
+        <p class="g-informe-corte">
+          {`${personas(filas.length)} en ${fmt(recintos.length)} recintos · datos al ${corte} (hora de Ecuador)`}
+        </p>
+      </div>
+      <InformeAcciones
+        client:load
+        encabezados={[
+          "Tipo de parroquia",
+          "Parroquia",
+          "Recinto",
+          "Dignidad",
+          "Junta",
+          "Titular o suplente",
+          "Cédula",
+          "Nombres",
+          "Teléfono",
+        ]}
+        filas={recintos.flatMap((r) =>
+          r.filas.map((f) => [
+            f.urbana ? "Urbana" : "Rural",
+            f.parroquia,
+            title(f.recinto),
+            f.dignidad,
+            f.junta ?? "",
+            f.tipo === "titular" ? "Titular" : "Suplente",
+            f.cedula,
+            f.nombres,
+            f.telefono,
+          ]),
+        )}
+        nombreArchivo={`listado-general-latacunga-${fechaArchivo}.csv`}
+      />
+    </header>
+
+    {recintos.map((r) => (
+      <section class="g-listado-recinto">
+        <h2>
+          {title(r.recinto)}
+          <span class="g-listado-recinto-dato">
+            {`Parroquia ${r.parroquia} (${r.urbana ? "urbana" : "rural"}) · ${personas(r.filas.length)}`}
+          </span>
+        </h2>
+        <div class="g-table-scroll">
+          <table class="g-table g-informe-tabla g-listado-tabla">
+            <caption class="g-sr-only">Personas de {title(r.recinto)}</caption>
+            <thead>
+              <tr>
+                <th scope="col">Junta</th>
+                <th scope="col">Cédula</th>
+                <th scope="col">Nombres</th>
+                <th scope="col">Teléfono</th>
+                <th scope="col">Tipo</th>
+              </tr>
+            </thead>
+            {r.dignidades.map((d) => (
+              <tbody>
+                <tr class="g-informe-grupo">
+                  <th scope="colgroup" colspan="5">
+                    {`${PLURAL[d.dignidad]} (${d.filas.length})`}
+                  </th>
+                </tr>
+                {d.filas.map((f) => (
+                  <tr>
+                    <td class="g-listado-dato">{f.junta ?? "—"}</td>
+                    <td class="g-listado-dato">{f.cedula}</td>
+                    <td>{f.nombres}</td>
+                    <td class="g-listado-dato">{f.telefono}</td>
+                    <td>{f.tipo === "titular" ? "Titular" : "Suplente"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            ))}
+          </table>
+        </div>
+      </section>
+    ))}
+  </article>
+</GestionLayout>

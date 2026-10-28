@@ -3248,22 +3248,57 @@ a.g-btn-accion {
   font-weight: 700;
 }
 
-/* Listado de personas para imprimir: una sola tabla de cuatro columnas. La
-   cédula y el teléfono nunca se parten; en el teléfono la tabla se desliza. */
+/* Listados de personas para imprimir. La cédula, el teléfono y la junta
+   nunca se parten; en el teléfono la tabla se desliza. */
 .g-listado-dato,
 .g-listado-tabla td:first-child {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.g-listado-tabla td:nth-child(3) {
-  width: 100%;
-}
 /* El N.º no necesita el ancho de la primera columna de los informes. */
 .g-informe .g-listado-tabla td:first-child {
   min-width: 0;
 }
+.g-listado-tabla .g-informe-grupo th {
+  padding-top: 10px;
+}
+/* Listado general: un bloque por recinto. */
+.g-listado-recinto {
+  margin-top: 28px;
+}
+.g-listado-recinto h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+}
+.g-listado-recinto-dato {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+@page horizontal {
+  size: A4 landscape;
+  margin: 12mm;
+}
 @media print {
   .g-listado-tabla thead {
     display: table-header-group;
+  }
+  /* El listado de personas tiene siete columnas: va en horizontal. */
+  .g-listado:not(.g-listado-general) {
+    page: horizontal;
+  }
+  /* Cada recinto empieza en hoja nueva, para repartirlo por separado. */
+  .g-listado-recinto + .g-listado-recinto {
+    break-before: page;
+  }
+  .g-listado-recinto {
+    margin-top: 12px;
+  }
+  .g-listado-recinto h2 {
+    break-after: avoid;
   }
 }

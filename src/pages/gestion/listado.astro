@@ -4,7 +4,13 @@ import InformeAcciones from "../../components/gestion/InformeAcciones";
 import { listVeedores } from "../../lib/gestion/veedores";
 import { listCoordinadores } from "../../lib/gestion/coordinadores";
 import { listAcreditadosCda } from "../../lib/gestion/acreditadosCda";
-import { fmt } from "../../lib/format";
+import { getMapData } from "../../lib/data";
+import {
+  compararEnRecinto,
+  filasListado,
+  type FilaListado,
+} from "../../lib/gestion/listado";
+import { fmt, title } from "../../lib/format";
 import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
 
 // Trae cédulas y celulares: el mismo permiso que Descargas.
@@ -12,31 +18,28 @@ if (!PAGINAS_GESTION.descargas.includes(Astro.locals.rol)) {
   return Astro.redirect(rutaPorDefecto(Astro.locals.rol));
 }
 
-const [veedores, coordinadores, acreditados] = await Promise.all([
+const [mapa, veedores, coordinadores, acreditados] = await Promise.all([
+  getMapData(),
   listVeedores(),
   listCoordinadores(),
   listAcreditadosCda(),
 ]);
 
-// Todas las personas del Consolidado en una sola lista, una vez por cédula
-// (alguien con dos puestos sale una vez), en orden alfabético.
-const porCedula = new Map<
-  string,
-  { cedula: string; nombres: string; telefono: string }
->();
-for (const p of [...coordinadores, ...acreditados, ...veedores]) {
-  const cedula = p.cedula.trim();
-  if (!porCedula.has(cedula)) {
-    porCedula.set(cedula, {
-      cedula,
-      nombres: p.nombres.trim(),
-      telefono: p.telefono.trim(),
-    });
-  }
-}
-const personas = [...porCedula.values()].sort((a, b) =>
-  a.nombres.localeCompare(b.nombres, "es"),
+// Todas las personas del Consolidado en una sola lista, una fila por puesto,
+// en orden alfabético, con su recinto, dignidad y junta.
+const filas = filasListado({
+  recintos: mapa.recintos,
+  parroquias: mapa.parroquias.features.map(({ properties }) => ({
+    properties,
+  })),
+  veedores,
+  coordinadores,
+  acreditados,
+}).sort(
+  (a, b) => a.nombres.localeCompare(b.nombres, "es") || compararEnRecinto(a, b),
 );
+const dignidad = (f: FilaListado) =>
+  f.tipo === "suplente" ? `${f.dignidad} suplente` : f.dignidad;
 
 const corte = new Intl.DateTimeFormat("es-EC", {
   dateStyle: "long",
@@ -52,13 +55,29 @@ const fechaArchivo = new Date().toISOString().slice(0, 10);
       <div>
         <h1>Listado de personas</h1>
         <p class="g-informe-corte">
-          {`${fmt(personas.length)} ${personas.length === 1 ? "persona" : "personas"} del Consolidado · datos al ${corte} (hora de Ecuador)`}
+          {`${fmt(filas.length)} ${filas.length === 1 ? "persona" : "personas"} del Consolidado · datos al ${corte} (hora de Ecuador)`}
         </p>
       </div>
       <InformeAcciones
         client:load
-        encabezados={["N.º", "Cédula", "Nombres", "Teléfono"]}
-        filas={personas.map((p, i) => [i + 1, p.cedula, p.nombres, p.telefono])}
+        encabezados={[
+          "N.º",
+          "Cédula",
+          "Nombres",
+          "Teléfono",
+          "Recinto",
+          "Dignidad",
+          "Junta",
+        ]}
+        filas={filas.map((f, i) => [
+          i + 1,
+          f.cedula,
+          f.nombres,
+          f.telefono,
+          title(f.recinto),
+          dignidad(f),
+          f.junta ?? "",
+        ])}
         nombreArchivo={`listado-personas-latacunga-${fechaArchivo}.csv`}
       />
     </header>
@@ -74,15 +93,21 @@ const fechaArchivo = new Date().toISOString().slice(0, 10);
             <th scope="col">Cédula</th>
             <th scope="col">Nombres</th>
             <th scope="col">Teléfono</th>
+            <th scope="col">Recinto</th>
+            <th scope="col">Dignidad</th>
+            <th scope="col">Junta</th>
           </tr>
         </thead>
         <tbody>
-          {personas.map((p, i) => (
+          {filas.map((f, i) => (
             <tr>
               <td class="g-num">{i + 1}</td>
-              <td class="g-listado-dato">{p.cedula}</td>
-              <td>{p.nombres}</td>
-              <td class="g-listado-dato">{p.telefono}</td>
+              <td class="g-listado-dato">{f.cedula}</td>
+              <td>{f.nombres}</td>
+              <td class="g-listado-dato">{f.telefono}</td>
+              <td>{title(f.recinto)}</td>
+              <td>{dignidad(f)}</td>
+              <td class="g-listado-dato">{f.junta ?? "—"}</td>
             </tr>
           ))}
         </tbody>
