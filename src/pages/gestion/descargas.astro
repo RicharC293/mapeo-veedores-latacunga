@@ -26,7 +26,6 @@ const juntas = mapa.recintos.reduce((a, r) => a + r.jt, 0);
 const recintosCda = mapa.recintos.filter((r) => r.cda).length;
 const asignados = [...veedores, ...coordinadores, ...acreditados];
 const puestos = asignados.length;
-const recintosConPersonas = new Set(asignados.map((p) => p.recintoCodigo)).size;
 
 // Qué lleva cada archivo, con las cifras de hoy.
 const contenido: Record<string, string[]> = {
@@ -103,10 +102,11 @@ const sup = {
       <h2>Listado general</h2>
       <p>
         Las mismas personas separadas por recinto, dignidad y junta, cada
-        recinto en su propia hoja para repartirlo.
+        recinto en su propia hoja para repartirlo. Los puestos que faltan
+        cubrir van en blanco, para anotarlos a mano.
       </p>
       <ul class="g-descarga-datos">
-        <li>{fmt(recintosConPersonas)} recintos con personas asignadas</li>
+        <li>{fmt(mapa.recintos.length)} recintos, uno por hoja</li>
         <li>Coordinador, acreditado CDA y veedores por junta</li>
       </ul>
       <a class="g-btn-accion" href="/gestion/listado-general">

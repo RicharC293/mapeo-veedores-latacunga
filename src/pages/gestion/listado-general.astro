@@ -9,6 +9,7 @@ import {
   agruparPorRecinto,
   filasListado,
   type Dignidad,
+  type FilaListado,
 } from "../../lib/gestion/listado";
 import { fmt, title } from "../../lib/format";
 import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
@@ -26,7 +27,8 @@ const [mapa, veedores, coordinadores, acreditados] = await Promise.all([
 ]);
 
 // Cada recinto en su hoja, con sus personas separadas por dignidad y, los
-// veedores, por junta.
+// veedores, por junta. Los puestos titulares sin cubrir van como filas
+// vacías, para anotar a mano a quien se consiga.
 const filas = filasListado({
   recintos: mapa.recintos,
   parroquias: mapa.parroquias.features.map(({ properties }) => ({
@@ -35,6 +37,7 @@ const filas = filasListado({
   veedores,
   coordinadores,
   acreditados,
+  conPorCubrir: true,
 });
 const recintos = agruparPorRecinto(filas).map((r) => ({
   ...r,
@@ -51,6 +54,17 @@ const PLURAL: Record<Dignidad, string> = {
   Veedor: "Veedores",
 };
 const personas = (n: number) => `${fmt(n)} ${n === 1 ? "persona" : "personas"}`;
+const resumen = (lista: FilaListado[]) => {
+  const faltan = lista.filter((f) => f.porCubrir).length;
+  const hay = lista.length - faltan;
+  const partes = [
+    hay > 0 || faltan === 0 ? personas(hay) : "",
+    faltan > 0 ? `${fmt(faltan)} por cubrir` : "",
+  ];
+  return partes.filter(Boolean).join(" · ");
+};
+const tipo = (f: FilaListado) =>
+  f.porCubrir ? "Por cubrir" : f.tipo === "titular" ? "Titular" : "Suplente";
 
 const corte = new Intl.DateTimeFormat("es-EC", {
   dateStyle: "long",
@@ -66,7 +80,7 @@ const fechaArchivo = new Date().toISOString().slice(0, 10);
       <div>
         <h1>Listado general</h1>
         <p class="g-informe-corte">
-          {`${personas(filas.length)} en ${fmt(recintos.length)} recintos · datos al ${corte} (hora de Ecuador)`}
+          {`${resumen(filas)} en ${fmt(recintos.length)} recintos · datos al ${corte} (hora de Ecuador)`}
         </p>
       </div>
       <InformeAcciones
@@ -89,7 +103,7 @@ const fechaArchivo = new Date().toISOString().slice(0, 10);
             title(f.recinto),
             f.dignidad,
             f.junta ?? "",
-            f.tipo === "titular" ? "Titular" : "Suplente",
+            tipo(f),
             f.cedula,
             f.nombres,
             f.telefono,
@@ -104,7 +118,7 @@ const fechaArchivo = new Date().toISOString().slice(0, 10);
         <h2>
           {title(r.recinto)}
           <span class="g-listado-recinto-dato">
-            {`Parroquia ${r.parroquia} (${r.urbana ? "urbana" : "rural"}) · ${personas(r.filas.length)}`}
+            {`Parroquia ${r.parroquia} (${r.urbana ? "urbana" : "rural"}) · ${resumen(r.filas)}`}
           </span>
         </h2>
         <div class="g-table-scroll">
@@ -123,16 +137,16 @@ const fechaArchivo = new Date().toISOString().slice(0, 10);
               <tbody>
                 <tr class="g-informe-grupo">
                   <th scope="colgroup" colspan="5">
-                    {`${PLURAL[d.dignidad]} (${d.filas.length})`}
+                    {`${PLURAL[d.dignidad]} · ${resumen(d.filas)}`}
                   </th>
                 </tr>
                 {d.filas.map((f) => (
-                  <tr>
+                  <tr class:list={{ "g-listado-vacio": f.porCubrir }}>
                     <td class="g-listado-dato">{f.junta ?? "—"}</td>
                     <td class="g-listado-dato">{f.cedula}</td>
                     <td>{f.nombres}</td>
                     <td class="g-listado-dato">{f.telefono}</td>
-                    <td>{f.tipo === "titular" ? "Titular" : "Suplente"}</td>
+                    <td>{tipo(f)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -1,4 +1,5 @@
 import type { ParroquiaBasica, Recinto } from "../types";
+import { listJuntasDeRecinto } from "./juntas";
 import type { AcreditadoCda, Coordinador, Veedor } from "./types";
 
 // Filas de los listados para imprimir: una por puesto asignado en el
@@ -18,6 +19,8 @@ export interface FilaListado {
   recinto: string;
   parroquia: string;
   urbana: boolean;
+  // Puesto titular que nadie cubre todavía: sin cédula, nombres ni teléfono.
+  porCubrir: boolean;
 }
 
 // "354-M15" → "15M".
@@ -53,6 +56,10 @@ export function filasListado(entrada: {
   veedores: Veedor[];
   coordinadores: Coordinador[];
   acreditados: AcreditadoCda[];
+  // Suma una fila vacía por cada puesto titular sin cubrir: el coordinador
+  // de cada recinto, el acreditado de cada recinto CDA y el veedor de cada
+  // junta.
+  conPorCubrir?: boolean;
 }): FilaListado[] {
   const recintoDe = new Map(entrada.recintos.map((r) => [r.cod, r]));
   const parroquiaDe = new Map(
@@ -75,22 +82,65 @@ export function filasListado(entrada: {
       junta: juntaCorta(p.juntaId),
     })),
   ];
-  return personas.map(({ p, dignidad, junta }) => {
-    const recinto = recintoDe.get(p.recintoCodigo);
+  const ubicacion = (recintoCodigo: number) => {
+    const recinto = recintoDe.get(recintoCodigo);
     const parroquia = recinto ? parroquiaDe.get(recinto.par) : undefined;
     return {
-      cedula: p.cedula.trim(),
-      nombres: p.nombres.trim(),
-      telefono: p.telefono.trim(),
-      dignidad,
-      tipo: p.tipo,
-      junta,
-      recintoCodigo: p.recintoCodigo,
-      recinto: recinto?.nombre ?? `Recinto ${p.recintoCodigo}`,
+      recintoCodigo,
+      recinto: recinto?.nombre ?? `Recinto ${recintoCodigo}`,
       parroquia: parroquia?.name ?? "",
       urbana: parroquia?.urbana ?? false,
     };
+  };
+  const filas: FilaListado[] = personas.map(({ p, dignidad, junta }) => ({
+    cedula: p.cedula.trim(),
+    nombres: p.nombres.trim(),
+    telefono: p.telefono.trim(),
+    dignidad,
+    tipo: p.tipo,
+    junta,
+    ...ubicacion(p.recintoCodigo),
+    porCubrir: false,
+  }));
+  if (!entrada.conPorCubrir) return filas;
+
+  const titulares = new Set(
+    personas
+      .filter(({ p }) => p.tipo === "titular")
+      .map(({ p, dignidad }) =>
+        dignidad === "Veedor"
+          ? (p as Veedor).juntaId
+          : `${dignidad}|${p.recintoCodigo}`,
+      ),
+  );
+  const vacio = (
+    recintoCodigo: number,
+    dignidad: Dignidad,
+    junta: string | null,
+  ): FilaListado => ({
+    cedula: "",
+    nombres: "",
+    telefono: "",
+    dignidad,
+    tipo: "titular",
+    junta,
+    ...ubicacion(recintoCodigo),
+    porCubrir: true,
   });
+  for (const r of entrada.recintos) {
+    if (!titulares.has(`Coordinador|${r.cod}`)) {
+      filas.push(vacio(r.cod, "Coordinador", null));
+    }
+    if (r.cda && !titulares.has(`Acreditado CDA|${r.cod}`)) {
+      filas.push(vacio(r.cod, "Acreditado CDA", null));
+    }
+    for (const j of listJuntasDeRecinto(r)) {
+      if (!titulares.has(j.id)) {
+        filas.push(vacio(r.cod, "Veedor", juntaCorta(j.id)));
+      }
+    }
+  }
+  return filas;
 }
 
 export interface RecintoListado {
