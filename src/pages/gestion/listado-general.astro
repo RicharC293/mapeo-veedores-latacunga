@@ -11,6 +11,13 @@ import {
   type Dignidad,
   type FilaListado,
 } from "../../lib/gestion/listado";
+import { listValidaciones } from "../../lib/validacion/validaciones";
+import {
+  datosPersonales,
+  edad,
+  MAYORIA_DE_EDAD,
+  type ValidacionCedula,
+} from "../../lib/validacion/plan";
 import { fmt, title } from "../../lib/format";
 import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
 
@@ -39,6 +46,31 @@ const filas = filasListado({
   acreditados,
   conPorCubrir: true,
 });
+// Los menores de edad no pueden cubrir el puesto: van en rojo, para
+// reemplazarlos. La edad sale de la validación con el Registro Civil; si la
+// tabla de validaciones no existe, no se marca a nadie.
+async function cargarValidaciones(): Promise<ValidacionCedula[]> {
+  try {
+    return await listValidaciones();
+  } catch {
+    return [];
+  }
+}
+const validacionDe = new Map(
+  (await cargarValidaciones()).map((v) => [v.cedula, v]),
+);
+const hoy = new Date();
+const edadDe = (f: FilaListado) =>
+  f.porCubrir
+    ? null
+    : edad(datosPersonales(validacionDe.get(f.cedula)).fechaNacimiento, hoy);
+const esMenor = (f: FilaListado) => {
+  const e = edadDe(f);
+  return e !== null && e < MAYORIA_DE_EDAD;
+};
+const menores = (lista: FilaListado[]) => lista.filter(esMenor).length;
+const LEYENDA = "En rojo: menor de edad, hay que reemplazarlo.";
+
 const recintos = agruparPorRecinto(filas).map((r) => ({
   ...r,
   dignidades: (["Coordinador", "Acreditado CDA", "Veedor"] as Dignidad[])
@@ -61,6 +93,10 @@ const resumen = (lista: FilaListado[]) => {
     hay > 0 || faltan === 0 ? personas(hay) : "",
     faltan > 0 ? `${fmt(faltan)} por cubrir` : "",
   ];
+  const n = menores(lista);
+  if (n > 0) {
+    partes.push(`${fmt(n)} ${n === 1 ? "menor" : "menores"} de edad`);
+  }
   return partes.filter(Boolean).join(" · ");
 };
 const tipo = (f: FilaListado) =>
@@ -80,8 +116,11 @@ const fechaArchivo = new Date().toISOString().slice(0, 10);
       <div>
         <h1>Listado general</h1>
         <p class="g-informe-corte">
-          {`${resumen(filas)} en ${fmt(recintos.length)} recintos · datos al ${corte} (hora de Ecuador)`}
+          {`${fmt(recintos.length)} recintos · ${resumen(filas)} · datos al ${corte} (hora de Ecuador)`}
         </p>
+        {menores(filas) > 0 ? (
+          <p class="g-listado-leyenda">{LEYENDA}</p>
+        ) : null}
       </div>
       <InformeAcciones
         client:load
@@ -95,6 +134,7 @@ const fechaArchivo = new Date().toISOString().slice(0, 10);
           "Cédula",
           "Nombres",
           "Teléfono",
+          "Observación",
         ]}
         filas={recintos.flatMap((r) =>
           r.filas.map((f) => [
@@ -107,6 +147,7 @@ const fechaArchivo = new Date().toISOString().slice(0, 10);
             f.cedula,
             f.nombres,
             f.telefono,
+            esMenor(f) ? `Menor de edad (${edadDe(f)} años)` : "",
           ]),
         )}
         nombreArchivo={`listado-general-latacunga-${fechaArchivo}.csv`}
@@ -121,6 +162,9 @@ const fechaArchivo = new Date().toISOString().slice(0, 10);
             {`Parroquia ${r.parroquia} (${r.urbana ? "urbana" : "rural"}) · ${resumen(r.filas)}`}
           </span>
         </h2>
+        {menores(r.filas) > 0 ? (
+          <p class="g-listado-leyenda">{LEYENDA}</p>
+        ) : null}
         <div class="g-table-scroll">
           <table class="g-table g-informe-tabla g-listado-tabla">
             <caption class="g-sr-only">Personas de {title(r.recinto)}</caption>
@@ -141,7 +185,15 @@ const fechaArchivo = new Date().toISOString().slice(0, 10);
                   </th>
                 </tr>
                 {d.filas.map((f) => (
-                  <tr class:list={{ "g-listado-vacio": f.porCubrir }}>
+                  <tr
+                    class:list={{
+                      "g-listado-vacio": f.porCubrir,
+                      "g-listado-menor": esMenor(f),
+                    }}
+                    title={
+                      esMenor(f) ? `Menor de edad (${edadDe(f)} años)` : undefined
+                    }
+                  >
                     <td class="g-listado-dato">{f.junta ?? "—"}</td>
                     <td class="g-listado-dato">{f.cedula}</td>
                     <td>{f.nombres}</td>

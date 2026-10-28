@@ -3262,6 +3262,11 @@ a.g-btn-accion {
 .g-listado-tabla .g-informe-grupo th {
   padding-top: 10px;
 }
+/* Filas alternadas en dos tonos suaves, para no saltar de renglón al leer
+   o escribir sobre el papel. */
+.g-listado-tabla tbody tr:nth-child(even):not(.g-informe-grupo) td {
+  background: color-mix(in srgb, var(--chip) 55%, transparent);
+}
 /* Listado general: un bloque por recinto. */
 .g-listado-recinto {
   margin-top: 28px;
@@ -3279,9 +3284,24 @@ a.g-btn-accion {
   font-size: 0.85rem;
   font-weight: 400;
 }
+/* Menor de edad: en rojo, con su leyenda, para reemplazarlo. */
+.g-listado-menor td {
+  color: var(--error);
+}
+.g-listado-leyenda {
+  margin: 0 0 8px;
+  color: var(--error);
+  font-size: 0.85rem;
+}
+.g-informe-cabecera .g-listado-leyenda {
+  margin: 4px 0 0;
+}
 /* Puesto sin cubrir: la fila queda en blanco para anotar a mano. */
 .g-listado-vacio td:last-child {
   color: var(--muted);
+}
+.g-listado-general .g-listado-tabla td:last-child {
+  white-space: nowrap;
 }
 @page horizontal {
   size: A4 landscape;
@@ -3304,6 +3324,14 @@ a.g-btn-accion {
   }
   .g-listado-recinto h2 {
     break-after: avoid;
+  }
+  .g-listado-tabla tbody td {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* En papel el tono se pierde: un poco más marcado que en pantalla. */
+  .g-listado-tabla tbody tr:nth-child(even):not(.g-informe-grupo) td {
+    background: color-mix(in srgb, var(--chip) 85%, transparent);
   }
   /* Alto suficiente para escribir nombre, cédula y teléfono. */
   .g-listado-vacio td {
