@@ -3296,13 +3296,6 @@ a.g-btn-accion {
 .g-informe-cabecera .g-listado-leyenda {
   margin: 4px 0 0;
 }
-/* Puesto sin cubrir: la fila queda en blanco para anotar a mano. */
-.g-listado-vacio td:last-child {
-  color: var(--muted);
-}
-.g-listado-general .g-listado-tabla td:last-child {
-  white-space: nowrap;
-}
 @page horizontal {
   size: A4 landscape;
   margin: 12mm;

@@ -70,21 +70,37 @@ const esMenor = (f: FilaListado) => {
 };
 const menores = (lista: FilaListado[]) => lista.filter(esMenor).length;
 const LEYENDA = "En rojo: menor de edad, hay que reemplazarlo.";
-
-const recintos = agruparPorRecinto(filas).map((r) => ({
-  ...r,
-  dignidades: (["Coordinador", "Acreditado CDA", "Veedor"] as Dignidad[])
-    .map((d) => ({
-      dignidad: d,
-      filas: r.filas.filter((f) => f.dignidad === d),
-    }))
-    .filter((d) => d.filas.length > 0),
-}));
 const PLURAL: Record<Dignidad, string> = {
   Coordinador: "Coordinadores",
   "Acreditado CDA": "Acreditados CDA",
   Veedor: "Veedores",
 };
+
+// Los titulares (y los puestos por cubrir) por dignidad; los suplentes, todos
+// juntos al final del recinto y por nombre, sin dignidad ni junta: solo su
+// cédula, nombres y teléfono.
+const recintos = agruparPorRecinto(filas).map((r) => {
+  const titulares = r.filas.filter((f) => f.tipo === "titular");
+  return {
+    ...r,
+    grupos: [
+      ...(["Coordinador", "Acreditado CDA", "Veedor"] as Dignidad[]).map(
+        (d) => ({
+          nombre: PLURAL[d],
+          filas: titulares.filter((f) => f.dignidad === d),
+        }),
+      ),
+      {
+        nombre: "Suplentes",
+        filas: r.filas
+          .filter((f) => f.tipo === "suplente")
+          .sort((a, b) => a.nombres.localeCompare(b.nombres, "es")),
+      },
+    ].filter((g) => g.filas.length > 0),
+  };
+});
+const puesto = (f: FilaListado) =>
+  f.tipo === "suplente" ? "" : (f.junta ?? "—");
 const personas = (n: number) => `${fmt(n)} ${n === 1 ? "persona" : "personas"}`;
 const resumen = (lista: FilaListado[]) => {
   const faltan = lista.filter((f) => f.porCubrir).length;
@@ -137,12 +153,12 @@ const fechaArchivo = new Date().toISOString().slice(0, 10);
           "Observación",
         ]}
         filas={recintos.flatMap((r) =>
-          r.filas.map((f) => [
+          r.grupos.flatMap((g) => g.filas).map((f) => [
             f.urbana ? "Urbana" : "Rural",
             f.parroquia,
             title(f.recinto),
-            f.dignidad,
-            f.junta ?? "",
+            f.tipo === "suplente" ? "" : f.dignidad,
+            f.tipo === "suplente" ? "" : (f.junta ?? ""),
             tipo(f),
             f.cedula,
             f.nombres,
@@ -174,17 +190,16 @@ const fechaArchivo = new Date().toISOString().slice(0, 10);
                 <th scope="col">Cédula</th>
                 <th scope="col">Nombres</th>
                 <th scope="col">Teléfono</th>
-                <th scope="col">Tipo</th>
               </tr>
             </thead>
-            {r.dignidades.map((d) => (
+            {r.grupos.map((g) => (
               <tbody>
                 <tr class="g-informe-grupo">
-                  <th scope="colgroup" colspan="5">
-                    {`${PLURAL[d.dignidad]} · ${resumen(d.filas)}`}
+                  <th scope="colgroup" colspan="4">
+                    {`${g.nombre} · ${resumen(g.filas)}`}
                   </th>
                 </tr>
-                {d.filas.map((f) => (
+                {g.filas.map((f) => (
                   <tr
                     class:list={{
                       "g-listado-vacio": f.porCubrir,
@@ -194,11 +209,10 @@ const fechaArchivo = new Date().toISOString().slice(0, 10);
                       esMenor(f) ? `Menor de edad (${edadDe(f)} años)` : undefined
                     }
                   >
-                    <td class="g-listado-dato">{f.junta ?? "—"}</td>
+                    <td class="g-listado-dato">{puesto(f)}</td>
                     <td class="g-listado-dato">{f.cedula}</td>
                     <td>{f.nombres}</td>
                     <td class="g-listado-dato">{f.telefono}</td>
-                    <td>{tipo(f)}</td>
                   </tr>
                 ))}
               </tbody>
