@@ -15,6 +15,7 @@ import {
 } from "../../lib/validacion/plan";
 import { listContactos } from "../../lib/contacto/contactos";
 import { nombreDeSaludo } from "../../lib/contacto/plan";
+import { listGruposWhatsapp } from "../../lib/gestion/gruposWhatsapp";
 import { listComunicados, listEnvios } from "../../lib/comunicados/comunicados";
 import type {
   Comunicado,
@@ -72,11 +73,23 @@ async function cargarComunicados(): Promise<{
     return null;
   }
 }
-const [validaciones, equivocados, guardados] = await Promise.all([
-  cargarValidaciones(),
-  cargarEquivocados(),
-  cargarComunicados(),
-]);
+// Enlace del grupo de WhatsApp de cada recinto, para {grupo}.
+async function cargarGrupos(): Promise<Record<number, string>> {
+  try {
+    return Object.fromEntries(
+      (await listGruposWhatsapp()).map((g) => [g.recintoCodigo, g.enlace]),
+    );
+  } catch {
+    return {};
+  }
+}
+const [validaciones, equivocados, guardados, gruposPorRecinto] =
+  await Promise.all([
+    cargarValidaciones(),
+    cargarEquivocados(),
+    cargarComunicados(),
+    cargarGrupos(),
+  ]);
 const validacionDe = new Map(validaciones.map((v) => [v.cedula, v]));
 const vetados = new Set(listaNegra.map((e) => e.cedula.trim()));
 
@@ -168,5 +181,6 @@ for (const m of militantes) {
       numeroEquivocado: porNumeroEquivocado,
       listaNegra: porListaNegra,
     }}
+    gruposPorRecinto={gruposPorRecinto}
   />
 </GestionLayout>

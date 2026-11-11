@@ -595,6 +595,27 @@ export type Database = {
         }
         Relationships: []
       }
+      recinto_grupos: {
+        Row: {
+          actualizado_en: string
+          actualizado_por: string | null
+          enlace: string
+          recinto_codigo: number
+        }
+        Insert: {
+          actualizado_en?: string
+          actualizado_por?: string | null
+          enlace: string
+          recinto_codigo: number
+        }
+        Update: {
+          actualizado_en?: string
+          actualizado_por?: string | null
+          enlace?: string
+          recinto_codigo?: number
+        }
+        Relationships: []
+      }
       recintos: {
         Row: {
           actualizado_en: string

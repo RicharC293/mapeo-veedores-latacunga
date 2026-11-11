@@ -17,6 +17,8 @@ export interface FiltrosComunicado {
   responsable: string;
   // Suma a quienes siguen en Militancia sin asignar.
   militancia: boolean;
+  // Solo quienes están en un recinto con grupo de WhatsApp cargado.
+  soloConGrupo: boolean;
 }
 
 export const DIGNIDADES: Clase[] = ["coordinador", "cda", "veedor"];
@@ -28,6 +30,7 @@ export const FILTROS_INICIALES: FiltrosComunicado = {
   tipo: "todos",
   responsable: "todos",
   militancia: false,
+  soloConGrupo: false,
 };
 
 // Filtros guardados en la base (jsonb) → FiltrosComunicado, con los valores
@@ -48,6 +51,7 @@ export function leerFiltros(valor: unknown): FiltrosComunicado {
         ? v.responsable
         : "todos",
     militancia: v.militancia === true,
+    soloConGrupo: v.soloConGrupo === true,
   };
 }
 
@@ -90,7 +94,10 @@ export function coincideFiltros(
   p: PersonaComunicado,
   f: FiltrosComunicado,
   parroquia: ParroquiaBasica | undefined,
+  // Si su recinto ya tiene grupo de WhatsApp.
+  conGrupo = false,
 ): boolean {
+  if (f.soloConGrupo && !conGrupo) return false;
   if (p.clase === null) {
     if (!f.militancia) return false;
   } else {
@@ -111,6 +118,8 @@ export const CAMPOS = [
   { clave: "parroquia", etiqueta: "Parroquia" },
   { clave: "direccion", etiqueta: "Dirección" },
   { clave: "junta", etiqueta: "Junta" },
+  // El grupo de WhatsApp de su recinto (se carga en el Consolidado).
+  { clave: "grupo", etiqueta: "Grupo del recinto" },
   { clave: "enlace", etiqueta: "Enlace" },
 ] as const;
 
@@ -122,6 +131,8 @@ export function datosDe(
   recinto: Recinto | undefined,
   parroquia: ParroquiaBasica | undefined,
   enlace: string,
+  // Enlace del grupo de WhatsApp del recinto, o "" si aún no tiene.
+  grupo = "",
 ): DatosComunicado {
   return {
     nombre: p.saludo,
@@ -130,6 +141,7 @@ export function datosDe(
     parroquia: parroquia?.properties.name ?? "",
     direccion: recinto?.dir.trim() ? title(recinto.dir) : "",
     junta: p.juntaId ? textoJunta(p.juntaId) : "",
+    grupo: grupo.trim(),
     enlace: enlace.trim(),
   };
 }

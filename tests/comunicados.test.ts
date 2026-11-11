@@ -93,6 +93,7 @@ describe("mensaje", () => {
       parroquia: "La Matriz",
       direccion: "Av. Amazonas y Quito",
       junta: "junta 3 femenina",
+      grupo: "",
       enlace: "https://x.y",
     });
     expect(rellenar("Hola {nombre}, {rol} en {recinto}. {otro}", datos)).toBe(
@@ -144,5 +145,32 @@ describe("agruparPorNumero", () => {
     expect(grupos).toHaveLength(1);
     expect(grupos[0].personas.map((p) => p.cedula)).toEqual(["1", "2"]);
     expect(sinNumero.map((p) => p.cedula)).toEqual(["3"]);
+  });
+});
+
+describe("grupo del recinto", () => {
+  it("pone el enlace del grupo donde dice {grupo}", () => {
+    const datos = datosDe(
+      persona({}),
+      recinto,
+      urbana,
+      "",
+      "https://chat.whatsapp.com/ABCDEFGHIJ",
+    );
+    expect(rellenar("Únete: {grupo}", datos)).toBe(
+      "Únete: https://chat.whatsapp.com/ABCDEFGHIJ",
+    );
+    expect(
+      camposVacios("{grupo}", datosDe(persona({}), recinto, urbana, "")),
+    ).toEqual(["grupo"]);
+  });
+});
+
+describe("solo recintos con grupo", () => {
+  it("deja fuera a quien está en un recinto sin grupo", () => {
+    const f = { ...FILTROS_INICIALES, soloConGrupo: true };
+    expect(coincideFiltros(persona({}), f, urbana, false)).toBe(false);
+    expect(coincideFiltros(persona({}), f, urbana, true)).toBe(true);
+    expect(leerFiltros({ soloConGrupo: true }).soloConGrupo).toBe(true);
   });
 });

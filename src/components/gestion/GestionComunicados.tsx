@@ -39,6 +39,8 @@ interface Props {
   tablaLista: boolean;
   // Personas que quedan fuera de todo comunicado y por qué.
   excluidos: { numeroEquivocado: number; listaNegra: number };
+  // Enlace del grupo de WhatsApp de cada recinto (por código), para {grupo}.
+  gruposPorRecinto: Record<number, string>;
 }
 
 interface Borrador {
@@ -217,6 +219,7 @@ export default function GestionComunicados({
   envios: enviosIniciales,
   tablaLista,
   excluidos,
+  gruposPorRecinto,
 }: Props) {
   const [comunicados, setComunicados] = useState(comunicadosIniciales);
   const [envios, setEnvios] = useState(enviosIniciales);
@@ -262,6 +265,9 @@ export default function GestionComunicados({
     [lideres],
   );
   const enMilitancia = personas.filter((p) => p.clase === null).length;
+  const tieneGrupo = (p: PersonaComunicado) =>
+    p.recintoCodigo !== null && Boolean(gruposPorRecinto[p.recintoCodigo]);
+  const recintosConGrupo = Object.keys(gruposPorRecinto).length;
 
   const actual = comunicados.find((c) => c.id === seleccion);
   const sinGuardar =
@@ -275,14 +281,19 @@ export default function GestionComunicados({
   const numerosDe = (filtros: FiltrosComunicado) =>
     agruparPorNumero(
       personas.filter((p) =>
-        coincideFiltros(p, filtros, parroquiaDePersona(p)),
+        coincideFiltros(p, filtros, parroquiaDePersona(p), tieneGrupo(p)),
       ),
       (p) => telefonoWhatsapp(p.telefono),
     );
 
   const { filas, sinNumero, total } = useMemo(() => {
     const elegidas = personas.filter((p) =>
-      coincideFiltros(p, borrador.filtros, parroquiaDePersona(p)),
+      coincideFiltros(
+        p,
+        borrador.filtros,
+        parroquiaDePersona(p),
+        tieneGrupo(p),
+      ),
     );
     const { grupos, sinNumero } = agruparPorNumero(elegidas, (p) =>
       telefonoWhatsapp(p.telefono),
@@ -304,6 +315,7 @@ export default function GestionComunicados({
             r,
             r ? parroquiaDe.get(r.par) : undefined,
             borrador.enlace,
+            r ? (gruposPorRecinto[r.cod] ?? "") : "",
           );
         }),
       );
@@ -332,6 +344,7 @@ export default function GestionComunicados({
     personas,
     borrador,
     envios,
+    gruposPorRecinto,
     seleccion,
     recintoDe,
     parroquiaDe,
@@ -434,7 +447,9 @@ export default function GestionComunicados({
       setSeleccion(c.id);
       setBorrador(borradorDe(c));
       setVista("pendiente");
-      setResultado("Copia creada con el mismo mensaje y filtros, sin envíos todavía.");
+      setResultado(
+        "Copia creada con el mismo mensaje y filtros, sin envíos todavía.",
+      );
     } catch (err) {
       setResultado(err instanceof Error ? err.message : "Error inesperado.");
     } finally {
@@ -777,6 +792,19 @@ export default function GestionComunicados({
                   />
                   Militancia sin asignar ({enMilitancia})
                 </label>
+                <label class="g-check">
+                  <input
+                    type="checkbox"
+                    checked={f.soloConGrupo}
+                    onChange={(e) =>
+                      ponerFiltros({
+                        soloConGrupo: (e.currentTarget as HTMLInputElement)
+                          .checked,
+                      })
+                    }
+                  />
+                  Solo recintos con grupo de WhatsApp ({recintosConGrupo})
+                </label>
               </div>
             </fieldset>
 
@@ -806,8 +834,9 @@ export default function GestionComunicados({
               <p class="g-com-aviso">
                 En {conVacios} {conVacios === 1 ? "número" : "números"} algún
                 dato del mensaje queda en blanco (por ejemplo, la junta de un
-                coordinador o el recinto de quien está en Militancia). Revisa
-                que el texto se entienda igual.
+                coordinador, el grupo de un recinto que aún no lo tiene cargado
+                o el recinto de quien está en Militancia). Revisa que el texto
+                se entienda igual.
               </p>
             ) : null}
 

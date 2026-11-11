@@ -2202,6 +2202,62 @@ select.g-campo-error {
   letter-spacing: 0;
   text-transform: none;
 }
+/* Grupo de WhatsApp del recinto: el enlace y sus acciones en una línea que
+   se parte en el teléfono. */
+.g-consol-grupo-actual {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.g-consol-grupo-actual a {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--sel);
+  font-size: 0.9rem;
+}
+.g-consol-grupo-vacio {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.g-consol-grupo-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.g-consol-grupo-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 520px;
+}
+.g-consol-grupo-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.g-consol-grupo-form input {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 400;
+}
+.g-consol-grupo-form small {
+  color: var(--muted);
+}
+.g-consol-grupo .g-btn-danger-ghost:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .g-consol-persona {
   display: flex;
   align-items: flex-start;

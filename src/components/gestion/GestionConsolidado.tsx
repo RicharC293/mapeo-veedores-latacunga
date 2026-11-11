@@ -12,6 +12,8 @@ import AlertaMesasInexistentes from "./AlertaMesasInexistentes";
 import { veedoresEnMesaInexistente } from "../../lib/gestion/mesasInexistentes";
 import Iniciales from "./Iniciales";
 import SincronizarIdentidad from "./SincronizarIdentidad";
+import GrupoWhatsappRecinto from "./GrupoWhatsappRecinto";
+import type { GrupoRecinto } from "../../lib/gestion/grupoWhatsapp";
 import {
   ETIQUETA_GENERO,
   edad,
@@ -76,6 +78,8 @@ interface Props {
   costoPorConsulta?: number;
   // Contacto por WhatsApp (verificación 3), por cédula.
   contactos?: Contacto[];
+  // Grupo de WhatsApp de cada recinto; null si la tabla aún no existe.
+  grupos?: GrupoRecinto[] | null;
 }
 
 // Decisiones sobre el nombre de una persona frente al oficial.
@@ -418,6 +422,7 @@ export default function GestionConsolidado({
   hayClave = false,
   costoPorConsulta = 0.02,
   contactos = [],
+  grupos: gruposIniciales = null,
 }: Props) {
   const [veedores, setVeedores] = useState(veedoresIniciales);
   const [coordinadores, setCoordinadores] = useState(coordinadoresIniciales);
@@ -431,6 +436,16 @@ export default function GestionConsolidado({
   const [filtroIdentidad, setFiltroIdentidad] =
     useState<FiltroIdentidad>("todas");
   const [decidiendo, setDecidiendo] = useState(false);
+  const [gruposWa, setGruposWa] = useState(gruposIniciales);
+  const grupoDe = useMemo(
+    () => new Map((gruposWa ?? []).map((g) => [g.recintoCodigo, g])),
+    [gruposWa],
+  );
+  const guardarGrupo = (codigo: number, g: GrupoRecinto | null) =>
+    setGruposWa((lista) => [
+      ...(lista ?? []).filter((x) => x.recintoCodigo !== codigo),
+      ...(g ? [g] : []),
+    ]);
 
   const validacionDe = useMemo(
     () => new Map(validaciones.map((v) => [v.cedula, v])),
@@ -539,6 +554,7 @@ export default function GestionConsolidado({
   const conCda = recintosCda.filter((f) => f.cda?.titular).length;
   const totalJuntas = base.reduce((a, f) => a + f.juntas.length, 0);
   const juntasConTitular = base.reduce((a, f) => a + f.juntasConTitular, 0);
+  const conGrupo = base.filter((f) => grupoDe.has(f.recinto.cod)).length;
 
   const hayFiltros =
     ubicacion !== "todas" ||
@@ -737,6 +753,19 @@ export default function GestionConsolidado({
           }
           etiquetaBarra="Juntas con veedor titular"
         />
+        {gruposWa !== null ? (
+          <ResumenAvance
+            parte={conGrupo}
+            total={base.length}
+            texto={
+              <>
+                <strong>{conGrupo}</strong> de <strong>{base.length}</strong>{" "}
+                recintos con grupo de WhatsApp
+              </>
+            }
+            etiquetaBarra="Recintos con grupo de WhatsApp"
+          />
+        ) : null}
       </div>
 
       {puedeVerificar ? (
@@ -904,10 +933,29 @@ export default function GestionConsolidado({
                               </span>
                             ) : null}
                           </span>
+                          {gruposWa !== null ? (
+                            <span
+                              class={`chip-estado ${grupoDe.has(f.recinto.cod) ? "chip-estado-ok" : "chip-estado-sin"}`}
+                            >
+                              Grupo
+                              <span class="g-sr-only">
+                                {grupoDe.has(f.recinto.cod)
+                                  ? " de WhatsApp cargado"
+                                  : " de WhatsApp sin cargar"}
+                              </span>
+                            </span>
+                          ) : null}
                         </span>
                       </summary>
                       {abierto ? (
                         <div class="g-consol-detalle">
+                          {gruposWa !== null ? (
+                            <GrupoWhatsappRecinto
+                              recintoCodigo={f.recinto.cod}
+                              grupo={grupoDe.get(f.recinto.cod)}
+                              onGuardado={guardarGrupo}
+                            />
+                          ) : null}
                           <section>
                             <h4>Coordinador</h4>
                             <PuestoLineas

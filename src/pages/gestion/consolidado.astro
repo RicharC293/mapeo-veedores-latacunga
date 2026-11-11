@@ -11,6 +11,8 @@ import { validacionesParaVista } from "../../lib/validacion/pantalla";
 import { COSTO_POR_CONSULTA } from "../../lib/validacion/ecuadorApi";
 import { listContactos } from "../../lib/contacto/contactos";
 import type { Contacto } from "../../lib/contacto/plan";
+import { listGruposWhatsapp } from "../../lib/gestion/gruposWhatsapp";
+import type { GrupoRecinto } from "../../lib/gestion/grupoWhatsapp";
 import type { ValidacionCedula } from "../../lib/validacion/plan";
 import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
 
@@ -45,9 +47,18 @@ async function cargarContactos(): Promise<Contacto[]> {
     return [];
   }
 }
-const [validaciones, contactos] = await Promise.all([
+// Grupo de WhatsApp de cada recinto; sin la tabla no se muestra la sección.
+async function cargarGrupos(): Promise<GrupoRecinto[] | null> {
+  try {
+    return await listGruposWhatsapp();
+  } catch {
+    return null;
+  }
+}
+const [validaciones, contactos, grupos] = await Promise.all([
   cargarValidaciones(),
   cargarContactos(),
+  cargarGrupos(),
 ]);
 const hayClave = Boolean(import.meta.env.ECUADORAPI_KEY);
 ---
@@ -74,5 +85,6 @@ const hayClave = Boolean(import.meta.env.ECUADORAPI_KEY);
     hayClave={hayClave}
     costoPorConsulta={COSTO_POR_CONSULTA}
     contactos={contactos}
+    grupos={grupos}
   />
 </GestionLayout>
