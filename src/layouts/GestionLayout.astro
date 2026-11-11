@@ -9,6 +9,7 @@ interface Props {
     | "index"
     | "consolidado"
     | "contacto"
+    | "comunicados"
     | "veedores"
     | "coordinadores"
     | "acreditados-cda"
@@ -52,6 +53,12 @@ const links = [
     href: "/gestion/contacto",
     key: "contacto",
     label: "Contacto",
+    group: "gestion",
+  },
+  {
+    href: "/gestion/comunicados",
+    key: "comunicados",
+    label: "Comunicados",
     group: "gestion",
   },
   // Veedores, Coordinadores y Acreditados CDA no van en el menú: el

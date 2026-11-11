@@ -3248,6 +3248,180 @@ a.g-btn-accion {
   font-weight: 700;
 }
 
+/* Comunicados: la lista de comunicados guardados, el editor (mensaje,
+   filtros y vista previa) y la lista de envío, que reutiliza las filas de
+   Contacto. */
+.g-com-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 10px;
+}
+.g-com-cabecera h2,
+.g-com-envio h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.g-com-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+.g-com-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.g-com-item:hover {
+  border-color: var(--sel);
+}
+.g-com-item[aria-current="true"] {
+  border-color: var(--sel);
+  box-shadow: inset 0 0 0 1px var(--sel);
+  background: color-mix(in srgb, var(--sel) 8%, var(--panel));
+}
+.g-com-item small {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.g-com-item:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.g-com-editor {
+  gap: 14px;
+  padding: 16px;
+}
+.g-com-editor input:not([type="checkbox"]),
+.g-com-editor select,
+.g-com-editor textarea {
+  width: 100%;
+  min-width: 0;
+}
+.g-com-editor input:not([type="checkbox"]),
+.g-com-editor select,
+.g-com-editor textarea {
+  font-weight: 400;
+}
+.g-com-editor textarea {
+  line-height: 1.5;
+}
+.g-com-campos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: -6px;
+}
+.g-com-campos > span {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.g-com-campos .g-chip-filtro {
+  min-height: 30px;
+  padding: 3px 10px;
+  font-size: 0.8rem;
+}
+.g-com-filtros {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.g-com-filtros legend {
+  padding: 0 4px;
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+.g-com-filtros-fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+.g-com-filtros-fila > label:not(.g-check) {
+  flex: 1 1 200px;
+}
+.g-com-alcance {
+  margin: 0;
+  font-size: 0.9rem;
+}
+.g-com-vista {
+  max-width: 62ch;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 4px 12px 12px 12px;
+  background: var(--panel);
+}
+.g-com-vista small {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.g-com-vista p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+.g-com-aviso {
+  margin: 0;
+  color: var(--aviso);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.g-com-editor .g-form-actions {
+  flex-wrap: wrap;
+}
+.g-com-editor .g-btn-ghost:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.g-com-envio {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.g-com-dest {
+  display: flex;
+  flex: 1 1 320px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.g-com-dest small {
+  color: var(--muted);
+}
+.g-com-dest .g-contacto-aviso {
+  color: var(--aviso);
+  font-weight: 700;
+}
+.g-com-destinatarios {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
 /* Listados de personas para imprimir. La cédula, el teléfono y la junta
    nunca se parten; en el teléfono la tabla se desliza. */
 .g-listado-dato,

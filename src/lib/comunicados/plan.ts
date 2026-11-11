@@ -1,0 +1,202 @@
+import { title } from "../format";
+import { coincideUbicacion, type Ubicacion } from "../gestion/ubicacion";
+import { textoJunta, textoRol, type Clase } from "../contacto/plan";
+import type { ParroquiaBasica, Recinto } from "../types";
+
+// Lógica pura de los comunicados por WhatsApp: a quién va cada uno, cómo se
+// completa el mensaje con los datos de cada persona y cómo se agrupan quienes
+// comparten celular. Sin base ni API, para poder probarla.
+
+export interface FiltrosComunicado {
+  ubicacion: Ubicacion;
+  // Un recinto concreto, o null para todos los de la ubicación.
+  recinto: number | null;
+  dignidades: Clase[];
+  tipo: "todos" | "titular" | "suplente";
+  // "todos", "sin" (sin responsable) o el id de un líder.
+  responsable: string;
+  // Suma a quienes siguen en Militancia sin asignar.
+  militancia: boolean;
+}
+
+export const DIGNIDADES: Clase[] = ["coordinador", "cda", "veedor"];
+
+export const FILTROS_INICIALES: FiltrosComunicado = {
+  ubicacion: "todas",
+  recinto: null,
+  dignidades: DIGNIDADES,
+  tipo: "todos",
+  responsable: "todos",
+  militancia: false,
+};
+
+// Filtros guardados en la base (jsonb) → FiltrosComunicado, con los valores
+// por defecto en lo que falte o no se reconozca.
+export function leerFiltros(valor: unknown): FiltrosComunicado {
+  const v = (valor ?? {}) as Partial<Record<keyof FiltrosComunicado, unknown>>;
+  const u = v.ubicacion;
+  return {
+    ubicacion:
+      u === "urbanas" || u === "rurales" || typeof u === "number" ? u : "todas",
+    recinto: typeof v.recinto === "number" ? v.recinto : null,
+    dignidades: Array.isArray(v.dignidades)
+      ? DIGNIDADES.filter((d) => (v.dignidades as unknown[]).includes(d))
+      : DIGNIDADES,
+    tipo: v.tipo === "titular" || v.tipo === "suplente" ? v.tipo : "todos",
+    responsable:
+      typeof v.responsable === "string" && v.responsable !== ""
+        ? v.responsable
+        : "todos",
+    militancia: v.militancia === true,
+  };
+}
+
+export interface Comunicado {
+  id: string;
+  titulo: string;
+  mensaje: string;
+  enlace: string;
+  filtros: FiltrosComunicado;
+  creadoPor: string | null;
+  creadoEn: string;
+  actualizadoEn: string;
+}
+
+export interface EnvioComunicado {
+  comunicadoId: string;
+  numero: string;
+  enviadoPor: string | null;
+  enviadoEn: string;
+}
+
+// Una persona a la que se le puede escribir: del Consolidado o, con clase
+// null, de Militancia (aún sin puesto).
+export interface PersonaComunicado {
+  cedula: string;
+  nombres: string;
+  // Nombres de pila para el saludo (ver nombreDeSaludo).
+  saludo: string;
+  telefono: string;
+  femenino: boolean;
+  clase: Clase | null;
+  tipo: "titular" | "suplente" | null;
+  // Su recinto o, en Militancia, el de preferencia si se reconoció.
+  recintoCodigo: number | null;
+  juntaId: string | null;
+  responsableId: string | null;
+}
+
+export function coincideFiltros(
+  p: PersonaComunicado,
+  f: FiltrosComunicado,
+  parroquia: ParroquiaBasica | undefined,
+): boolean {
+  if (p.clase === null) {
+    if (!f.militancia) return false;
+  } else {
+    if (!f.dignidades.includes(p.clase)) return false;
+    if (f.tipo !== "todos" && p.tipo !== f.tipo) return false;
+  }
+  if (f.recinto !== null && p.recintoCodigo !== f.recinto) return false;
+  if (!coincideUbicacion(f.ubicacion, parroquia)) return false;
+  if (f.responsable === "sin") return p.responsableId === null;
+  return f.responsable === "todos" || p.responsableId === f.responsable;
+}
+
+// Los datos que se pueden poner en el mensaje, en el orden de los botones.
+export const CAMPOS = [
+  { clave: "nombre", etiqueta: "Nombre" },
+  { clave: "rol", etiqueta: "Rol" },
+  { clave: "recinto", etiqueta: "Recinto" },
+  { clave: "parroquia", etiqueta: "Parroquia" },
+  { clave: "direccion", etiqueta: "Dirección" },
+  { clave: "junta", etiqueta: "Junta" },
+  { clave: "enlace", etiqueta: "Enlace" },
+] as const;
+
+export type Campo = (typeof CAMPOS)[number]["clave"];
+export type DatosComunicado = Record<Campo, string>;
+
+export function datosDe(
+  p: PersonaComunicado,
+  recinto: Recinto | undefined,
+  parroquia: ParroquiaBasica | undefined,
+  enlace: string,
+): DatosComunicado {
+  return {
+    nombre: p.saludo,
+    rol: p.clase && p.tipo ? textoRol(p.clase, p.femenino, p.tipo) : "",
+    recinto: recinto ? title(recinto.nombre) : "",
+    parroquia: parroquia?.properties.name ?? "",
+    direccion: recinto?.dir.trim() ? title(recinto.dir) : "",
+    junta: p.juntaId ? textoJunta(p.juntaId) : "",
+    enlace: enlace.trim(),
+  };
+}
+
+// "Ana", "Ana y Luis", "Ana, Luis y Rosa": sin repetidos ni vacíos.
+export function unirTextos(valores: string[]): string {
+  const unicos = [...new Set(valores.map((v) => v.trim()).filter(Boolean))];
+  if (unicos.length <= 1) return unicos[0] ?? "";
+  return `${unicos.slice(0, -1).join(", ")} y ${unicos[unicos.length - 1]}`;
+}
+
+// Quienes comparten celular reciben un solo mensaje que los nombra a todos.
+export function combinarDatos(lista: DatosComunicado[]): DatosComunicado {
+  const datos = {} as DatosComunicado;
+  for (const { clave } of CAMPOS) {
+    datos[clave] = unirTextos(lista.map((d) => d[clave]));
+  }
+  return datos;
+}
+
+// Reemplaza cada {campo} conocido; lo demás entre llaves queda tal cual.
+export function rellenar(plantilla: string, datos: DatosComunicado): string {
+  return plantilla.replace(/\{(\w+)\}/g, (marca, clave: string) =>
+    clave in datos ? datos[clave as Campo] : marca,
+  );
+}
+
+// Campos que la plantilla usa y que en estos datos quedarían vacíos.
+export function camposVacios(
+  plantilla: string,
+  datos: DatosComunicado,
+): Campo[] {
+  return CAMPOS.map((c) => c.clave).filter(
+    (clave) => plantilla.includes(`{${clave}}`) && datos[clave] === "",
+  );
+}
+
+export interface GrupoNumero<T> {
+  numero: string;
+  personas: T[];
+}
+
+// Agrupa por celular (en formato wa.me). Quien no tiene un celular válido
+// queda aparte: no se le puede escribir.
+export function agruparPorNumero<T>(
+  personas: T[],
+  numeroDe: (p: T) => string | null,
+): { grupos: GrupoNumero<T>[]; sinNumero: T[] } {
+  const mapa = new Map<string, T[]>();
+  const sinNumero: T[] = [];
+  for (const p of personas) {
+    const numero = numeroDe(p);
+    if (numero) mapa.set(numero, [...(mapa.get(numero) ?? []), p]);
+    else sinNumero.push(p);
+  }
+  return {
+    grupos: [...mapa.entries()].map(([numero, delNumero]) => ({
+      numero,
+      personas: delNumero,
+    })),
+    sinNumero,
+  };
+}
+
+export const MENSAJE_INICIAL = [
+  "¡Hola, {nombre}! 👋",
+  "",
+  "",
+  "Campo Ciudad, Una Sola Fuerza",
+].join("\n");

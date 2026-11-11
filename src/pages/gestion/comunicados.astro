@@ -1,0 +1,172 @@
+---
+import GestionLayout from "../../layouts/GestionLayout.astro";
+import GestionComunicados from "../../components/gestion/GestionComunicados";
+import { getMapData } from "../../lib/data";
+import { listVeedores } from "../../lib/gestion/veedores";
+import { listCoordinadores } from "../../lib/gestion/coordinadores";
+import { listAcreditadosCda } from "../../lib/gestion/acreditadosCda";
+import { listMilitantes } from "../../lib/gestion/militancia";
+import { listListaNegra } from "../../lib/gestion/listaNegra";
+import { listLideres } from "../../lib/gestion/lideres";
+import { listValidaciones } from "../../lib/validacion/validaciones";
+import {
+  datosPersonales,
+  type ValidacionCedula,
+} from "../../lib/validacion/plan";
+import { listContactos } from "../../lib/contacto/contactos";
+import { nombreDeSaludo } from "../../lib/contacto/plan";
+import { listComunicados, listEnvios } from "../../lib/comunicados/comunicados";
+import type {
+  Comunicado,
+  EnvioComunicado,
+  PersonaComunicado,
+} from "../../lib/comunicados/plan";
+import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
+
+if (!PAGINAS_GESTION.comunicados.includes(Astro.locals.rol)) {
+  return Astro.redirect(rutaPorDefecto(Astro.locals.rol));
+}
+
+const data = await getMapData();
+const [veedores, coordinadores, acreditados, militantes, listaNegra, lideres] =
+  await Promise.all([
+    listVeedores(),
+    listCoordinadores(),
+    listAcreditadosCda(),
+    listMilitantes(),
+    listListaNegra(),
+    listLideres(),
+  ]);
+// Sin la validación o sin la tabla de contactos el comunicado igual funciona:
+// solo se pierde el género del rol y la exclusión de números equivocados.
+async function cargarValidaciones(): Promise<ValidacionCedula[]> {
+  try {
+    return await listValidaciones();
+  } catch {
+    return [];
+  }
+}
+async function cargarEquivocados(): Promise<Set<string>> {
+  try {
+    return new Set(
+      (await listContactos())
+        .filter((c) => c.estado === "numero_equivocado")
+        .map((c) => c.cedula),
+    );
+  } catch {
+    return new Set();
+  }
+}
+// Si las tablas aún no existen, la pantalla pide aplicar la migración.
+async function cargarComunicados(): Promise<{
+  comunicados: Comunicado[];
+  envios: EnvioComunicado[];
+} | null> {
+  try {
+    const [comunicados, envios] = await Promise.all([
+      listComunicados(),
+      listEnvios(),
+    ]);
+    return { comunicados, envios };
+  } catch {
+    return null;
+  }
+}
+const [validaciones, equivocados, guardados] = await Promise.all([
+  cargarValidaciones(),
+  cargarEquivocados(),
+  cargarComunicados(),
+]);
+const validacionDe = new Map(validaciones.map((v) => [v.cedula, v]));
+const vetados = new Set(listaNegra.map((e) => e.cedula.trim()));
+
+// Quedan fuera quien está en la lista negra y quien tiene marcado en Contacto
+// que el celular no es suyo.
+let porNumeroEquivocado = 0;
+let porListaNegra = 0;
+const admitir = (cedula: string) => {
+  if (vetados.has(cedula)) {
+    porListaNegra += 1;
+    return false;
+  }
+  if (equivocados.has(cedula)) {
+    porNumeroEquivocado += 1;
+    return false;
+  }
+  return true;
+};
+const persona = (p: {
+  cedula: string;
+  nombres: string;
+  telefono: string;
+}): Pick<
+  PersonaComunicado,
+  "cedula" | "nombres" | "saludo" | "telefono" | "femenino"
+> => {
+  const cedula = p.cedula.trim();
+  const v = validacionDe.get(cedula);
+  return {
+    cedula,
+    nombres: p.nombres.trim(),
+    saludo: nombreDeSaludo(p.nombres, v?.nombres ?? null),
+    telefono: p.telefono.trim(),
+    femenino: datosPersonales(v).genero === "femenino",
+  };
+};
+
+const personas: PersonaComunicado[] = [
+  ...coordinadores.map((p) => ({
+    p,
+    clase: "coordinador" as const,
+    juntaId: null,
+  })),
+  ...acreditados.map((p) => ({ p, clase: "cda" as const, juntaId: null })),
+  ...veedores.map((p) => ({ p, clase: "veedor" as const, juntaId: p.juntaId })),
+]
+  .filter(({ p }) => admitir(p.cedula.trim()))
+  .map(({ p, clase, juntaId }) => ({
+    ...persona(p),
+    clase,
+    tipo: p.tipo,
+    recintoCodigo: p.recintoCodigo,
+    juntaId,
+    responsableId: p.responsableLiderId,
+  }));
+// De Militancia, solo quien aún no tiene puesto (los demás ya están arriba).
+for (const m of militantes) {
+  if (m.asignado || !admitir(m.cedula.trim())) continue;
+  personas.push({
+    ...persona(m),
+    clase: null,
+    tipo: null,
+    recintoCodigo: m.recintoCodigo,
+    juntaId: null,
+    responsableId: m.responsableLiderId,
+  });
+}
+---
+
+<GestionLayout title="Comunicados" activo="comunicados">
+  <h1>Comunicados</h1>
+  <p class="g-sub">
+    Avisos por WhatsApp a las personas del Consolidado: escribe el mensaje una
+    vez, elige a quién va y envíalo número por número. Cada envío queda
+    registrado para repartir el trabajo sin repetir.
+  </p>
+  <GestionComunicados
+    client:load
+    parroquias={data.parroquias.features.map(({ properties }) => ({
+      properties,
+    }))}
+    recintos={data.recintos}
+    lideres={lideres.map(({ id, nombres }) => ({ id, nombres }))}
+    personas={personas}
+    comunicados={guardados?.comunicados ?? []}
+    envios={guardados?.envios ?? []}
+    tablaLista={guardados !== null}
+    excluidos={{
+      numeroEquivocado: porNumeroEquivocado,
+      listaNegra: porListaNegra,
+    }}
+  />
+</GestionLayout>

@@ -66,6 +66,15 @@ const ROL: Record<Clase, { m: string; f: string }> = {
   cda: { m: "acreditado del CDA", f: "acreditada del CDA" },
 };
 
+// "veedora", "coordinador suplente"…
+export function textoRol(
+  clase: Clase,
+  femenino: boolean,
+  tipo: "titular" | "suplente",
+): string {
+  return `${ROL[clase][femenino ? "f" : "m"]}${tipo === "suplente" ? " suplente" : ""}`;
+}
+
 // "M3" → "junta 3 masculina".
 export function textoJunta(juntaId: string): string {
   const etiqueta = juntaId.slice(juntaId.lastIndexOf("-") + 1);
@@ -89,9 +98,7 @@ export interface DatosMensaje {
 // en MAYÚSCULAS para que se lean de un vistazo.
 export function mensajeWhatsapp(d: DatosMensaje): string {
   const M = (s: string) => s.trim().toUpperCase();
-  const rol = M(
-    `${ROL[d.clase][d.femenino ? "f" : "m"]}${d.tipo === "suplente" ? " suplente" : ""}`,
-  );
+  const rol = M(textoRol(d.clase, d.femenino, d.tipo));
   const recinto = `recinto electoral ${M(d.recinto)}`;
   const lugar = [
     d.juntaId

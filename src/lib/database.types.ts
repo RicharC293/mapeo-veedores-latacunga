@@ -140,6 +140,68 @@ export type Database = {
         }
         Relationships: []
       }
+      comunicado_envios: {
+        Row: {
+          comunicado_id: string
+          enviado_en: string
+          enviado_por: string | null
+          numero: string
+        }
+        Insert: {
+          comunicado_id: string
+          enviado_en?: string
+          enviado_por?: string | null
+          numero: string
+        }
+        Update: {
+          comunicado_id?: string
+          enviado_en?: string
+          enviado_por?: string | null
+          numero?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comunicado_envios_comunicado_id_fkey"
+            columns: ["comunicado_id"]
+            isOneToOne: false
+            referencedRelation: "comunicados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comunicados: {
+        Row: {
+          actualizado_en: string
+          creado_en: string
+          creado_por: string | null
+          enlace: string
+          filtros: Json
+          id: string
+          mensaje: string
+          titulo: string
+        }
+        Insert: {
+          actualizado_en?: string
+          creado_en?: string
+          creado_por?: string | null
+          enlace?: string
+          filtros?: Json
+          id?: string
+          mensaje?: string
+          titulo: string
+        }
+        Update: {
+          actualizado_en?: string
+          creado_en?: string
+          creado_por?: string | null
+          enlace?: string
+          filtros?: Json
+          id?: string
+          mensaje?: string
+          titulo?: string
+        }
+        Relationships: []
+      }
       contactos: {
         Row: {
           actualizado_en: string

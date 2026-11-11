@@ -14,6 +14,8 @@ export const PAGINAS_GESTION: Record<string, Rol[]> = {
   militancia: ["gestor", "administrador"],
   // Contacto por WhatsApp para confirmar la participación (verificación 3).
   contacto: ["gestor", "administrador"],
+  // Avisos por WhatsApp a las personas del Consolidado (y de Militancia).
+  comunicados: ["gestor", "administrador"],
   lideres: ["administrador"],
   // Ver y eliminar; el alta/edición manual se filtra aparte (solo admin).
   "lista-negra": ["gestor", "administrador"],
