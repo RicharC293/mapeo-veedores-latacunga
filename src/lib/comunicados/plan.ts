@@ -80,6 +80,8 @@ export interface PersonaComunicado {
   nombres: string;
   // Nombres de pila para el saludo (ver nombreDeSaludo).
   saludo: string;
+  // Apellidos (ver apellidosDeSaludo).
+  apellidos: string;
   telefono: string;
   femenino: boolean;
   clase: Clase | null;
@@ -113,6 +115,7 @@ export function coincideFiltros(
 // Los datos que se pueden poner en el mensaje, en el orden de los botones.
 export const CAMPOS = [
   { clave: "nombre", etiqueta: "Nombre" },
+  { clave: "apellido", etiqueta: "Apellido" },
   { clave: "rol", etiqueta: "Rol" },
   { clave: "recinto", etiqueta: "Recinto" },
   { clave: "parroquia", etiqueta: "Parroquia" },
@@ -136,6 +139,7 @@ export function datosDe(
 ): DatosComunicado {
   return {
     nombre: p.saludo,
+    apellido: p.apellidos,
     rol: p.clase && p.tipo ? textoRol(p.clase, p.femenino, p.tipo) : "",
     recinto: recinto ? title(recinto.nombre) : "",
     parroquia: parroquia?.properties.name ?? "",

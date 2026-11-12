@@ -17,6 +17,7 @@ const persona = (extra: Partial<PersonaComunicado>): PersonaComunicado => ({
   cedula: "0503451163",
   nombres: "PÉREZ LÓPEZ ANA MARÍA",
   saludo: "Ana María",
+  apellidos: "Pérez López",
   telefono: "0987654321",
   femenino: true,
   clase: "veedor",
@@ -88,6 +89,7 @@ describe("mensaje", () => {
     const datos = datosDe(persona({}), recinto, urbana, " https://x.y ");
     expect(datos).toEqual({
       nombre: "Ana María",
+      apellido: "Pérez López",
       rol: "veedora",
       recinto: "Colegio Urbano",
       parroquia: "La Matriz",

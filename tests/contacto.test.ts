@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  apellidosDeSaludo,
   claveDePuesto,
   enlaceWhatsapp,
   mensajeWhatsapp,
@@ -140,5 +141,18 @@ describe("situacionContacto", () => {
       contacto({}),
     );
     expect(otro).toMatchObject({ estado: "enviado", cambioDePuesto: true });
+  });
+});
+
+describe("apellidosDeSaludo", () => {
+  it("usa los apellidos del Registro Civil o los dos primeros del nombre", () => {
+    expect(apellidosDeSaludo("PÉREZ LÓPEZ ANA", "PÉREZ LÓPEZ")).toBe(
+      "Pérez López",
+    );
+    expect(apellidosDeSaludo("PÉREZ LÓPEZ MARÍA JOSÉ", null)).toBe(
+      "Pérez López",
+    );
+    expect(apellidosDeSaludo("PÉREZ ANA", null)).toBe("Pérez");
+    expect(apellidosDeSaludo("ANA", null)).toBe("");
   });
 });

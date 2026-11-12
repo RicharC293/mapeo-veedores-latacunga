@@ -60,6 +60,19 @@ export function nombreDeSaludo(
   return title(pila.join(" "));
 }
 
+// Apellidos: los del Registro Civil o, si faltan, las dos primeras palabras
+// del nombre (o la primera, si solo hay dos).
+export function apellidosDeSaludo(
+  nombres: string,
+  apellidosOficiales: string | null,
+): string {
+  const oficiales = apellidosOficiales?.trim();
+  if (oficiales) return title(oficiales);
+  const partes = nombres.trim().split(/\s+/);
+  if (partes.length < 2) return "";
+  return title(partes.slice(0, partes.length > 2 ? 2 : 1).join(" "));
+}
+
 const ROL: Record<Clase, { m: string; f: string }> = {
   veedor: { m: "veedor", f: "veedora" },
   coordinador: { m: "coordinador", f: "coordinadora" },
