@@ -5,6 +5,7 @@ import { listVeedores } from "../../lib/gestion/veedores";
 import { listCoordinadores } from "../../lib/gestion/coordinadores";
 import { listAcreditadosCda } from "../../lib/gestion/acreditadosCda";
 import { OPCIONES_DESCARGA } from "../../lib/gestion/descargas";
+import { filasRurales } from "../../lib/gestion/ruralXlsx";
 import { fmt } from "../../lib/format";
 import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
 
@@ -27,6 +28,23 @@ const recintosCda = mapa.recintos.filter((r) => r.cda).length;
 const asignados = [...veedores, ...coordinadores, ...acreditados];
 const puestos = asignados.length;
 
+// Lo rural, con los puestos que faltan como filas vacías.
+const rurales = filasRurales({
+  recintos: mapa.recintos,
+  parroquias: mapa.parroquias.features.map(({ properties }) => ({
+    properties,
+  })),
+  veedores,
+  coordinadores,
+  acreditados,
+});
+const recintosRurales = new Set(rurales.map((f) => f.recintoCodigo)).size;
+const cubiertosRurales = rurales.filter(
+  (f) => f.tipo === "titular" && !f.porCubrir,
+).length;
+const puestosRurales = rurales.filter((f) => f.tipo === "titular").length;
+const suplentesRurales = rurales.filter((f) => f.tipo === "suplente").length;
+
 // Qué lleva cada archivo, con las cifras de hoy.
 const contenido: Record<string, string[]> = {
   todo: [
@@ -42,12 +60,19 @@ const contenido: Record<string, string[]> = {
   cda: [
     `${fmt(titulares(acreditados))} de ${fmt(recintosCda)} acreditados titulares`,
   ],
+  rural: [
+    `${fmt(recintosRurales)} recintos rurales, una hoja por dignidad`,
+    `${fmt(cubiertosRurales)} de ${fmt(puestosRurales)} puestos titulares cubiertos`,
+    `${fmt(suplentesRurales)} ${suplentesRurales === 1 ? "suplente" : "suplentes"} en su propia fila`,
+  ],
 };
 const sup = {
   todo: suplentes(veedores) + suplentes(coordinadores),
   veedores: suplentes(veedores),
   coordinadores: suplentes(coordinadores),
   cda: suplentes(acreditados),
+  // Lo rural lleva a los suplentes en filas propias, no en Observaciones.
+  rural: 0,
 };
 ---
 
@@ -116,8 +141,8 @@ const sup = {
   </ul>
 
   <p class="g-descargas-nota">
-    Solo se llenan los titulares en las casillas de nombre, cédula y teléfono;
-    los suplentes se anotan en la columna Observaciones. Las cédulas repetidas
+    En la matriz solo se llenan los titulares en las casillas de nombre, cédula
+    y teléfono; los suplentes se anotan en la columna Observaciones. Las cédulas repetidas
     se marcan solas, como ya hace la plantilla. Los archivos incluyen cédulas y
     celulares: compártelos solo con quien deba verlos.
   </p>

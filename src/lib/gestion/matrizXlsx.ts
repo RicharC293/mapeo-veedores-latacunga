@@ -358,7 +358,8 @@ function existeJunta(recinto: Recinto, genero: string, numero: number) {
 // aparte con el mismo aspecto (encabezado azul con letras blancas).
 // ---------------------------------------------------------------------------
 
-const ESTILOS_CDA = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+// También los usa el libro de varias hojas (libroXlsx.ts).
+export const ESTILOS_CDA = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
 <fonts count="3">
 <font><sz val="10"/><name val="Arial"/><family val="2"/></font>

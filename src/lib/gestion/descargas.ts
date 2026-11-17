@@ -1,6 +1,6 @@
 import type { AlcanceMatriz } from "./matrizXlsx";
 
-export type TipoDescarga = AlcanceMatriz | "cda";
+export type TipoDescarga = AlcanceMatriz | "cda" | "rural";
 
 export interface OpcionDescarga {
   tipo: TipoDescarga;
@@ -38,6 +38,13 @@ export const OPCIONES_DESCARGA: OpcionDescarga[] = [
     descripcion:
       "Una hoja con los 19 recintos CDA y el acreditado de cada uno. La plantilla no trae esta tabla, así que va en un archivo aparte.",
     archivo: "Acreditados_CDA_Latacunga",
+  },
+  {
+    tipo: "rural",
+    titulo: "Solo rural",
+    descripcion:
+      "Las parroquias rurales en tres hojas: coordinadores, acreditados CDA y veedores, con titulares, suplentes y los puestos que faltan cubrir.",
+    archivo: "Rural_Coordinadores_CDA_Veedores",
   },
 ];
 

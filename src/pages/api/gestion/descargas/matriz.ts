@@ -9,6 +9,7 @@ import {
   opcionDescarga,
 } from "../../../../lib/gestion/descargas";
 import { armarCdaXlsx, llenarMatriz } from "../../../../lib/gestion/matrizXlsx";
+import { armarRuralXlsx } from "../../../../lib/gestion/ruralXlsx";
 import { json, requireApiRole } from "../../../../lib/gestion/apiHelpers";
 import { PAGINAS_GESTION } from "../../../../lib/auth/roles";
 
@@ -46,17 +47,17 @@ export const GET: APIRoute = async ({ url, locals }) => {
       acreditados,
     };
     const ahora = Date.now();
+    const corte = new Intl.DateTimeFormat("es-EC", {
+      dateStyle: "long",
+      timeStyle: "short",
+      timeZone: "America/Guayaquil",
+    }).format(new Date(ahora));
     const bytes =
       opcion.tipo === "cda"
-        ? armarCdaXlsx(
-            datos,
-            new Intl.DateTimeFormat("es-EC", {
-              dateStyle: "long",
-              timeStyle: "short",
-              timeZone: "America/Guayaquil",
-            }).format(new Date(ahora)),
-          )
-        : llenarMatriz(bytesDePlantilla(), datos, opcion.tipo).archivo;
+        ? armarCdaXlsx(datos, corte)
+        : opcion.tipo === "rural"
+          ? armarRuralXlsx(datos, corte)
+          : llenarMatriz(bytesDePlantilla(), datos, opcion.tipo).archivo;
     return new Response(new Uint8Array(bytes), {
       headers: {
         "content-type": TIPO_XLSX,

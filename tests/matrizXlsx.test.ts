@@ -9,6 +9,7 @@ import {
   type DatosMatriz,
 } from "../src/lib/gestion/matrizXlsx";
 import { listJuntasDeRecinto } from "../src/lib/gestion/juntas";
+import { armarRuralXlsx } from "../src/lib/gestion/ruralXlsx";
 import type { ParroquiaFeature, Recinto } from "../src/lib/types";
 import type {
   AcreditadoCda,
@@ -270,5 +271,76 @@ describe("armarCdaXlsx", () => {
     );
     expect(f[4][6]).toBe("");
     expect(String(f[1][0])).toContain("0 de 19");
+  });
+});
+
+describe("armarRuralXlsx: solo las parroquias rurales", () => {
+  const urbana = new Map(
+    parroquias.map((p) => [p.properties.code, p.properties.urbana]),
+  );
+  const rurales = recintos.filter((r) => !urbana.get(r.par));
+  const datos = datosCompletos();
+  // Un recinto rural sin coordinador y con un suplente de veedor.
+  const sinCoordinador = rurales[0];
+  datos.coordinadores = datos.coordinadores.filter(
+    (c) => c.recintoCodigo !== sinCoordinador.cod,
+  );
+  const juntaSuplente = listJuntasDeRecinto(sinCoordinador)[0];
+  datos.veedores.push(
+    persona({
+      juntaId: juntaSuplente.id,
+      recintoCodigo: sinCoordinador.cod,
+      parroquiaCodigo: sinCoordinador.par,
+      tipo: "suplente",
+    }) as Veedor,
+  );
+  const libro = XLSX.read(armarRuralXlsx(datos, "17 de noviembre de 2026"), {
+    type: "array",
+  });
+  const filas = (hoja: string) =>
+    XLSX.utils.sheet_to_json<Record<string, unknown>>(libro.Sheets[hoja], {
+      range: 3,
+    });
+
+  it("trae una hoja por dignidad", () => {
+    expect(libro.SheetNames).toEqual([
+      "Coordinadores",
+      "Acreditados CDA",
+      "Veedores",
+    ]);
+  });
+
+  it("solo incluye recintos rurales", () => {
+    const nombresRurales = new Set(rurales.map((r) => r.nombre));
+    for (const hoja of libro.SheetNames) {
+      for (const f of filas(hoja)) {
+        expect(nombresRurales.has(String(f["Recinto electoral"]))).toBe(true);
+      }
+    }
+  });
+
+  it("lleva un coordinador por recinto rural, con el faltante por cubrir", () => {
+    const coordinadores = filas("Coordinadores");
+    expect(coordinadores).toHaveLength(rurales.length);
+    const vacia = coordinadores.find(
+      (f) => f["Recinto electoral"] === sinCoordinador.nombre,
+    )!;
+    expect(vacia.Tipo).toBe("Por cubrir");
+    expect(vacia.Nombres).toBeUndefined();
+  });
+
+  it("lleva a los veedores por junta, con los suplentes en su propia fila", () => {
+    const veedores = filas("Veedores");
+    const juntas = rurales.reduce((a, r) => a + r.jt, 0);
+    expect(veedores).toHaveLength(juntas + 1);
+    const suplente = veedores.find((f) => f.Tipo === "Suplente")!;
+    expect(suplente.Junta).toBe("1F");
+    expect(String(suplente["Cédula"])).toMatch(/^0/);
+  });
+
+  it("lleva un acreditado por recinto CDA rural", () => {
+    expect(filas("Acreditados CDA")).toHaveLength(
+      rurales.filter((r) => r.cda).length,
+    );
   });
 });
