@@ -87,7 +87,7 @@ describe("mensajeWhatsapp", () => {
 
   it("el enlace lleva el mensaje codificado", () => {
     expect(enlaceWhatsapp("593987654321", "¡Hola! 👋")).toBe(
-      "https://wa.me/593987654321?text=%C2%A1Hola!%20%F0%9F%91%8B",
+      "https://api.whatsapp.com/send?phone=593987654321&text=%C2%A1Hola!%20%F0%9F%91%8B",
     );
   });
 });

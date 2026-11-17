@@ -134,8 +134,11 @@ export function mensajeWhatsapp(d: DatosMensaje): string {
   ].join("\n\n");
 }
 
+// Va directo a api.whatsapp.com/send: el atajo wa.me redirige ahí y en la
+// redirección vuelve a codificar el texto, lo que daña los emojis (llegan
+// como "�").
 export function enlaceWhatsapp(numero: string, mensaje: string): string {
-  return `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
+  return `https://api.whatsapp.com/send?phone=${numero}&text=${encodeURIComponent(mensaje)}`;
 }
 
 export interface SituacionContacto {
