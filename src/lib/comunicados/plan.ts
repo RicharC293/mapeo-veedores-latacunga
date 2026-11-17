@@ -124,7 +124,8 @@ export const CAMPOS = [
   { clave: "junta", etiqueta: "Junta" },
   // El grupo de WhatsApp de su recinto (se carga en el Consolidado).
   { clave: "grupo", etiqueta: "Grupo del recinto" },
-  // El equipo de su recinto, una persona por línea (ver textoEquipo).
+  // El equipo de su recinto, una persona por línea (ver textoEquipo). Solo
+  // para coordinadores: a los demás les queda vacío.
   { clave: "equipoCoordinador", etiqueta: "Equipo coordinador" },
   { clave: "equipoCda", etiqueta: "Equipo CDA" },
   { clave: "equipoVeedores", etiqueta: "Equipo veedores" },
@@ -134,18 +135,12 @@ export const CAMPOS = [
 export type Campo = (typeof CAMPOS)[number]["clave"];
 export type DatosComunicado = Record<Campo, string>;
 
-// Datos que solo tienen sentido si el comunicado va a un solo recinto: el
-// equipo de ese recinto.
-export const CAMPOS_DE_RECINTO: Campo[] = [
+// El equipo del recinto: solo lo reciben los coordinadores.
+export const CAMPOS_DE_EQUIPO: Campo[] = [
   "equipoCoordinador",
   "equipoCda",
   "equipoVeedores",
 ];
-
-// Los datos de recinto que usa el mensaje.
-export function camposDeRecintoEn(mensaje: string): Campo[] {
-  return CAMPOS_DE_RECINTO.filter((c) => mensaje.includes(`{${c}}`));
-}
 
 export interface MiembroEquipo {
   nombres: string;
@@ -183,9 +178,10 @@ export function datosDe(
   enlace: string,
   // Enlace del grupo de WhatsApp del recinto, o "" si aún no tiene.
   grupo = "",
-  // Quienes tienen puesto en su recinto.
+  // Quienes tienen puesto en su recinto: solo se usa si es coordinador.
   equipo?: EquipoRecinto,
 ): DatosComunicado {
+  const suEquipo = p.clase === "coordinador" ? equipo : undefined;
   return {
     nombre: p.saludo,
     apellido: p.apellidos,
@@ -195,9 +191,9 @@ export function datosDe(
     direccion: recinto?.dir.trim() ? title(recinto.dir) : "",
     junta: p.juntaId ? textoJunta(p.juntaId) : "",
     grupo: grupo.trim(),
-    equipoCoordinador: textoEquipo(equipo?.coordinador ?? []),
-    equipoCda: textoEquipo(equipo?.cda ?? []),
-    equipoVeedores: textoEquipo(equipo?.veedor ?? []),
+    equipoCoordinador: textoEquipo(suEquipo?.coordinador ?? []),
+    equipoCda: textoEquipo(suEquipo?.cda ?? []),
+    equipoVeedores: textoEquipo(suEquipo?.veedor ?? []),
     enlace: enlace.trim(),
   };
 }
@@ -225,13 +221,18 @@ export function rellenar(plantilla: string, datos: DatosComunicado): string {
   );
 }
 
-// Campos que la plantilla usa y que en estos datos quedarían vacíos.
+// Campos que la plantilla usa y que en estos datos quedarían vacíos, salvo
+// los que se dejan vacíos a propósito (el equipo, a quien no coordina).
 export function camposVacios(
   plantilla: string,
   datos: DatosComunicado,
+  ignorar: Campo[] = [],
 ): Campo[] {
   return CAMPOS.map((c) => c.clave).filter(
-    (clave) => plantilla.includes(`{${clave}}`) && datos[clave] === "",
+    (clave) =>
+      !ignorar.includes(clave) &&
+      plantilla.includes(`{${clave}}`) &&
+      datos[clave] === "",
   );
 }
 

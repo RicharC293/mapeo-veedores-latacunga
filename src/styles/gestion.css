@@ -3393,10 +3393,6 @@ a.g-btn-accion {
   padding: 3px 10px;
   font-size: 0.8rem;
 }
-.g-com-campos .g-chip-filtro:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
 .g-com-campos-nota {
   color: var(--muted);
   font-size: 0.78rem;

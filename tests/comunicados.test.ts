@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   agruparPorNumero,
-  camposDeRecintoEn,
+  CAMPOS_DE_EQUIPO,
   camposVacios,
   coincideFiltros,
   combinarDatos,
@@ -212,8 +212,15 @@ describe("equipo del recinto", () => {
     );
   });
 
-  it("pone el equipo en el mensaje y avisa si falta alguno", () => {
-    const datos = datosDe(persona({}), recinto, urbana, "", "", equipo);
+  it("pone el equipo de su recinto al coordinador y avisa si falta alguno", () => {
+    const datos = datosDe(
+      persona({ clase: "coordinador", juntaId: null }),
+      recinto,
+      urbana,
+      "",
+      "",
+      equipo,
+    );
     expect(rellenar("Coordina:\n{equipoCoordinador}", datos)).toBe(
       "Coordina:\n• Tapia Vega Rosa\n• Mena Ruiz Luis (suplente)",
     );
@@ -222,11 +229,21 @@ describe("equipo del recinto", () => {
     ]);
   });
 
-  it("reconoce los datos que piden un recinto", () => {
-    expect(camposDeRecintoEn("Hola {nombre}")).toEqual([]);
-    expect(camposDeRecintoEn("{equipoVeedores} y {equipoCda}")).toEqual([
-      "equipoCda",
-      "equipoVeedores",
-    ]);
+  it("deja el equipo vacío a quien no es coordinador, sin avisar", () => {
+    for (const clase of ["veedor", "cda", null] as const) {
+      const datos = datosDe(
+        persona({ clase }),
+        recinto,
+        urbana,
+        "",
+        "",
+        equipo,
+      );
+      expect(datos.equipoCoordinador).toBe("");
+      expect(datos.equipoVeedores).toBe("");
+      expect(
+        camposVacios("{equipoVeedores} {enlace}", datos, CAMPOS_DE_EQUIPO),
+      ).toEqual(["enlace"]);
+    }
   });
 });

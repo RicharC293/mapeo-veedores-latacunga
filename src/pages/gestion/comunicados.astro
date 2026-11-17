@@ -148,8 +148,8 @@ const personas: PersonaComunicado[] = [
     responsableId: p.responsableLiderId,
   }));
 // El equipo de cada recinto, para {equipoCoordinador}, {equipoCda} y
-// {equipoVeedores}: todos los que tienen puesto, también a quienes no se les
-// puede escribir (su nombre igual sirve al resto del equipo).
+// {equipoVeedores} (solo los reciben los coordinadores): todos los que tienen
+// puesto, también a quienes no se les puede escribir.
 const equiposPorRecinto: Record<number, EquipoRecinto> = {};
 const equipoDe = (recintoCodigo: number) =>
   (equiposPorRecinto[recintoCodigo] ??= {

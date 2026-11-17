@@ -3,12 +3,11 @@ import { ResumenAvance, VacioFiltros } from "./FiltrosRecintos";
 import BotonIcono, { TrazosIcono } from "./BotonIcono";
 import {
   CAMPOS,
-  CAMPOS_DE_RECINTO,
+  CAMPOS_DE_EQUIPO,
   DIGNIDADES,
   FILTROS_INICIALES,
   MENSAJE_INICIAL,
   agruparPorNumero,
-  camposDeRecintoEn,
   camposVacios,
   coincideFiltros,
   combinarDatos,
@@ -336,7 +335,15 @@ export default function GestionComunicados({
         telefono: primera.telefono,
         personas: g.personas,
         mensaje: rellenar(borrador.mensaje, datos),
-        vacios: camposVacios(borrador.mensaje, datos),
+        // El equipo solo llega a los coordinadores: a los demás les queda
+        // vacío a propósito.
+        vacios: camposVacios(
+          borrador.mensaje,
+          datos,
+          g.personas.some((p) => p.clase === "coordinador")
+            ? []
+            : CAMPOS_DE_EQUIPO,
+        ),
         envio: envioDe.get(g.numero),
         orden: `${r ? (parroquiaDe.get(r.par)?.properties.name ?? "") : "~"}|${r?.nombre ?? ""}|${primera.nombres}`,
       };
@@ -372,9 +379,6 @@ export default function GestionComunicados({
           `${x.personas.map((p) => `${p.nombres} ${p.cedula}`).join(" ")} ${x.telefono}`,
         ).includes(q)),
   );
-  // Los datos de equipo solo valen para un comunicado de un solo recinto.
-  const equipoSinRecinto =
-    f.recinto === null && camposDeRecintoEn(borrador.mensaje).length > 0;
   const recintosDeUbicacion = recintos
     .filter((r) => coincideUbicacion(f.ubicacion, parroquiaDe.get(r.par)))
     .sort((a, b) => a.nombre.localeCompare(b.nombre));
@@ -636,31 +640,20 @@ export default function GestionComunicados({
               aria-label="Insertar un dato"
             >
               <span>Insertar:</span>
-              {CAMPOS.map((c) => {
-                const pideRecinto =
-                  f.recinto === null && CAMPOS_DE_RECINTO.includes(c.clave);
-                return (
-                  <button
-                    key={c.clave}
-                    type="button"
-                    class="g-chip-filtro"
-                    disabled={pideRecinto}
-                    title={
-                      pideRecinto
-                        ? "Elige un recinto en «A quién va» para usar este dato"
-                        : undefined
-                    }
-                    onClick={() => insertarCampo(c.clave)}
-                  >
-                    {c.etiqueta}
-                  </button>
-                );
-              })}
-              {f.recinto === null ? (
-                <small class="g-com-campos-nota">
-                  Los equipos se activan al elegir un recinto.
-                </small>
-              ) : null}
+              {CAMPOS.map((c) => (
+                <button
+                  key={c.clave}
+                  type="button"
+                  class="g-chip-filtro"
+                  onClick={() => insertarCampo(c.clave)}
+                >
+                  {c.etiqueta}
+                </button>
+              ))}
+              <small class="g-com-campos-nota">
+                Los equipos llevan a la gente del recinto de cada coordinador; a
+                los demás les quedan vacíos.
+              </small>
             </div>
             <label>
               Mensaje
@@ -866,22 +859,11 @@ export default function GestionComunicados({
               </p>
             ) : null}
 
-            {equipoSinRecinto ? (
-              <p class="g-com-aviso" role="alert">
-                El mensaje usa el equipo del recinto: elige un recinto en «A
-                quién va» o quita{" "}
-                {camposDeRecintoEn(borrador.mensaje)
-                  .map((c) => `{${c}}`)
-                  .join(", ")}{" "}
-                para guardar.
-              </p>
-            ) : null}
-
             <div class="g-form-actions">
               <button
                 type="submit"
                 class="g-btn-accion"
-                disabled={ocupado || !sinGuardar || equipoSinRecinto}
+                disabled={ocupado || !sinGuardar}
               >
                 {seleccion === "nuevo" ? "Crear comunicado" : "Guardar cambios"}
               </button>
