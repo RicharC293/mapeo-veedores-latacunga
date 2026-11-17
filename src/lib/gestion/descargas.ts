@@ -43,8 +43,8 @@ export const OPCIONES_DESCARGA: OpcionDescarga[] = [
     tipo: "rural",
     titulo: "Solo rural",
     descripcion:
-      "Las parroquias rurales en tres hojas: coordinadores, acreditados CDA y veedores, con titulares, suplentes y los puestos que faltan cubrir.",
-    archivo: "Rural_Coordinadores_CDA_Veedores",
+      "Una hoja por parroquia rural con sus coordinadores, acreditados CDA y veedores, recinto por recinto: titulares, suplentes y los puestos que faltan cubrir.",
+    archivo: "Rural_por_parroquia",
   },
 ];
 

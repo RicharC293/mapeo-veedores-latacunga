@@ -39,6 +39,7 @@ const rurales = filasRurales({
   acreditados,
 });
 const recintosRurales = new Set(rurales.map((f) => f.recintoCodigo)).size;
+const parroquiasRurales = new Set(rurales.map((f) => f.parroquia)).size;
 const cubiertosRurales = rurales.filter(
   (f) => f.tipo === "titular" && !f.porCubrir,
 ).length;
@@ -61,7 +62,8 @@ const contenido: Record<string, string[]> = {
     `${fmt(titulares(acreditados))} de ${fmt(recintosCda)} acreditados titulares`,
   ],
   rural: [
-    `${fmt(recintosRurales)} recintos rurales, una hoja por dignidad`,
+    `${fmt(parroquiasRurales)} parroquias rurales, una hoja por parroquia`,
+    `${fmt(recintosRurales)} recintos, con coordinadores, CDA y veedores por recinto`,
     `${fmt(cubiertosRurales)} de ${fmt(puestosRurales)} puestos titulares cubiertos`,
     `${fmt(suplentesRurales)} ${suplentesRurales === 1 ? "suplente" : "suplentes"} en su propia fila`,
   ],

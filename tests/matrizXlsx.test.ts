@@ -274,9 +274,12 @@ describe("armarCdaXlsx", () => {
   });
 });
 
-describe("armarRuralXlsx: solo las parroquias rurales", () => {
+describe("armarRuralXlsx: una hoja por parroquia rural", () => {
   const urbana = new Map(
     parroquias.map((p) => [p.properties.code, p.properties.urbana]),
+  );
+  const nombreParroquia = new Map(
+    parroquias.map((p) => [p.properties.code, p.properties.name]),
   );
   const rurales = recintos.filter((r) => !urbana.get(r.par));
   const datos = datosCompletos();
@@ -301,46 +304,53 @@ describe("armarRuralXlsx: solo las parroquias rurales", () => {
     XLSX.utils.sheet_to_json<Record<string, unknown>>(libro.Sheets[hoja], {
       range: 3,
     });
+  const parroquiasRurales = [
+    ...new Set(rurales.map((r) => nombreParroquia.get(r.par)!)),
+  ].sort((a, b) => a.localeCompare(b, "es"));
 
-  it("trae una hoja por dignidad", () => {
-    expect(libro.SheetNames).toEqual([
-      "Coordinadores",
-      "Acreditados CDA",
-      "Veedores",
-    ]);
+  it("trae una hoja por parroquia rural, en orden alfabético", () => {
+    expect(libro.SheetNames).toEqual(parroquiasRurales);
   });
 
-  it("solo incluye recintos rurales", () => {
-    const nombresRurales = new Set(rurales.map((r) => r.nombre));
+  it("cada hoja trae solo los recintos de su parroquia", () => {
     for (const hoja of libro.SheetNames) {
+      const propios = new Set(
+        rurales
+          .filter((r) => nombreParroquia.get(r.par) === hoja)
+          .map((r) => r.nombre),
+      );
       for (const f of filas(hoja)) {
-        expect(nombresRurales.has(String(f["Recinto electoral"]))).toBe(true);
+        expect(propios.has(String(f["Recinto electoral"]))).toBe(true);
       }
     }
   });
 
-  it("lleva un coordinador por recinto rural, con el faltante por cubrir", () => {
-    const coordinadores = filas("Coordinadores");
-    expect(coordinadores).toHaveLength(rurales.length);
-    const vacia = coordinadores.find(
+  it("lleva coordinador, CDA y veedores de cada recinto, con los faltantes", () => {
+    const todas = libro.SheetNames.flatMap(filas);
+    const de = (d: string) => todas.filter((f) => f.Dignidad === d);
+    expect(de("Coordinador")).toHaveLength(rurales.length);
+    expect(de("Acreditado CDA")).toHaveLength(
+      rurales.filter((r) => r.cda).length,
+    );
+    expect(de("Veedor")).toHaveLength(
+      rurales.reduce((a, r) => a + r.jt, 0) + 1,
+    );
+    const vacia = de("Coordinador").find(
       (f) => f["Recinto electoral"] === sinCoordinador.nombre,
     )!;
     expect(vacia.Tipo).toBe("Por cubrir");
     expect(vacia.Nombres).toBeUndefined();
   });
 
-  it("lleva a los veedores por junta, con los suplentes en su propia fila", () => {
-    const veedores = filas("Veedores");
-    const juntas = rurales.reduce((a, r) => a + r.jt, 0);
-    expect(veedores).toHaveLength(juntas + 1);
-    const suplente = veedores.find((f) => f.Tipo === "Suplente")!;
-    expect(suplente.Junta).toBe("1F");
-    expect(String(suplente["Cédula"])).toMatch(/^0/);
-  });
-
-  it("lleva un acreditado por recinto CDA rural", () => {
-    expect(filas("Acreditados CDA")).toHaveLength(
-      rurales.filter((r) => r.cda).length,
+  it("pone primero al coordinador y a cada suplente tras su titular", () => {
+    const hoja = filas(nombreParroquia.get(sinCoordinador.par)!).filter(
+      (f) => f["Recinto electoral"] === sinCoordinador.nombre,
     );
+    expect(hoja[0].Dignidad).toBe("Coordinador");
+    const i = hoja.findIndex((f) => f.Tipo === "Suplente");
+    expect(hoja[i].Junta).toBe("1F");
+    expect(hoja[i - 1].Junta).toBe("1F");
+    expect(hoja[i - 1].Tipo).toBe("Titular");
+    expect(String(hoja[i]["Cédula"])).toMatch(/^0/);
   });
 });

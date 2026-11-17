@@ -7,27 +7,9 @@ import {
 } from "./listado";
 import type { DatosMatriz } from "./matrizXlsx";
 
-// Excel de las parroquias rurales: una hoja por dignidad (coordinadores,
-// acreditados CDA y veedores), con titulares, suplentes y los puestos
-// titulares que faltan cubrir, ordenados por parroquia, recinto y junta.
-
-const HOJAS: { dignidad: Dignidad; nombre: string; titulo: string }[] = [
-  {
-    dignidad: "Coordinador",
-    nombre: "Coordinadores",
-    titulo: "Coordinadores de recinto — Parroquias rurales de Latacunga",
-  },
-  {
-    dignidad: "Acreditado CDA",
-    nombre: "Acreditados CDA",
-    titulo: "Acreditados CDA — Parroquias rurales de Latacunga",
-  },
-  {
-    dignidad: "Veedor",
-    nombre: "Veedores",
-    titulo: "Veedores por junta — Parroquias rurales de Latacunga",
-  },
-];
+// Excel de las parroquias rurales: una hoja por parroquia con sus
+// coordinadores, acreditados CDA y veedores (titulares, suplentes y los
+// puestos titulares que faltan cubrir), recinto por recinto.
 
 const TIPO: Record<FilaListado["tipo"], string> = {
   titular: "Titular",
@@ -45,43 +27,54 @@ export function filasRurales(datos: DatosMatriz): FilaListado[] {
     );
 }
 
+// Excel no admite estos caracteres en el nombre de una hoja, ni más de 31.
+export function nombreDeHoja(texto: string): string {
+  return texto.replace(/[[\]:*?/\\]/g, " ").trim().slice(0, 31) || "Parroquia";
+}
+
 const plural = (n: number, uno: string, varios: string) =>
   `${n} ${n === 1 ? uno : varios}`;
 
+function cubiertos(filas: FilaListado[], dignidad: Dignidad): string {
+  const propias = filas.filter(
+    (f) => f.dignidad === dignidad && f.tipo === "titular",
+  );
+  return `${propias.filter((f) => !f.porCubrir).length}/${propias.length}`;
+}
+
 export function hojasRurales(datos: DatosMatriz, corte: string): HojaLibro[] {
-  const filas = filasRurales(datos);
-  return HOJAS.map(({ dignidad, nombre, titulo }) => {
-    const propias = filas.filter((f) => f.dignidad === dignidad);
-    const conJunta = dignidad === "Veedor";
-    const titulares = propias.filter(
-      (f) => f.tipo === "titular" && !f.porCubrir,
-    ).length;
-    const puestos = propias.filter((f) => f.tipo === "titular").length;
-    const suplentes = propias.filter((f) => f.tipo === "suplente").length;
+  const porParroquia = new Map<string, FilaListado[]>();
+  for (const f of filasRurales(datos)) {
+    porParroquia.set(f.parroquia, [...(porParroquia.get(f.parroquia) ?? []), f]);
+  }
+  return [...porParroquia.entries()].map(([parroquia, filas]) => {
+    const recintos = new Set(filas.map((f) => f.recintoCodigo)).size;
+    const suplentes = filas.filter((f) => f.tipo === "suplente").length;
     return {
-      nombre,
-      titulo,
+      nombre: nombreDeHoja(parroquia),
+      titulo: `Parroquia ${parroquia} — Coordinadores, acreditados CDA y veedores`,
       subtitulo: [
         `Datos al ${corte}`,
-        `${titulares} de ${puestos} puestos titulares cubiertos`,
+        plural(recintos, "recinto", "recintos"),
+        `Titulares cubiertos: coordinadores ${cubiertos(filas, "Coordinador")}, CDA ${cubiertos(filas, "Acreditado CDA")}, veedores ${cubiertos(filas, "Veedor")}`,
         plural(suplentes, "suplente", "suplentes"),
       ].join(" · "),
       encabezados: [
         "N°",
-        "Parroquia",
         "Recinto electoral",
-        ...(conJunta ? ["Junta"] : []),
+        "Dignidad",
+        "Junta",
         "Tipo",
         "Nombres",
         "Cédula",
         "Teléfono",
       ],
-      anchos: [6, 22, 44, ...(conJunta ? [8] : []), 12, 38, 14, 14],
-      filas: propias.map((f, i): Celda[] => [
+      anchos: [6, 44, 16, 8, 12, 38, 14, 14],
+      filas: filas.map((f, i): Celda[] => [
         i + 1,
-        f.parroquia,
         f.recinto,
-        ...(conJunta ? [f.junta ?? ""] : []),
+        f.dignidad,
+        f.junta ?? "",
         f.porCubrir ? "Por cubrir" : TIPO[f.tipo],
         f.nombres,
         f.cedula,
