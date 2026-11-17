@@ -154,8 +154,8 @@ interface Persona {
 }
 
 // Los suplentes no tienen casilla propia en la plantilla: van en la columna
-// de observaciones, con su cédula y celular.
-function textoSuplentes(suplentes: Persona[]): string {
+// de observaciones, con su cédula y celular. También en el Excel rural.
+export function textoSuplentes(suplentes: Persona[]): string {
   return suplentes
     .map(
       (s) =>

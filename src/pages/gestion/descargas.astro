@@ -65,7 +65,6 @@ const contenido: Record<string, string[]> = {
     `${fmt(parroquiasRurales)} parroquias rurales, una hoja por parroquia`,
     `${fmt(recintosRurales)} recintos, con coordinadores, CDA y veedores por recinto`,
     `${fmt(cubiertosRurales)} de ${fmt(puestosRurales)} puestos titulares cubiertos`,
-    `${fmt(suplentesRurales)} ${suplentesRurales === 1 ? "suplente" : "suplentes"} en su propia fila`,
   ],
 };
 const sup = {
@@ -73,8 +72,7 @@ const sup = {
   veedores: suplentes(veedores),
   coordinadores: suplentes(coordinadores),
   cda: suplentes(acreditados),
-  // Lo rural lleva a los suplentes en filas propias, no en Observaciones.
-  rural: 0,
+  rural: suplentesRurales,
 };
 ---
 

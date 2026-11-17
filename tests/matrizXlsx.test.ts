@@ -325,32 +325,49 @@ describe("armarRuralXlsx: una hoja por parroquia rural", () => {
     }
   });
 
-  it("lleva coordinador, CDA y veedores de cada recinto, con los faltantes", () => {
+  it("lleva una fila por puesto titular, con los faltantes en blanco", () => {
     const todas = libro.SheetNames.flatMap(filas);
     const de = (d: string) => todas.filter((f) => f.Dignidad === d);
     expect(de("Coordinador")).toHaveLength(rurales.length);
     expect(de("Acreditado CDA")).toHaveLength(
       rurales.filter((r) => r.cda).length,
     );
-    expect(de("Veedor")).toHaveLength(
-      rurales.reduce((a, r) => a + r.jt, 0) + 1,
-    );
+    // El suplente no suma fila: va en Observaciones de su junta.
+    expect(de("Veedor")).toHaveLength(rurales.reduce((a, r) => a + r.jt, 0));
     const vacia = de("Coordinador").find(
       (f) => f["Recinto electoral"] === sinCoordinador.nombre,
     )!;
-    expect(vacia.Tipo).toBe("Por cubrir");
+    expect(vacia.Observaciones).toBe("Por cubrir");
     expect(vacia.Nombres).toBeUndefined();
   });
 
-  it("pone primero al coordinador y a cada suplente tras su titular", () => {
-    const hoja = filas(nombreParroquia.get(sinCoordinador.par)!).filter(
+  it("pone la junta junto al recinto y al suplente en Observaciones", () => {
+    const hoja = XLSX.utils.sheet_to_json<unknown[]>(
+      libro.Sheets[nombreParroquia.get(sinCoordinador.par)!],
+      { header: 1, range: 3 },
+    );
+    expect(hoja[0]).toEqual([
+      "N°",
+      "Recinto electoral",
+      "Junta",
+      "Dignidad",
+      "Nombres",
+      "Cédula",
+      "Teléfono",
+      "Observaciones",
+    ]);
+    const propias = filas(nombreParroquia.get(sinCoordinador.par)!).filter(
       (f) => f["Recinto electoral"] === sinCoordinador.nombre,
     );
-    expect(hoja[0].Dignidad).toBe("Coordinador");
-    const i = hoja.findIndex((f) => f.Tipo === "Suplente");
-    expect(hoja[i].Junta).toBe("1F");
-    expect(hoja[i - 1].Junta).toBe("1F");
-    expect(hoja[i - 1].Tipo).toBe("Titular");
-    expect(String(hoja[i]["Cédula"])).toMatch(/^0/);
+    expect(propias[0].Dignidad).toBe("Coordinador");
+    const suplente = datos.veedores.find((v) => v.tipo === "suplente")!;
+    const conSuplente = propias.filter((f) =>
+      String(f.Observaciones ?? "").includes("Suplente:"),
+    );
+    expect(conSuplente).toHaveLength(1);
+    expect(conSuplente[0].Junta).toBe("1F");
+    expect(conSuplente[0].Observaciones).toBe(
+      `Suplente: ${suplente.nombres} (CI ${suplente.cedula}, cel. ${suplente.telefono})`,
+    );
   });
 });
