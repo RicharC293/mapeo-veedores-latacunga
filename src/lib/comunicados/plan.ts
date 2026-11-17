@@ -1,6 +1,7 @@
 import { title } from "../format";
 import { coincideUbicacion, type Ubicacion } from "../gestion/ubicacion";
 import { textoJunta, textoRol, type Clase } from "../contacto/plan";
+import { juntaCorta } from "../gestion/listado";
 import type { ParroquiaBasica, Recinto } from "../types";
 
 // Lógica pura de los comunicados por WhatsApp: a quién va cada uno, cómo se
@@ -123,11 +124,57 @@ export const CAMPOS = [
   { clave: "junta", etiqueta: "Junta" },
   // El grupo de WhatsApp de su recinto (se carga en el Consolidado).
   { clave: "grupo", etiqueta: "Grupo del recinto" },
+  // El equipo de su recinto, una persona por línea (ver textoEquipo).
+  { clave: "equipoCoordinador", etiqueta: "Equipo coordinador" },
+  { clave: "equipoCda", etiqueta: "Equipo CDA" },
+  { clave: "equipoVeedores", etiqueta: "Equipo veedores" },
   { clave: "enlace", etiqueta: "Enlace" },
 ] as const;
 
 export type Campo = (typeof CAMPOS)[number]["clave"];
 export type DatosComunicado = Record<Campo, string>;
+
+// Datos que solo tienen sentido si el comunicado va a un solo recinto: el
+// equipo de ese recinto.
+export const CAMPOS_DE_RECINTO: Campo[] = [
+  "equipoCoordinador",
+  "equipoCda",
+  "equipoVeedores",
+];
+
+// Los datos de recinto que usa el mensaje.
+export function camposDeRecintoEn(mensaje: string): Campo[] {
+  return CAMPOS_DE_RECINTO.filter((c) => mensaje.includes(`{${c}}`));
+}
+
+export interface MiembroEquipo {
+  nombres: string;
+  tipo: "titular" | "suplente";
+  juntaId: string | null;
+}
+
+// Quienes tienen puesto en un recinto, por dignidad.
+export type EquipoRecinto = Record<Clase, MiembroEquipo[]>;
+
+// Una línea por persona: "• 1F: Ana Pérez", "• 1F: Luis Mena (suplente)";
+// por junta (1F, 1M, 2F…) y el titular antes que sus suplentes.
+export function textoEquipo(miembros: MiembroEquipo[]): string {
+  const junta = (m: MiembroEquipo) => (m.juntaId ? juntaCorta(m.juntaId) : "");
+  return [...miembros]
+    .sort(
+      (a, b) =>
+        Number.parseInt(junta(a) || "0", 10) -
+          Number.parseInt(junta(b) || "0", 10) ||
+        junta(a).localeCompare(junta(b)) ||
+        Number(a.tipo === "suplente") - Number(b.tipo === "suplente") ||
+        a.nombres.localeCompare(b.nombres, "es"),
+    )
+    .map(
+      (m) =>
+        `• ${m.juntaId ? `${junta(m)}: ` : ""}${title(m.nombres.trim())}${m.tipo === "suplente" ? " (suplente)" : ""}`,
+    )
+    .join("\n");
+}
 
 export function datosDe(
   p: PersonaComunicado,
@@ -136,6 +183,8 @@ export function datosDe(
   enlace: string,
   // Enlace del grupo de WhatsApp del recinto, o "" si aún no tiene.
   grupo = "",
+  // Quienes tienen puesto en su recinto.
+  equipo?: EquipoRecinto,
 ): DatosComunicado {
   return {
     nombre: p.saludo,
@@ -146,6 +195,9 @@ export function datosDe(
     direccion: recinto?.dir.trim() ? title(recinto.dir) : "",
     junta: p.juntaId ? textoJunta(p.juntaId) : "",
     grupo: grupo.trim(),
+    equipoCoordinador: textoEquipo(equipo?.coordinador ?? []),
+    equipoCda: textoEquipo(equipo?.cda ?? []),
+    equipoVeedores: textoEquipo(equipo?.veedor ?? []),
     enlace: enlace.trim(),
   };
 }

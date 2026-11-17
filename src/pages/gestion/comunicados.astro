@@ -20,6 +20,7 @@ import { listComunicados, listEnvios } from "../../lib/comunicados/comunicados";
 import type {
   Comunicado,
   EnvioComunicado,
+  EquipoRecinto,
   PersonaComunicado,
 } from "../../lib/comunicados/plan";
 import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
@@ -146,6 +147,38 @@ const personas: PersonaComunicado[] = [
     juntaId,
     responsableId: p.responsableLiderId,
   }));
+// El equipo de cada recinto, para {equipoCoordinador}, {equipoCda} y
+// {equipoVeedores}: todos los que tienen puesto, también a quienes no se les
+// puede escribir (su nombre igual sirve al resto del equipo).
+const equiposPorRecinto: Record<number, EquipoRecinto> = {};
+const equipoDe = (recintoCodigo: number) =>
+  (equiposPorRecinto[recintoCodigo] ??= {
+    coordinador: [],
+    cda: [],
+    veedor: [],
+  });
+for (const p of coordinadores) {
+  equipoDe(p.recintoCodigo).coordinador.push({
+    nombres: p.nombres,
+    tipo: p.tipo,
+    juntaId: null,
+  });
+}
+for (const p of acreditados) {
+  equipoDe(p.recintoCodigo).cda.push({
+    nombres: p.nombres,
+    tipo: p.tipo,
+    juntaId: null,
+  });
+}
+for (const p of veedores) {
+  equipoDe(p.recintoCodigo).veedor.push({
+    nombres: p.nombres,
+    tipo: p.tipo,
+    juntaId: p.juntaId,
+  });
+}
+
 // De Militancia, solo quien aún no tiene puesto (los demás ya están arriba).
 for (const m of militantes) {
   if (m.asignado || !admitir(m.cedula.trim())) continue;
@@ -183,5 +216,6 @@ for (const m of militantes) {
       listaNegra: porListaNegra,
     }}
     gruposPorRecinto={gruposPorRecinto}
+    equiposPorRecinto={equiposPorRecinto}
   />
 </GestionLayout>

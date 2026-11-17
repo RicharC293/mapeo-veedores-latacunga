@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   agruparPorNumero,
+  camposDeRecintoEn,
   camposVacios,
   coincideFiltros,
   combinarDatos,
@@ -8,7 +9,9 @@ import {
   FILTROS_INICIALES,
   leerFiltros,
   rellenar,
+  textoEquipo,
   unirTextos,
+  type EquipoRecinto,
   type PersonaComunicado,
 } from "../src/lib/comunicados/plan";
 import type { ParroquiaBasica, Recinto } from "../src/lib/types";
@@ -96,6 +99,9 @@ describe("mensaje", () => {
       direccion: "Av. Amazonas y Quito",
       junta: "junta 3 femenina",
       grupo: "",
+      equipoCoordinador: "",
+      equipoCda: "",
+      equipoVeedores: "",
       enlace: "https://x.y",
     });
     expect(rellenar("Hola {nombre}, {rol} en {recinto}. {otro}", datos)).toBe(
@@ -174,5 +180,53 @@ describe("solo recintos con grupo", () => {
     expect(coincideFiltros(persona({}), f, urbana, false)).toBe(false);
     expect(coincideFiltros(persona({}), f, urbana, true)).toBe(true);
     expect(leerFiltros({ soloConGrupo: true }).soloConGrupo).toBe(true);
+  });
+});
+
+describe("equipo del recinto", () => {
+  const equipo: EquipoRecinto = {
+    coordinador: [
+      { nombres: "MENA RUIZ LUIS", tipo: "suplente", juntaId: null },
+      { nombres: "TAPIA VEGA ROSA", tipo: "titular", juntaId: null },
+    ],
+    cda: [],
+    veedor: [
+      { nombres: "CHAUCA IZA MARTA", tipo: "titular", juntaId: "2-M1" },
+      { nombres: "PILA TOASA JUAN", tipo: "suplente", juntaId: "2-F1" },
+      { nombres: "SOLA CRUZ ANA", tipo: "titular", juntaId: "2-F10" },
+      { nombres: "PÉREZ LÓPEZ ANA", tipo: "titular", juntaId: "2-F1" },
+    ],
+  };
+
+  it("lista una persona por línea, por junta y el titular primero", () => {
+    expect(textoEquipo(equipo.veedor)).toBe(
+      [
+        "• 1F: Pérez López Ana",
+        "• 1F: Pila Toasa Juan (suplente)",
+        "• 1M: Chauca Iza Marta",
+        "• 10F: Sola Cruz Ana",
+      ].join("\n"),
+    );
+    expect(textoEquipo(equipo.coordinador)).toBe(
+      "• Tapia Vega Rosa\n• Mena Ruiz Luis (suplente)",
+    );
+  });
+
+  it("pone el equipo en el mensaje y avisa si falta alguno", () => {
+    const datos = datosDe(persona({}), recinto, urbana, "", "", equipo);
+    expect(rellenar("Coordina:\n{equipoCoordinador}", datos)).toBe(
+      "Coordina:\n• Tapia Vega Rosa\n• Mena Ruiz Luis (suplente)",
+    );
+    expect(camposVacios("{equipoCda} {equipoVeedores}", datos)).toEqual([
+      "equipoCda",
+    ]);
+  });
+
+  it("reconoce los datos que piden un recinto", () => {
+    expect(camposDeRecintoEn("Hola {nombre}")).toEqual([]);
+    expect(camposDeRecintoEn("{equipoVeedores} y {equipoCda}")).toEqual([
+      "equipoCda",
+      "equipoVeedores",
+    ]);
   });
 });
