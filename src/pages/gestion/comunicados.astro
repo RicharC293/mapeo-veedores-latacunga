@@ -148,9 +148,8 @@ const personas: PersonaComunicado[] = [
     responsableId: p.responsableLiderId,
   }));
 // El equipo de cada recinto, para {equipoCoordinador}, {equipoCda} y
-// {equipoVeedores} (solo los reciben los coordinadores): todos los que tienen
-// puesto, también a quienes no se les puede escribir, y los puestos titulares
-// que faltan.
+// {equipoVeedores}: todos los que tienen puesto, también a quienes no se les
+// puede escribir, y los puestos titulares que faltan.
 // El nombre va tal como está en el listado oficial.
 const miembro = (p: {
   nombres: string;

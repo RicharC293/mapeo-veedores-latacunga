@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   agruparPorNumero,
-  CAMPOS_DE_EQUIPO,
   camposVacios,
   coincideFiltros,
   combinarDatos,
@@ -245,7 +244,7 @@ describe("equipo del recinto", () => {
     expect(equipos[3].cda).toBeNull();
   });
 
-  it("solo el coordinador recibe el equipo de su recinto", () => {
+  it("pone el equipo de su recinto", () => {
     const coordinador = persona({ clase: "coordinador", juntaId: null });
     const datos = datosDe(coordinador, conJuntas, urbana, "", "", equipos[2]);
     expect(rellenar("CDA: {equipoCda}", datos)).toBe(
@@ -266,7 +265,7 @@ describe("equipo del recinto", () => {
     );
   });
 
-  it("deja el equipo vacío a quien no es coordinador, sin avisar", () => {
+  it("lo recibe cualquier persona del recinto, no solo el coordinador", () => {
     for (const clase of ["veedor", "cda", null] as const) {
       const datos = datosDe(
         persona({ clase }),
@@ -276,11 +275,15 @@ describe("equipo del recinto", () => {
         "",
         equipos[2],
       );
-      expect(datos.equipoCoordinador).toBe("");
-      expect(datos.equipoVeedores).toBe("");
-      expect(
-        camposVacios("{equipoVeedores} {enlace}", datos, CAMPOS_DE_EQUIPO),
-      ).toEqual(["enlace"]);
+      expect(datos.equipoVeedores.split("\n")).toHaveLength(4);
+      expect(datos.equipoCoordinador).toContain("MENA RUIZ LUIS");
     }
+    // Sin recinto (Militancia sin preferencia reconocida) queda vacío.
+    expect(
+      camposVacios(
+        "{equipoVeedores}",
+        datosDe(persona({ clase: null }), undefined, undefined, ""),
+      ),
+    ).toEqual(["equipoVeedores"]);
   });
 });

@@ -3,7 +3,6 @@ import { ResumenAvance, VacioFiltros } from "./FiltrosRecintos";
 import BotonIcono, { TrazosIcono } from "./BotonIcono";
 import {
   CAMPOS,
-  CAMPOS_DE_EQUIPO,
   DIGNIDADES,
   FILTROS_INICIALES,
   MENSAJE_INICIAL,
@@ -335,15 +334,7 @@ export default function GestionComunicados({
         telefono: primera.telefono,
         personas: g.personas,
         mensaje: rellenar(borrador.mensaje, datos),
-        // El equipo solo llega a los coordinadores: a los demás les queda
-        // vacío a propósito.
-        vacios: camposVacios(
-          borrador.mensaje,
-          datos,
-          g.personas.some((p) => p.clase === "coordinador")
-            ? []
-            : CAMPOS_DE_EQUIPO,
-        ),
+        vacios: camposVacios(borrador.mensaje, datos),
         envio: envioDe.get(g.numero),
         orden: `${r ? (parroquiaDe.get(r.par)?.properties.name ?? "") : "~"}|${r?.nombre ?? ""}|${primera.nombres}`,
       };
@@ -651,8 +642,7 @@ export default function GestionComunicados({
                 </button>
               ))}
               <small class="g-com-campos-nota">
-                Los equipos llevan a la gente del recinto de cada coordinador; a
-                los demás les quedan vacíos.
+                Los equipos llevan los puestos del recinto de cada persona.
               </small>
             </div>
             <label>
