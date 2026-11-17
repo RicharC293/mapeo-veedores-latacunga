@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   apellidosDeSaludo,
-  nombreCompleto,
   claveDePuesto,
   enlaceWhatsapp,
   mensajeWhatsapp,
@@ -155,20 +154,5 @@ describe("apellidosDeSaludo", () => {
     );
     expect(apellidosDeSaludo("PÉREZ ANA", null)).toBe("Pérez");
     expect(apellidosDeSaludo("ANA", null)).toBe("");
-  });
-});
-
-describe("nombreCompleto", () => {
-  it("usa los nombres y apellidos del Registro Civil", () => {
-    expect(
-      nombreCompleto("PEREZ LOPEZ ANA", "Ana María", "Pérez López"),
-    ).toBe("ANA MARÍA PÉREZ LÓPEZ");
-  });
-  it("si faltan, pasa los dos apellidos al final", () => {
-    expect(nombreCompleto("PÉREZ LÓPEZ ANA MARÍA", null, null)).toBe(
-      "ANA MARÍA PÉREZ LÓPEZ",
-    );
-    expect(nombreCompleto("Pérez Ana", null, null)).toBe("ANA PÉREZ");
-    expect(nombreCompleto("Ana", null, null)).toBe("ANA");
   });
 });

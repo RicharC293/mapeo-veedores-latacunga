@@ -144,8 +144,8 @@ export const CAMPOS_DE_EQUIPO: Campo[] = [
 ];
 
 export interface MiembroEquipo {
-  // "NOMBRE NOMBRE APELLIDO APELLIDO" (ver nombreCompleto), o "" si el puesto
-  // titular aún no tiene a nadie.
+  // Como está en el listado oficial (APELLIDOS NOMBRES, en mayúsculas), o ""
+  // si el puesto titular aún no tiene a nadie.
   nombres: string;
   telefono: string;
   tipo: "titular" | "suplente";
@@ -203,7 +203,7 @@ export function armarEquipos(
   return equipos;
 }
 
-// Una línea por puesto: "1F: ANA MARÍA PÉREZ LÓPEZ - 0991234567",
+// Una línea por puesto: "1F: PÉREZ LÓPEZ ANA MARÍA - 0991234567",
 // "1F suplente: …", "2F: AÚN NO SE HA ASIGNADO"; por junta (1F, 1M, 2F…) y
 // el titular antes que sus suplentes. Coordinador y CDA van sin junta.
 export function textoEquipo(miembros: MiembroEquipo[]): string {

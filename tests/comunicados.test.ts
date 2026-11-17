@@ -201,7 +201,7 @@ describe("equipo del recinto", () => {
   const puesto = (extra: Partial<PuestoEquipo>): PuestoEquipo => ({
     clase: "veedor",
     recintoCodigo: 2,
-    nombres: "ANA MARÍA PÉREZ LÓPEZ",
+    nombres: "PÉREZ LÓPEZ ANA MARÍA",
     telefono: "0987654321",
     tipo: "titular",
     juntaId: "2-F1",
@@ -212,14 +212,14 @@ describe("equipo del recinto", () => {
     [
       puesto({}),
       puesto({
-        nombres: "JUAN PILA TOASA",
+        nombres: "PILA TOASA JUAN",
         telefono: "",
         tipo: "suplente",
       }),
-      puesto({ nombres: "MARTA CHAUCA IZA", juntaId: "2-M1" }),
+      puesto({ nombres: "CHAUCA IZA MARTA", juntaId: "2-M1" }),
       puesto({
         clase: "coordinador",
-        nombres: "LUIS MENA RUIZ",
+        nombres: "MENA RUIZ LUIS",
         tipo: "suplente",
         juntaId: null,
       }),
@@ -229,9 +229,9 @@ describe("equipo del recinto", () => {
   it("lista cada junta con su teléfono y marca las que faltan", () => {
     expect(textoEquipo(equipos[2].veedor)).toBe(
       [
-        "1F: ANA MARÍA PÉREZ LÓPEZ - 0987654321",
-        "1F suplente: JUAN PILA TOASA",
-        "1M: MARTA CHAUCA IZA - 0987654321",
+        "1F: PÉREZ LÓPEZ ANA MARÍA - 0987654321",
+        "1F suplente: PILA TOASA JUAN",
+        "1M: CHAUCA IZA MARTA - 0987654321",
         "2F: AÚN NO SE HA ASIGNADO",
       ].join("\n"),
     );
@@ -239,7 +239,7 @@ describe("equipo del recinto", () => {
 
   it("marca también al coordinador y al CDA que faltan", () => {
     expect(textoEquipo(equipos[2].coordinador)).toBe(
-      "AÚN NO SE HA ASIGNADO\nSuplente: LUIS MENA RUIZ - 0987654321",
+      "AÚN NO SE HA ASIGNADO\nSuplente: MENA RUIZ LUIS - 0987654321",
     );
     expect(textoEquipo(equipos[2].cda!)).toBe("AÚN NO SE HA ASIGNADO");
     expect(equipos[3].cda).toBeNull();

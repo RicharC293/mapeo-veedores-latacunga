@@ -14,11 +14,7 @@ import {
   type ValidacionCedula,
 } from "../../lib/validacion/plan";
 import { listContactos } from "../../lib/contacto/contactos";
-import {
-  apellidosDeSaludo,
-  nombreCompleto,
-  nombreDeSaludo,
-} from "../../lib/contacto/plan";
+import { apellidosDeSaludo, nombreDeSaludo } from "../../lib/contacto/plan";
 import { listGruposWhatsapp } from "../../lib/gestion/gruposWhatsapp";
 import { listComunicados, listEnvios } from "../../lib/comunicados/comunicados";
 import {
@@ -155,21 +151,18 @@ const personas: PersonaComunicado[] = [
 // {equipoVeedores} (solo los reciben los coordinadores): todos los que tienen
 // puesto, también a quienes no se les puede escribir, y los puestos titulares
 // que faltan.
+// El nombre va tal como está en el listado oficial.
 const miembro = (p: {
-  cedula: string;
   nombres: string;
   telefono: string;
   tipo: "titular" | "suplente";
   recintoCodigo: number;
-}) => {
-  const v = validacionDe.get(p.cedula.trim());
-  return {
-    nombres: nombreCompleto(p.nombres, v?.nombres ?? null, v?.apellidos ?? null),
-    telefono: p.telefono.trim(),
-    tipo: p.tipo,
-    recintoCodigo: p.recintoCodigo,
-  };
-};
+}) => ({
+  nombres: p.nombres.trim().replace(/\s+/g, " ").toUpperCase(),
+  telefono: p.telefono.trim(),
+  tipo: p.tipo,
+  recintoCodigo: p.recintoCodigo,
+});
 const equiposPorRecinto = armarEquipos(data.recintos, [
   ...coordinadores.map((p) => ({
     ...miembro(p),
