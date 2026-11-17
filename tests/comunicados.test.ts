@@ -225,11 +225,10 @@ describe("equipo del recinto", () => {
     ],
   );
 
-  it("lista cada junta con su teléfono y marca las que faltan", () => {
+  it("lista cada junta con su titular y teléfono, sin suplentes", () => {
     expect(textoEquipo(equipos[2].veedor)).toBe(
       [
         "1F: PÉREZ LÓPEZ ANA MARÍA - 0987654321",
-        "1F suplente: PILA TOASA JUAN",
         "1M: CHAUCA IZA MARTA - 0987654321",
         "2F: AÚN NO SE HA ASIGNADO",
       ].join("\n"),
@@ -237,9 +236,8 @@ describe("equipo del recinto", () => {
   });
 
   it("marca también al coordinador y al CDA que faltan", () => {
-    expect(textoEquipo(equipos[2].coordinador)).toBe(
-      "AÚN NO SE HA ASIGNADO\nSuplente: MENA RUIZ LUIS - 0987654321",
-    );
+    // Solo tiene suplente: el puesto titular sigue sin asignar.
+    expect(textoEquipo(equipos[2].coordinador)).toBe("AÚN NO SE HA ASIGNADO");
     expect(textoEquipo(equipos[2].cda!)).toBe("AÚN NO SE HA ASIGNADO");
     expect(equipos[3].cda).toBeNull();
   });
@@ -250,7 +248,7 @@ describe("equipo del recinto", () => {
     expect(rellenar("CDA: {equipoCda}", datos)).toBe(
       "CDA: AÚN NO SE HA ASIGNADO",
     );
-    expect(datos.equipoVeedores.split("\n")).toHaveLength(4);
+    expect(datos.equipoVeedores.split("\n")).toHaveLength(3);
     const otro = datosDe(
       { ...coordinador, recintoCodigo: 3 },
       sinCda,
@@ -275,8 +273,8 @@ describe("equipo del recinto", () => {
         "",
         equipos[2],
       );
-      expect(datos.equipoVeedores.split("\n")).toHaveLength(4);
-      expect(datos.equipoCoordinador).toContain("MENA RUIZ LUIS");
+      expect(datos.equipoVeedores).toContain("CHAUCA IZA MARTA");
+      expect(datos.equipoVeedores).not.toContain("PILA TOASA JUAN");
     }
     // Sin recinto (Militancia sin preferencia reconocida) queda vacío.
     expect(
