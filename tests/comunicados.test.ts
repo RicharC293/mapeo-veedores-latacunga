@@ -8,10 +8,12 @@ import {
   datosDe,
   FILTROS_INICIALES,
   leerFiltros,
+  armarEquipos,
   rellenar,
+  SIN_CDA,
   textoEquipo,
   unirTextos,
-  type EquipoRecinto,
+  type PuestoEquipo,
   type PersonaComunicado,
 } from "../src/lib/comunicados/plan";
 import type { ParroquiaBasica, Recinto } from "../src/lib/types";
@@ -184,60 +186,95 @@ describe("solo recintos con grupo", () => {
 });
 
 describe("equipo del recinto", () => {
-  const equipo: EquipoRecinto = {
-    coordinador: [
-      { nombres: "MENA RUIZ LUIS", tipo: "suplente", juntaId: null },
-      { nombres: "TAPIA VEGA ROSA", tipo: "titular", juntaId: null },
+  // Recinto 2 con juntas 1F, 2F y 1M, y CDA.
+  const conJuntas = {
+    ...recinto,
+    cda: true,
+    jf: 2,
+    fi: 1,
+    ff: 2,
+    jm: 1,
+    mi: 1,
+    mf: 1,
+  } as Recinto;
+  const sinCda = { ...conJuntas, cod: 3, cda: false } as Recinto;
+  const puesto = (extra: Partial<PuestoEquipo>): PuestoEquipo => ({
+    clase: "veedor",
+    recintoCodigo: 2,
+    nombres: "ANA MARÍA PÉREZ LÓPEZ",
+    telefono: "0987654321",
+    tipo: "titular",
+    juntaId: "2-F1",
+    ...extra,
+  });
+  const equipos = armarEquipos(
+    [conJuntas, sinCda],
+    [
+      puesto({}),
+      puesto({
+        nombres: "JUAN PILA TOASA",
+        telefono: "",
+        tipo: "suplente",
+      }),
+      puesto({ nombres: "MARTA CHAUCA IZA", juntaId: "2-M1" }),
+      puesto({
+        clase: "coordinador",
+        nombres: "LUIS MENA RUIZ",
+        tipo: "suplente",
+        juntaId: null,
+      }),
     ],
-    cda: [],
-    veedor: [
-      { nombres: "CHAUCA IZA MARTA", tipo: "titular", juntaId: "2-M1" },
-      { nombres: "PILA TOASA JUAN", tipo: "suplente", juntaId: "2-F1" },
-      { nombres: "SOLA CRUZ ANA", tipo: "titular", juntaId: "2-F10" },
-      { nombres: "PÉREZ LÓPEZ ANA", tipo: "titular", juntaId: "2-F1" },
-    ],
-  };
+  );
 
-  it("lista una persona por línea, por junta y el titular primero", () => {
-    expect(textoEquipo(equipo.veedor)).toBe(
+  it("lista cada junta con su teléfono y marca las que faltan", () => {
+    expect(textoEquipo(equipos[2].veedor)).toBe(
       [
-        "• 1F: Pérez López Ana",
-        "• 1F: Pila Toasa Juan (suplente)",
-        "• 1M: Chauca Iza Marta",
-        "• 10F: Sola Cruz Ana",
+        "1F: ANA MARÍA PÉREZ LÓPEZ - 0987654321",
+        "1F suplente: JUAN PILA TOASA",
+        "1M: MARTA CHAUCA IZA - 0987654321",
+        "2F: AÚN NO SE HA ASIGNADO",
       ].join("\n"),
-    );
-    expect(textoEquipo(equipo.coordinador)).toBe(
-      "• Tapia Vega Rosa\n• Mena Ruiz Luis (suplente)",
     );
   });
 
-  it("pone el equipo de su recinto al coordinador y avisa si falta alguno", () => {
-    const datos = datosDe(
-      persona({ clase: "coordinador", juntaId: null }),
-      recinto,
+  it("marca también al coordinador y al CDA que faltan", () => {
+    expect(textoEquipo(equipos[2].coordinador)).toBe(
+      "AÚN NO SE HA ASIGNADO\nSuplente: LUIS MENA RUIZ - 0987654321",
+    );
+    expect(textoEquipo(equipos[2].cda!)).toBe("AÚN NO SE HA ASIGNADO");
+    expect(equipos[3].cda).toBeNull();
+  });
+
+  it("solo el coordinador recibe el equipo de su recinto", () => {
+    const coordinador = persona({ clase: "coordinador", juntaId: null });
+    const datos = datosDe(coordinador, conJuntas, urbana, "", "", equipos[2]);
+    expect(rellenar("CDA: {equipoCda}", datos)).toBe(
+      "CDA: AÚN NO SE HA ASIGNADO",
+    );
+    expect(datos.equipoVeedores.split("\n")).toHaveLength(4);
+    const otro = datosDe(
+      { ...coordinador, recintoCodigo: 3 },
+      sinCda,
       urbana,
       "",
       "",
-      equipo,
+      equipos[3],
     );
-    expect(rellenar("Coordina:\n{equipoCoordinador}", datos)).toBe(
-      "Coordina:\n• Tapia Vega Rosa\n• Mena Ruiz Luis (suplente)",
+    expect(otro.equipoCda).toBe(SIN_CDA);
+    expect(otro.equipoVeedores).toBe(
+      "1F: AÚN NO SE HA ASIGNADO\n1M: AÚN NO SE HA ASIGNADO\n2F: AÚN NO SE HA ASIGNADO",
     );
-    expect(camposVacios("{equipoCda} {equipoVeedores}", datos)).toEqual([
-      "equipoCda",
-    ]);
   });
 
   it("deja el equipo vacío a quien no es coordinador, sin avisar", () => {
     for (const clase of ["veedor", "cda", null] as const) {
       const datos = datosDe(
         persona({ clase }),
-        recinto,
+        conJuntas,
         urbana,
         "",
         "",
-        equipo,
+        equipos[2],
       );
       expect(datos.equipoCoordinador).toBe("");
       expect(datos.equipoVeedores).toBe("");

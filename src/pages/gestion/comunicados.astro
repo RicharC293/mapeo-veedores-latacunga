@@ -14,14 +14,18 @@ import {
   type ValidacionCedula,
 } from "../../lib/validacion/plan";
 import { listContactos } from "../../lib/contacto/contactos";
-import { apellidosDeSaludo, nombreDeSaludo } from "../../lib/contacto/plan";
+import {
+  apellidosDeSaludo,
+  nombreCompleto,
+  nombreDeSaludo,
+} from "../../lib/contacto/plan";
 import { listGruposWhatsapp } from "../../lib/gestion/gruposWhatsapp";
 import { listComunicados, listEnvios } from "../../lib/comunicados/comunicados";
-import type {
-  Comunicado,
-  EnvioComunicado,
-  EquipoRecinto,
-  PersonaComunicado,
+import {
+  armarEquipos,
+  type Comunicado,
+  type EnvioComunicado,
+  type PersonaComunicado,
 } from "../../lib/comunicados/plan";
 import { PAGINAS_GESTION, rutaPorDefecto } from "../../lib/auth/roles";
 
@@ -149,35 +153,40 @@ const personas: PersonaComunicado[] = [
   }));
 // El equipo de cada recinto, para {equipoCoordinador}, {equipoCda} y
 // {equipoVeedores} (solo los reciben los coordinadores): todos los que tienen
-// puesto, también a quienes no se les puede escribir.
-const equiposPorRecinto: Record<number, EquipoRecinto> = {};
-const equipoDe = (recintoCodigo: number) =>
-  (equiposPorRecinto[recintoCodigo] ??= {
-    coordinador: [],
-    cda: [],
-    veedor: [],
-  });
-for (const p of coordinadores) {
-  equipoDe(p.recintoCodigo).coordinador.push({
-    nombres: p.nombres,
+// puesto, también a quienes no se les puede escribir, y los puestos titulares
+// que faltan.
+const miembro = (p: {
+  cedula: string;
+  nombres: string;
+  telefono: string;
+  tipo: "titular" | "suplente";
+  recintoCodigo: number;
+}) => {
+  const v = validacionDe.get(p.cedula.trim());
+  return {
+    nombres: nombreCompleto(p.nombres, v?.nombres ?? null, v?.apellidos ?? null),
+    telefono: p.telefono.trim(),
     tipo: p.tipo,
+    recintoCodigo: p.recintoCodigo,
+  };
+};
+const equiposPorRecinto = armarEquipos(data.recintos, [
+  ...coordinadores.map((p) => ({
+    ...miembro(p),
+    clase: "coordinador" as const,
     juntaId: null,
-  });
-}
-for (const p of acreditados) {
-  equipoDe(p.recintoCodigo).cda.push({
-    nombres: p.nombres,
-    tipo: p.tipo,
+  })),
+  ...acreditados.map((p) => ({
+    ...miembro(p),
+    clase: "cda" as const,
     juntaId: null,
-  });
-}
-for (const p of veedores) {
-  equipoDe(p.recintoCodigo).veedor.push({
-    nombres: p.nombres,
-    tipo: p.tipo,
+  })),
+  ...veedores.map((p) => ({
+    ...miembro(p),
+    clase: "veedor" as const,
     juntaId: p.juntaId,
-  });
-}
+  })),
+]);
 
 // De Militancia, solo quien aún no tiene puesto (los demás ya están arriba).
 for (const m of militantes) {

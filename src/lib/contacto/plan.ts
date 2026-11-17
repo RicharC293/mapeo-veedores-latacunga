@@ -73,6 +73,24 @@ export function apellidosDeSaludo(
   return title(partes.slice(0, partes.length > 2 ? 2 : 1).join(" "));
 }
 
+// "NOMBRE NOMBRE APELLIDO APELLIDO", en mayúsculas: los del Registro Civil o,
+// si faltan, el nombre guardado (APELLIDO APELLIDO NOMBRE …) con los dos
+// primeros al final.
+export function nombreCompleto(
+  nombres: string,
+  nombresOficiales: string | null,
+  apellidosOficiales: string | null,
+): string {
+  const n = nombresOficiales?.trim();
+  const a = apellidosOficiales?.trim();
+  if (n && a) return `${n} ${a}`.toUpperCase();
+  const partes = nombres.trim().split(/\s+/).filter(Boolean);
+  const corte = partes.length > 2 ? 2 : partes.length === 2 ? 1 : 0;
+  return [...partes.slice(corte), ...partes.slice(0, corte)]
+    .join(" ")
+    .toUpperCase();
+}
+
 const ROL: Record<Clase, { m: string; f: string }> = {
   veedor: { m: "veedor", f: "veedora" },
   coordinador: { m: "coordinador", f: "coordinadora" },

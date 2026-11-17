@@ -2,6 +2,7 @@ import { title } from "../format";
 import { coincideUbicacion, type Ubicacion } from "../gestion/ubicacion";
 import { textoJunta, textoRol, type Clase } from "../contacto/plan";
 import { juntaCorta } from "../gestion/listado";
+import { listJuntasDeRecinto } from "../gestion/juntas";
 import type { ParroquiaBasica, Recinto } from "../types";
 
 // Lógica pura de los comunicados por WhatsApp: a quién va cada uno, cómo se
@@ -143,18 +144,79 @@ export const CAMPOS_DE_EQUIPO: Campo[] = [
 ];
 
 export interface MiembroEquipo {
+  // "NOMBRE NOMBRE APELLIDO APELLIDO" (ver nombreCompleto), o "" si el puesto
+  // titular aún no tiene a nadie.
   nombres: string;
+  telefono: string;
   tipo: "titular" | "suplente";
   juntaId: string | null;
 }
 
-// Quienes tienen puesto en un recinto, por dignidad.
-export type EquipoRecinto = Record<Clase, MiembroEquipo[]>;
+// Los puestos de un recinto, por dignidad, con los titulares que faltan como
+// miembros sin nombre. cda es null si el recinto no es CDA.
+export interface EquipoRecinto {
+  coordinador: MiembroEquipo[];
+  cda: MiembroEquipo[] | null;
+  veedor: MiembroEquipo[];
+}
 
-// Una línea por persona: "• 1F: Ana Pérez", "• 1F: Luis Mena (suplente)";
-// por junta (1F, 1M, 2F…) y el titular antes que sus suplentes.
+export interface PuestoEquipo extends MiembroEquipo {
+  clase: Clase;
+  recintoCodigo: number;
+}
+
+export const SIN_ASIGNAR = "AÚN NO SE HA ASIGNADO";
+export const SIN_CDA = "ESTE RECINTO NO TIENE CDA";
+
+// El equipo de cada recinto: quienes tienen puesto y, donde falta el
+// titular (coordinador, CDA si el recinto lo es, o veedor de una junta), un
+// puesto sin nombre.
+export function armarEquipos(
+  recintos: Recinto[],
+  puestos: PuestoEquipo[],
+): Record<number, EquipoRecinto> {
+  const equipos: Record<number, EquipoRecinto> = {};
+  for (const r of recintos) {
+    equipos[r.cod] = { coordinador: [], cda: r.cda ? [] : null, veedor: [] };
+  }
+  for (const { clase, recintoCodigo, ...m } of puestos) {
+    const e = equipos[recintoCodigo];
+    if (!e) continue;
+    (e[clase] ?? (e[clase] = [])).push(m);
+  }
+  const vacio = (juntaId: string | null): MiembroEquipo => ({
+    nombres: "",
+    telefono: "",
+    tipo: "titular",
+    juntaId,
+  });
+  const conTitular = (lista: MiembroEquipo[], juntaId: string | null) =>
+    lista.some((m) => m.tipo === "titular" && m.juntaId === juntaId);
+  for (const r of recintos) {
+    const e = equipos[r.cod];
+    if (!conTitular(e.coordinador, null)) e.coordinador.push(vacio(null));
+    if (e.cda && !conTitular(e.cda, null)) e.cda.push(vacio(null));
+    for (const j of listJuntasDeRecinto(r)) {
+      if (!conTitular(e.veedor, j.id)) e.veedor.push(vacio(j.id));
+    }
+  }
+  return equipos;
+}
+
+// Una línea por puesto: "1F: ANA MARÍA PÉREZ LÓPEZ - 0991234567",
+// "1F suplente: …", "2F: AÚN NO SE HA ASIGNADO"; por junta (1F, 1M, 2F…) y
+// el titular antes que sus suplentes. Coordinador y CDA van sin junta.
 export function textoEquipo(miembros: MiembroEquipo[]): string {
   const junta = (m: MiembroEquipo) => (m.juntaId ? juntaCorta(m.juntaId) : "");
+  const persona = (m: MiembroEquipo) =>
+    m.nombres.trim()
+      ? `${m.nombres.trim()}${m.telefono.trim() ? ` - ${m.telefono.trim()}` : ""}`
+      : SIN_ASIGNAR;
+  const puesto = (m: MiembroEquipo) => {
+    const suplente = m.tipo === "suplente";
+    if (m.juntaId) return `${junta(m)}${suplente ? " suplente" : ""}: `;
+    return suplente ? "Suplente: " : "";
+  };
   return [...miembros]
     .sort(
       (a, b) =>
@@ -164,10 +226,7 @@ export function textoEquipo(miembros: MiembroEquipo[]): string {
         Number(a.tipo === "suplente") - Number(b.tipo === "suplente") ||
         a.nombres.localeCompare(b.nombres, "es"),
     )
-    .map(
-      (m) =>
-        `• ${m.juntaId ? `${junta(m)}: ` : ""}${title(m.nombres.trim())}${m.tipo === "suplente" ? " (suplente)" : ""}`,
-    )
+    .map((m) => `${puesto(m)}${persona(m)}`)
     .join("\n");
 }
 
@@ -191,9 +250,13 @@ export function datosDe(
     direccion: recinto?.dir.trim() ? title(recinto.dir) : "",
     junta: p.juntaId ? textoJunta(p.juntaId) : "",
     grupo: grupo.trim(),
-    equipoCoordinador: textoEquipo(suEquipo?.coordinador ?? []),
-    equipoCda: textoEquipo(suEquipo?.cda ?? []),
-    equipoVeedores: textoEquipo(suEquipo?.veedor ?? []),
+    equipoCoordinador: suEquipo ? textoEquipo(suEquipo.coordinador) : "",
+    equipoCda: suEquipo
+      ? suEquipo.cda
+        ? textoEquipo(suEquipo.cda)
+        : SIN_CDA
+      : "",
+    equipoVeedores: suEquipo ? textoEquipo(suEquipo.veedor) : "",
     enlace: enlace.trim(),
   };
 }
